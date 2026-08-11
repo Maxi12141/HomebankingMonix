@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Micro-interacciones suaves (respetan reduced-motion) */
+  .hover-lift {
+    @apply transition-[transform,box-shadow] duration-300 will-change-transform;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .hover-lift:hover {
+    @apply -translate-y-1;
+  }
+  .hover-lift:active {
+    @apply translate-y-0 scale-[0.99];
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hover-lift,
+    .hover-lift:hover,
+    .hover-lift:active {
+      transform: none !important;
+      transition: none !important;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    --slate-secondary: #3F5370;
+  }
+
+  .dark {
+    --slate-secondary: #B0C0D6;
+  }
+
+  body {
+    @apply font-body font-medium text-navy dark:text-white bg-slate-input dark:bg-navy antialiased;
+  }
+
+  p, span, label, li, dd, dt, button, a, input, select, textarea {
+    @apply font-medium;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-semibold tracking-tight;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  /* Native <select> options: readable in light and dark mode */
+  .dark select {
+    color-scheme: dark;
+  }
+
+  select option,
+  select optgroup {
+    background-color: #F0F2F5;
+    color: #001A3D;
+  }
+
+  .dark select option,
+  .dark select optgroup {
+    background-color: #0D2B52;
+    color: #ffffff;
+  }
+}
