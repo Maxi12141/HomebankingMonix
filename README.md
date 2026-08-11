@@ -32,13 +32,17 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 ### Autenticación
 - Registro con datos personales (nombre, apellido, DNI, email, teléfono, dirección, fecha de nacimiento)
 - Login / logout con Supabase Auth
-- Protección de rutas: rutas privadas (`/dashboard`, `/transferir`, `/historial`, `/depositar`, `/perfil`, `/contactos`) requieren sesión activa; rutas públicas (`/`, `/login`, `/register`) redirigen al dashboard si ya hay sesión
+- Protección de rutas: rutas privadas (`/dashboard`, `/transferir`, `/historial`, `/depositar`, `/perfil`, `/contactos`, `/pagar`, `/reservas`, `/tarjeta`, `/mercado-monix`, `/promos`, `/cashback`, `/financiacion`) requieren sesión activa; rutas públicas (`/`, `/login`, `/register`) redirigen al dashboard si ya hay sesión
+- Pantalla de fallback (`MissingEnvScreen`) si faltan o son inválidas las variables `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, en vez de romper la app con pantalla en blanco (ver `isSupabaseConfigured` en `src/lib/supabaseClient.ts`)
 
 ### Dashboard
 - Saldo actual con animación CountUp al cargar y al recibir transferencias en tiempo real
 - Indicador delta (`+$ X recibido` / `-$ X enviado`) que aparece y desaparece automáticamente al detectar cambios de saldo vía Supabase Realtime
 - Últimos 5 movimientos clickeables con modal de detalle completo
-- Acciones rápidas: Transferir, Historial, Depositar
+- Acciones rápidas: Transferir, Pagar, Historial, Depositar
+- Card de Reservas (`ReservasHomeCard`) con saldo del "bolsillo" de ahorro, TNA y estimación diaria
+- Banner publicitario (`AdBanner`) con acceso a mercadoMONIX y tarjetas expandibles de Ofertas, Cashback y Financiación
+- Campanita de notificaciones (`NotificationBell`) en el header, visible en todas las páginas: alerta con toast y badge de no leídas ante depósitos/transferencias entrantes
 - Onboarding tour para usuarios nuevos (spotlight animado con guía paso a paso)
 - Modal de bono de bienvenida ($150.000) al registrarse por primera vez
 
@@ -66,6 +70,31 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 ### Depósito
 - Acreditación de fondos en la cuenta propia
 
+### Pagar (servicios y suscripciones)
+- Catálogo de servicios/suscripciones (Spotify, Netflix, Disney+, etc.) — catálogo hardcodeado a modo de demo
+- Flujo de selección → confirmación → éxito
+- Al confirmar, debita `cuentas.saldo` y registra el movimiento correspondiente en `movimientos`
+- El estado "ya pagado" es solo en memoria (no persiste entre recargas)
+
+### Reservas
+- "Bolsillo" de ahorro separado del saldo principal, con interés diario compuesto (TNA configurable, 32% por defecto)
+- Mover fondos entre cuenta principal y Reservas, actualizando `cuentas.saldo`, `reservas.saldo` y registrando el movimiento
+- Card resumen en el Dashboard (`ReservasHomeCard`) con saldo, TNA y estimación de interés diario
+- Lógica de acumulación de interés en el hook `useReserva` (tabla `reservas`)
+
+### Mi Tarjeta
+- Tarjeta de débito virtual 3D interactiva (`MonixCard3D`, tilt con el mouse), con flip para ver frente (PAN enmascarado) y dorso (CBU/alias con copiar al portapapeles)
+- Congelar / descongelar tarjeta y mostrar/ocultar el número (estado guardado en `localStorage` por cuenta; es un toggle visual, no bloquea operaciones en el backend)
+- Límites diarios de compra/extracción/online (informativos, sin enforcement real)
+
+### mercadoMONIX, Promos, Cashback y Financiación
+> Accesibles desde el banner publicitario del Dashboard (no están en el menú principal). Son funcionalidades de demo/marketing salvo donde se indica.
+
+- **mercadoMONIX** (`/mercado-monix`): mini-marketplace interno con búsqueda, filtro por categorías y grilla de productos (catálogo estático en `src/data/mercadoMonixProductos.ts`, imágenes en `public/mercado`). Al comprar, debita `cuentas.saldo` y registra el movimiento (`mercadoMONIX|...`) — lógica de saldo real, catálogo mock
+- **Promos** (`/promos`): listado de ofertas/descuentos de comercios asociados con términos expandibles — solo estado local, sin persistencia
+- **Cashback** (`/cashback`): simulador de cashback por comercio adherido sobre un monto ingresado — solo estado local, sin persistencia
+- **Financiación** (`/financiacion`): simulador de cuotas (3/6/12) sobre un monto — solo estado local, sin persistencia
+
 ### Contactos
 - Agenda persistida en `localStorage` via Zustand persist
 - Agregar, editar apodo y eliminar contactos
@@ -74,6 +103,7 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 ### Perfil
 - Datos personales del usuario
 - Información de la cuenta (CBU, alias, número de cuenta, tipo)
+- Foto de avatar (guardada como base64 en `localStorage` vía `avatarStore`, no en Supabase Storage)
 - Cambio de contraseña con verificación del password actual
 - Toggle de tema claro / oscuro (persistido en `localStorage`)
 
@@ -114,11 +144,18 @@ src/
 │   │   └── Modal.tsx              # Modal con overlay y AnimatePresence
 │   ├── AgendaContactosPanel.tsx   # Panel de contactos guardados
 │   ├── LoadingScreen.tsx          # Pantalla de carga animada (mínimo 2.4 s)
+│   ├── MissingEnvScreen.tsx       # Fallback si faltan variables de entorno de Supabase
+│   ├── MonixCard3D.tsx            # Tarjeta de débito virtual 3D interactiva (tilt + flip)
 │   ├── MonixLogoAnimated.tsx      # Logo con animación de salto letra por letra (hover)
 │   ├── MonixLogoNavbar.tsx        # Logo compacto con shimmer para la navbar
+│   ├── NotificationBell.tsx       # Campanita de notificaciones (depósitos/transferencias entrantes)
 │   ├── OnboardingTour.tsx         # Tour guiado con spotlight animado (Framer Motion)
+│   ├── ReservasHomeCard.tsx       # Card resumen de Reservas en el Dashboard
 │   ├── TransactionDetailModal.tsx # Modal de detalle de movimiento + descarga PDF
 │   └── WelcomeBonusModal.tsx      # Modal de bono de bienvenida ($150.000)
+│
+├── data/
+│   └── mercadoMonixProductos.ts   # Catálogo estático de productos de mercadoMONIX
 │
 ├── hooks/
 │   ├── useAuth.ts                 # Sincroniza sesión de Supabase con authStore
@@ -126,21 +163,29 @@ src/
 │   ├── useContactos.ts            # CRUD de contactos (Zustand persist en localStorage)
 │   ├── useCuenta.ts               # Fetch de cuenta + suscripción Realtime de saldo
 │   ├── useMovimientos.ts          # Fetch de movimientos con límite
+│   ├── useReserva.ts              # CRUD + cálculo de interés diario compuesto de Reservas
 │   ├── useSyncTransferenciasEntrantes.ts  # Polling cada 2 min al BC para recibir transferencias externas
 │   └── useTransferenciasRecientes.ts      # Últimos CBUs a los que se transfirió
 │
 ├── lib/
-│   └── supabaseClient.ts          # Instancia única del cliente Supabase
+│   └── supabaseClient.ts          # Instancia única del cliente Supabase + isSupabaseConfigured
 │
 ├── pages/
+│   ├── CashbackPage.tsx           # Simulador de cashback por comercio (demo)
 │   ├── ContactosPage.tsx          # Gestión de agenda de contactos
 │   ├── DashboardPage.tsx          # Página principal con saldo y movimientos recientes
 │   ├── DepositPage.tsx            # Formulario de depósito
+│   ├── FinanciacionPage.tsx       # Simulador de cuotas (demo)
 │   ├── HistorialPage.tsx          # Historial completo con filtros avanzados
 │   ├── LandingPage.tsx            # Página de bienvenida (no autenticado)
 │   ├── LoginPage.tsx              # Formulario de inicio de sesión
+│   ├── MercadoMonixPage.tsx       # Mini-marketplace interno (mercadoMONIX)
+│   ├── PagarPage.tsx              # Pago de servicios/suscripciones
 │   ├── ProfilePage.tsx            # Perfil y configuración del usuario
+│   ├── PromosPage.tsx             # Listado de ofertas/descuentos (demo)
 │   ├── RegisterPage.tsx           # Registro de nuevo usuario
+│   ├── ReservasPage.tsx           # Bolsillo de ahorro con interés diario
+│   ├── TarjetaPage.tsx            # Gestión de la tarjeta de débito virtual
 │   └── TransferPage.tsx           # Formulario de transferencia paso a paso
 │
 ├── services/
@@ -151,6 +196,8 @@ src/
 │   └── cuentaStore.ts             # Estado de la cuenta activa (saldo, refreshTick)
 │
 ├── stores/
+│   ├── avatarStore.ts             # Foto de avatar por usuario (base64, localStorage)
+│   ├── notificacionesStore.ts     # Timestamp de última notificación leída
 │   └── themeStore.ts              # Tema claro/oscuro (persistido en localStorage)
 │
 ├── types/
@@ -162,6 +209,11 @@ src/
 ├── App.tsx                        # Router, guards de autenticación, AppShell
 ├── index.css                      # Directivas Tailwind + utilidad no-scrollbar
 └── main.tsx                       # Entry point de React
+
+supabase/
+├── policies.sql                   # Políticas RLS de personas, cuentas, movimientos y reservas
+├── reservas.sql                   # Tabla `reservas` (saldo, tasa_anual, ultima_interes_at) + RLS
+└── cuentas_interes.sql            # Agrega tasa_anual / ultima_interes_at a `cuentas`
 ```
 
 ---
@@ -198,6 +250,20 @@ Una cuenta bancaria por usuario.
 | `activa` | boolean | — |
 | `cbu` | text (unique) | Obtenido del Banco Central al registrarse |
 | `alias` | text (unique) | Generado aleatoriamente (tres palabras con punto) |
+| `tasa_anual` | numeric | TNA de la cuenta principal, default 32% (agregada en `supabase/cuentas_interes.sql`) |
+| `ultima_interes_at` | timestamptz | Última vez que se acreditó interés (agregada en `supabase/cuentas_interes.sql`) |
+| `created_at` | timestamptz | Auto |
+
+### `reservas`
+Bolsillo de ahorro con interés diario compuesto, uno por cuenta (definida en `supabase/reservas.sql`).
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `id` | uuid (PK) | — |
+| `cuenta_id` | uuid (FK → cuentas, unique) | Una reserva por cuenta |
+| `saldo` | numeric | Saldo actual en Reservas |
+| `tasa_anual` | numeric | TNA aplicada, default 32% |
+| `ultima_interes_at` | timestamptz | Última vez que se acreditó interés |
 | `created_at` | timestamptz | Auto |
 
 ### `movimientos`
@@ -308,6 +374,12 @@ npm run dev
 
 ---
 
+## Código legacy sin usar (raíz del repo)
+
+En la raíz conviven archivos de un prototipo anterior con **Express + PostgreSQL crudo** (`app.js`, `config/db.js`, `controllers/`, `models/`, `routes/`, `init/*.sql`, `files/`), previo a la migración a Supabase. No forman parte de la app actual: ningún script de `package.json` los ejecuta, y sus dependencias (`express`, `pg`, `dotenv`) **no** están en `package.json` ni instaladas en `node_modules`. Si no se van a usar, se pueden borrar sin afectar la app de React/Vite/Supabase; si se quieren correr como servidor aparte, hay que instalarlos manualmente (`npm install express pg dotenv`) y configurar `DATABASE_URL`.
+
+---
+
 ## Configuración de Supabase
 
 ### Autenticación
@@ -331,6 +403,8 @@ CREATE POLICY "propietario puede actualizar su cuenta"
 ON cuentas FOR UPDATE
 USING (persona_id = auth.uid());
 ```
+
+> El repo incluye SQL ya escrito para correr directamente en el SQL Editor de Supabase: `supabase/policies.sql` (políticas RLS de `personas`, `cuentas`, `movimientos` y `reservas`), `supabase/reservas.sql` (crea la tabla `reservas`) y `supabase/cuentas_interes.sql` (agrega `tasa_anual` / `ultima_interes_at` a `cuentas`). Ejecutar en ese orden: `reservas.sql` → `cuentas_interes.sql` → `policies.sql`.
 
 ### Realtime
 
