@@ -261,7 +261,7 @@ export function DashboardPage() {
           </Button>
         </motion.div>
 
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} id="tour-reservas">
           <ReservasHomeCard cuentaId={cuenta?.id} />
         </motion.div>
 

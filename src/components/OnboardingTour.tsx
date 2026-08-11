@@ -30,6 +30,20 @@ export function OnboardingTour({ steps, onComplete }: Props) {
   // Keep stepRef in sync so the resize handler always has the latest step
   useEffect(() => { stepRef.current = step }, [step])
 
+  // Lock the page's scroll container while the tour is active — the spotlight/tooltip
+  // are positioned from a rect measured once per step, so a manual scroll would desync them.
+  useEffect(() => {
+    const scrollable = document.querySelector('main')
+    if (!(scrollable instanceof HTMLElement)) return
+
+    const prevOverflow = scrollable.style.overflow
+    scrollable.style.overflow = 'hidden'
+
+    return () => {
+      scrollable.style.overflow = prevOverflow
+    }
+  }, [])
+
   const measure = useCallback((stepIdx: number) => {
     const el = document.getElementById(steps[stepIdx].targetId)
     if (!el) return
