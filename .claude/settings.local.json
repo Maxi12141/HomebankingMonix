@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Admin\\\\Desktop\\\\Homebanking-MONIX\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(ls -la \"c:\\\\Users\\\\Admin\\\\Desktop\\\\Homebanking-MONIX\\\\\" | head -30)",
+      "Read(//c/Users/Admin/Desktop/**)"
+    ]
+  }
+}
