@@ -1,14 +1,16 @@
-import { DollarSign, Landmark, Activity, PiggyBank } from 'lucide-react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { DollarSign, Landmark } from 'lucide-react'
 import { useMercadoFinanciero } from '../hooks/useMercadoFinanciero'
 
 const DOLAR_LABELS: Record<string, string> = {
   oficial: 'Oficial',
   blue: 'Blue',
-  bolsa: 'MEP',
-  contadoconliqui: 'CCL',
 }
 
-const RESERVAS_TNA_MONIX = 32
+/** Velocidad constante del scroll, en píxeles por segundo (independiente de cuánto texto haya). */
+const SPEED_PX_PER_SEC = 15
+/** Cuántas veces se repite el set de items para asegurar que siempre haya contenido de sobra y no queden huecos vacíos. */
+const REPEAT = 6
 
 function formatARS(value: number) {
   return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(value)
@@ -27,55 +29,53 @@ interface TickerItem {
 
 export function MarketTicker() {
   const { data, loading } = useMercadoFinanciero()
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [duration, setDuration] = useState(40)
 
-  if (loading || !data) return null
+  const items: TickerItem[] = useMemo(() => {
+    if (!data) return []
 
-  const dolarItems: TickerItem[] = data.dolares
-    .filter((d) => DOLAR_LABELS[d.casa])
-    .map((d) => ({
-      key: `dolar-${d.casa}`,
-      icon: DollarSign,
-      label: `Dólar ${DOLAR_LABELS[d.casa]}`,
-      value: `Compra $${formatARS(d.compra)} · Venta $${formatARS(d.venta)}`,
-    }))
+    const dolarItems: TickerItem[] = data.dolares
+      .filter((d) => DOLAR_LABELS[d.casa])
+      .map((d) => ({
+        key: `dolar-${d.casa}`,
+        icon: DollarSign,
+        label: `Dólar ${DOLAR_LABELS[d.casa]}`,
+        value: `Compra $${formatARS(d.compra)} · Venta $${formatARS(d.venta)}`,
+      }))
 
-  const items: TickerItem[] = [
-    ...dolarItems,
-    ...(data.tnaPrestamosProm != null
-      ? [
-          {
-            key: 'prestamos',
-            icon: Landmark,
-            label: 'Préstamos personales',
-            value: `TNA promedio del mercado ${formatPct(data.tnaPrestamosProm * 100)}`,
-          },
-        ]
-      : []),
-    ...(data.riesgoPais != null
-      ? [
-          {
-            key: 'riesgo-pais',
-            icon: Activity,
-            label: 'Riesgo País',
-            value: `${data.riesgoPais} pts`,
-          },
-        ]
-      : []),
-    ...(data.tnaPlazoFijoProm != null
-      ? [
-          {
-            key: 'reservas',
-            icon: PiggyBank,
-            label: 'Reservas Monix',
-            value: `TNA ${formatPct(RESERVAS_TNA_MONIX)} vs. ${formatPct(data.tnaPlazoFijoProm * 100)} promedio de plazo fijo del mercado`,
-          },
-        ]
-      : []),
-  ]
+    return [
+      ...dolarItems,
+      ...(data.tnaPrestamosProm != null
+        ? [
+            {
+              key: 'prestamos',
+              icon: Landmark,
+              label: 'Préstamos personales',
+              value: `TNA promedio ${formatPct(data.tnaPrestamosProm * 100)}`,
+            },
+          ]
+        : []),
+    ]
+  }, [data])
 
-  if (items.length === 0) return null
+  const block = useMemo(() => Array.from({ length: REPEAT }, () => items).flat(), [items])
+  const loop = useMemo(() => [...block, ...block], [block])
 
-  const loop = [...items, ...items]
+  useLayoutEffect(() => {
+    if (!trackRef.current || block.length === 0) return
+
+    function measure() {
+      const setWidth = (trackRef.current?.scrollWidth ?? 0) / 2
+      if (setWidth > 0) setDuration(setWidth / SPEED_PX_PER_SEC)
+    }
+
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [block])
+
+  if (loading || !data || items.length === 0) return null
 
   return (
     <div
@@ -83,12 +83,16 @@ export function MarketTicker() {
       role="marquee"
       aria-label="Cotizaciones y tasas del mercado en tiempo real"
     >
-      <div className="flex w-max animate-marquee">
+      <div
+        ref={trackRef}
+        className="flex w-max animate-marquee"
+        style={{ animationDuration: `${duration}s` }}
+      >
         {loop.map((item, i) => (
           <div
             key={`${item.key}-${i}`}
             className="flex items-center gap-2 px-6 py-2 whitespace-nowrap shrink-0"
-            aria-hidden={i >= items.length}
+            aria-hidden={i >= block.length}
           >
             <item.icon size={14} className="text-mint shrink-0" />
             <span className="font-body text-xs text-white/60">{item.label}</span>

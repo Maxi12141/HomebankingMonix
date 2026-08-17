@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { useThemeStore } from '../stores/themeStore'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { getRememberedCredentials, saveRememberedCredentials, clearRememberedCredentials } from '../utils/rememberMe'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
 
@@ -14,8 +15,18 @@ export function LoginPage() {
   const { theme } = useThemeStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const remembered = getRememberedCredentials()
+    if (remembered) {
+      setEmail(remembered.email)
+      setPassword(remembered.password)
+      setRememberMe(true)
+    }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -23,6 +34,11 @@ export function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
+      if (rememberMe) {
+        saveRememberedCredentials(email, password)
+      } else {
+        clearRememberedCredentials()
+      }
       navigate('/dashboard')
     } catch {
       setError('Email o contraseña incorrectos')
@@ -70,6 +86,16 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+
+            <label className="flex items-center gap-2 -mt-1 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 dark:border-white/20 accent-mint cursor-pointer"
+              />
+              <span className="text-sm font-body text-slate-secondary">Recordarme</span>
+            </label>
 
             {error && (
               <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3">
