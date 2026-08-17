@@ -6,7 +6,7 @@ import { useCuenta } from '../hooks/useCuenta'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
-import { MonixCard3D } from '../components/MonixCard3D'
+import { MonixCard3D, buildPan, buildCvv } from '../components/MonixCard3D'
 
 function freezeKey(cuentaId: string) {
   return `monix_card_frozen_${cuentaId}`
@@ -32,16 +32,14 @@ export function TarjetaPage() {
   }
 
   const tipoLabel = cuenta?.tipo === 'cuenta_corriente' ? 'Cuenta Corriente' : 'Caja de Ahorro'
-  const last4 = (cuenta?.numero_cuenta ?? '').replace(/\D/g, '').slice(-4).padStart(4, '0')
-  const panDisplay = showSensitive
-    ? `4532  8814  62${(cuenta?.numero_cuenta ?? '0000').replace(/\D/g, '').slice(0, 2).padEnd(2, '0')}  ${last4}`
-    : `4532  ••••  ••••  ${last4}`
+  const panDisplay = buildPan(cuenta?.numero_cuenta, showSensitive)
+  const cvvDisplay = showSensitive ? buildCvv(cuenta?.numero_cuenta) : '•••'
 
   return (
     <PageWrapper>
       <div className="max-w-lg mx-auto">
         <div className="mb-6">
-          <h1 className="font-display text-2xl font-semibold text-navy dark:text-white">
+          <h1 className="font-display text-2xl font-semibold text-mint">
             Mi tarjeta
           </h1>
           <p className="font-body text-sm text-slate-secondary mt-1">
@@ -63,15 +61,15 @@ export function TarjetaPage() {
           </Card>
         )}
 
-        <div className={frozen ? 'opacity-70 grayscale-[0.35] transition-all' : 'transition-all'}>
-          <MonixCard3D
-            titular={[persona?.nombre, persona?.apellido].filter(Boolean).join(' ')}
-            numeroCuenta={cuenta?.numero_cuenta}
-            cbu={cuenta?.cbu}
-            alias={cuenta?.alias}
-            tipo={cuenta?.tipo}
-          />
-        </div>
+        <MonixCard3D
+          titular={[persona?.nombre, persona?.apellido].filter(Boolean).join(' ')}
+          numeroCuenta={cuenta?.numero_cuenta}
+          cbu={cuenta?.cbu}
+          alias={cuenta?.alias}
+          tipo={cuenta?.tipo}
+          showSensitive={showSensitive}
+          frozen={frozen}
+        />
 
         <div className="grid grid-cols-2 gap-3 mb-6">
           <Button
@@ -104,6 +102,11 @@ export function TarjetaPage() {
             <div className="flex items-center justify-between gap-3">
               <dt className="font-body text-xs text-slate-secondary uppercase tracking-wider">Número</dt>
               <dd className="font-mono text-sm text-navy dark:text-white">{panDisplay}</dd>
+            </div>
+            <div className="h-px bg-slate-200 dark:bg-white/10" />
+            <div className="flex items-center justify-between gap-3">
+              <dt className="font-body text-xs text-slate-secondary uppercase tracking-wider">CVV</dt>
+              <dd className="font-mono text-sm text-navy dark:text-white">{cvvDisplay}</dd>
             </div>
             <div className="h-px bg-slate-200 dark:bg-white/10" />
             <div className="flex items-center justify-between gap-3">

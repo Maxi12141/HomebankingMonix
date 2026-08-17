@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type CSSProperties } from 'react'
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { Check, Copy, RotateCcw } from 'lucide-react'
 
 interface MonixCard3DProps {
@@ -8,12 +8,26 @@ interface MonixCard3DProps {
   cbu?: string | null
   alias?: string | null
   tipo?: 'caja_ahorro' | 'cuenta_corriente' | string | null
+  showSensitive?: boolean
+  frozen?: boolean
 }
 
-function maskPan(numeroCuenta?: string | null) {
+/** Número de tarjeta completo (fake, derivado de la cuenta) — mismo esquema que usa TarjetaPage. */
+export function buildPan(numeroCuenta?: string | null, revealed?: boolean) {
   const digits = (numeroCuenta ?? '').replace(/\D/g, '')
   const last4 = digits.slice(-4).padStart(4, '0')
-  return `4532  ••••  ••••  ${last4}`
+  if (!revealed) return `4532  ••••  ••••  ${last4}`
+  const mid = digits.slice(0, 2).padEnd(2, '0')
+  return `4532  8814  62${mid}  ${last4}`
+}
+
+/** CVV fake determinístico, derivado de la cuenta (misma cuenta → mismo CVV siempre). */
+export function buildCvv(numeroCuenta?: string | null) {
+  const digits = (numeroCuenta ?? '').replace(/\D/g, '')
+  if (digits.length >= 7) return digits.slice(3, 6)
+  let hash = 0
+  for (const ch of digits || 'monix') hash = (hash * 31 + ch.charCodeAt(0)) % 900
+  return String(hash + 100)
 }
 
 const faceBaseStyle: CSSProperties = {
@@ -31,6 +45,8 @@ export function MonixCard3D({
   cbu,
   alias,
   tipo,
+  showSensitive = false,
+  frozen = false,
 }: MonixCard3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [flipped, setFlipped] = useState(false)
@@ -51,7 +67,8 @@ export function MonixCard3D({
     return `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,0.35) 0%, transparent 45%)`
   })
 
-  const pan = useMemo(() => maskPan(numeroCuenta), [numeroCuenta])
+  const pan = useMemo(() => buildPan(numeroCuenta, showSensitive), [numeroCuenta, showSensitive])
+  const cvv = useMemo(() => buildCvv(numeroCuenta), [numeroCuenta])
   const tipoLabel = tipo === 'cuenta_corriente' ? 'Cuenta Corriente' : 'Caja de Ahorro'
   const nombre = (titular || 'Titular MONIX').toUpperCase()
 
@@ -117,6 +134,8 @@ export function MonixCard3D({
             rotateY: tiltY,
             transformStyle: 'preserve-3d',
           }}
+          animate={{ scale: frozen ? [1, 0.96, 1] : 1 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           className="relative w-full aspect-[1.586/1]"
         >
           {/* Flip layer */}
@@ -209,7 +228,9 @@ export function MonixCard3D({
               <div className="px-5 sm:px-6 pt-4 space-y-3 text-left">
                 <div className="rounded-md bg-white/90 px-3 py-2 flex items-center justify-between">
                   <span className="font-body text-[10px] text-navy/50 uppercase tracking-wider">CVV</span>
-                  <span className="font-mono text-sm text-navy tracking-widest">•••</span>
+                  <span className="font-mono text-sm text-navy tracking-widest">
+                    {showSensitive ? cvv : '•••'}
+                  </span>
                 </div>
 
                 <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-2.5">
@@ -266,6 +287,41 @@ export function MonixCard3D({
               </div>
             </div>
           </motion.div>
+
+          {/* Escarcha — cubre rápidamente la tarjeta al congelarla, se retira al descongelar */}
+          <AnimatePresence>
+            {frozen && (
+              <motion.div
+                key="frost"
+                initial={{ opacity: 0, clipPath: 'circle(0% at 50% 50%)' }}
+                animate={{ opacity: 1, clipPath: 'circle(150% at 50% 50%)' }}
+                exit={{ opacity: 0, clipPath: 'circle(0% at 50% 50%)' }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="pointer-events-none absolute inset-0 rounded-2xl overflow-hidden z-20"
+                style={{
+                  background:
+                    'linear-gradient(135deg, rgba(200,235,255,0.4) 0%, rgba(130,195,255,0.16) 45%, rgba(255,255,255,0.32) 100%)',
+                  backdropFilter: 'blur(1px) saturate(0.65)',
+                  WebkitBackdropFilter: 'blur(1px) saturate(0.65)',
+                  border: '1px solid rgba(200,235,255,0.55)',
+                  boxShadow: 'inset 0 0 46px rgba(150,210,255,0.4)',
+                }}
+              >
+                {/* motas de escarcha */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      'radial-gradient(circle at 14% 22%, rgba(255,255,255,0.65) 0%, transparent 9%), ' +
+                      'radial-gradient(circle at 82% 18%, rgba(255,255,255,0.55) 0%, transparent 7%), ' +
+                      'radial-gradient(circle at 72% 78%, rgba(255,255,255,0.6) 0%, transparent 11%), ' +
+                      'radial-gradient(circle at 22% 82%, rgba(255,255,255,0.5) 0%, transparent 8%), ' +
+                      'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.35) 0%, transparent 14%)',
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </div>

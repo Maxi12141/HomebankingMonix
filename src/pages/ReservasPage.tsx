@@ -80,7 +80,7 @@ export function ReservasPage() {
         toast.success('Dinero ingresado a tu reserva')
       } else {
         if (montoNum > saldoReserva) {
-          throw new Error('No tenés ese monto en la reserva')
+          throw new Error('No se pudo completar la transacción. Actualmente no tenés ese monto en tu reserva.')
         }
         const nuevoSaldoCuenta = roundMoney(cuenta.saldo + montoNum)
         const nuevoSaldoReserva = roundMoney(saldoReserva - montoNum)
@@ -124,7 +124,7 @@ export function ReservasPage() {
   return (
     <PageWrapper>
       <div className="max-w-md mx-auto">
-        <h1 className="font-display text-2xl font-semibold text-navy dark:text-white mb-2">
+        <h1 className="font-display text-2xl font-semibold text-mint mb-2">
           Reservas
         </h1>
         <p className="font-body text-sm text-slate-secondary mb-6">

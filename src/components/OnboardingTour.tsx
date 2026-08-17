@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 
@@ -20,27 +20,44 @@ interface Pos {
 
 const PAD = 10
 const TIP_W = 300
-const TIP_H = 168
+// Estimación inicial nomás — la altura real (variable según el largo del texto de cada paso)
+// se mide con tipRef y corrige la posición en el layout effect de abajo.
+const TIP_H_ESTIMATE = 190
 
 export function OnboardingTour({ steps, onComplete }: Props) {
   const [step, setStep] = useState(0)
   const [pos, setPos] = useState<Pos | null>(null)
   const stepRef = useRef(0)
+  const tipRef = useRef<HTMLDivElement>(null)
 
   // Keep stepRef in sync so the resize handler always has the latest step
   useEffect(() => { stepRef.current = step }, [step])
 
-  // Lock the page's scroll container while the tour is active — the spotlight/tooltip
-  // are positioned from a rect measured once per step, so a manual scroll would desync them.
+  // Bloquea todo el scroll (rueda del mouse, trackpad, touch) mientras el tour está activo.
+  // El spotlight y el tooltip se posicionan a partir de un rect medido una vez por paso,
+  // así que cualquier scroll — del usuario o "chained" hacia un ancestro scrolleable — desincroniza
+  // el encuadre. overflow:hidden en <main> no alcanza a cubrir todos los casos, así que además
+  // se frena el evento a nivel window con preventDefault.
   useEffect(() => {
-    const scrollable = document.querySelector('main')
-    if (!(scrollable instanceof HTMLElement)) return
+    const main = document.querySelector('main')
+    const prevMainOverflow = main instanceof HTMLElement ? main.style.overflow : ''
+    if (main instanceof HTMLElement) main.style.overflow = 'hidden'
 
-    const prevOverflow = scrollable.style.overflow
-    scrollable.style.overflow = 'hidden'
+    const prevBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function blockScroll(e: Event) {
+      e.preventDefault()
+    }
+
+    window.addEventListener('wheel', blockScroll, { passive: false })
+    window.addEventListener('touchmove', blockScroll, { passive: false })
 
     return () => {
-      scrollable.style.overflow = prevOverflow
+      if (main instanceof HTMLElement) main.style.overflow = prevMainOverflow
+      document.body.style.overflow = prevBodyOverflow
+      window.removeEventListener('wheel', blockScroll)
+      window.removeEventListener('touchmove', blockScroll)
     }
   }, [])
 
@@ -58,12 +75,14 @@ export function OnboardingTour({ steps, onComplete }: Props) {
       const spotW = r.width + PAD * 2
       const spotH = r.height + PAD * 2
 
-      // Place tooltip below or above — never overlapping the spotlight
+      // Place tooltip below or above — never overlapping the spotlight.
+      // TIP_H_ESTIMATE es solo un punto de partida; el layout effect de abajo la corrige
+      // con la altura real una vez que el tooltip está en el DOM.
       const isLower = r.top + r.height / 2 > window.innerHeight * 0.58
       const tipL = Math.max(16, Math.min(spotL, window.innerWidth - TIP_W - 16))
       const tipT = isLower
-        ? Math.max(16, spotT - TIP_H - 8)
-        : Math.min(spotT + spotH + 8, window.innerHeight - TIP_H - 16)
+        ? Math.max(16, spotT - TIP_H_ESTIMATE - 8)
+        : Math.min(spotT + spotH + 8, window.innerHeight - TIP_H_ESTIMATE - 16)
 
       setPos({ spot: { left: spotL, top: spotT, width: spotW, height: spotH }, tip: { left: tipL, top: tipT } })
     }, 360)
@@ -71,6 +90,25 @@ export function OnboardingTour({ steps, onComplete }: Props) {
 
   // Initial measurement
   useEffect(() => { measure(0) }, [measure])
+
+  // Corrige tip.top con la altura REAL del tooltip renderizado (varía según el largo del texto
+  // de cada paso) para que nunca se superponga con el spotlight, ni de más ni de menos.
+  useLayoutEffect(() => {
+    if (!pos || !tipRef.current) return
+    const tipH = tipRef.current.offsetHeight
+    if (tipH === 0) return
+
+    const { spot } = pos
+    const isLower = spot.top + spot.height / 2 > window.innerHeight * 0.58
+    const correctedTipT = isLower
+      ? Math.max(16, spot.top - tipH - 8)
+      : Math.min(spot.top + spot.height + 8, window.innerHeight - tipH - 16)
+
+    if (Math.abs(correctedTipT - pos.tip.top) > 1) {
+      setPos((p) => (p ? { ...p, tip: { ...p.tip, top: correctedTipT } } : p))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, pos?.spot.top, pos?.spot.height])
 
   // Resize: re-measure current step
   useEffect(() => {
@@ -122,6 +160,7 @@ export function OnboardingTour({ steps, onComplete }: Props) {
 
       {/* Tooltip — single element, animates to new position alongside spotlight */}
       <motion.div
+        ref={tipRef}
         animate={{ left: pos.tip.left, top: pos.tip.top }}
         transition={{ type: 'spring', stiffness: 260, damping: 26 }}
         style={{ position: 'fixed', width: TIP_W, pointerEvents: 'auto' }}
