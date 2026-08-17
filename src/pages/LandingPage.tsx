@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRightLeft, BarChart2, ShieldCheck, ArrowRight, Sun, Moon, CheckCircle2 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
+import { MarketTicker } from '../components/MarketTicker'
 import { MonixLogoAnimated } from '../components/MonixLogoAnimated'
 import { MonixLogoNavbar } from '../components/MonixLogoNavbar'
 import { useThemeStore } from '../stores/themeStore'
@@ -330,6 +331,9 @@ export function LandingPage() {
           </nav>
         </div>
       </header>
+
+      {/* Ticker de mercado */}
+      <MarketTicker />
 
       {/* Hero */}
       <section className="min-h-[85vh] flex items-center justify-center px-6">

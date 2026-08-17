@@ -8,7 +8,20 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Admin\\\\Desktop\\\\Homebanking-MONIX\" -Recurse -Directory)",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(ls -la \"c:\\\\Users\\\\Admin\\\\Desktop\\\\Homebanking-MONIX\\\\\" | head -30)",
-      "Read(//c/Users/Admin/Desktop/**)"
+      "Read(//c/Users/Admin/Desktop/**)",
+      "WebFetch(domain:dolarapi.com)",
+      "WebFetch(domain:argentinadatos.com)",
+      "WebFetch(domain:api.argentinadatos.com)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(node .scratch-playwright-check.mjs)",
+      "Bash(npx --yes playwright screenshot --help)",
+      "Bash(npx --yes playwright screenshot --color-scheme=light --wait-for-timeout=4500 --viewport-size=1440,900 \"http://localhost:5173/\" .scratch-desktop-light.png)",
+      "Bash(npx --yes playwright screenshot --color-scheme=dark --wait-for-timeout=4500 --viewport-size=1440,900 \"http://localhost:5173/\" .scratch-desktop-dark.png)",
+      "Bash(npx --yes playwright screenshot --color-scheme=light --wait-for-timeout=4500 --viewport-size=390,844 \"http://localhost:5173/\" .scratch-mobile-light.png)",
+      "Bash(npx --yes playwright install chromium)",
+      "Bash(rm -f .scratch-playwright-check.mjs .scratch-desktop-light.png .scratch-desktop-dark.png .scratch-mobile-light.png .env)",
+      "Bash(lsof -ti:5173 -sTCP:LISTEN)",
+      "Bash(xargs -r kill)"
     ]
   }
 }
