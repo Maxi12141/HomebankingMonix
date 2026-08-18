@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { BadgeCheck, Lock, AtSign, Camera } from 'lucide-react'
+import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
@@ -45,6 +45,7 @@ export function ProfilePage() {
   const [aliasInput, setAliasInput] = useState(cuenta?.alias ?? '')
   const [savingAlias, setSavingAlias] = useState(false)
   const [aliasError, setAliasError] = useState('')
+  const [showData, setShowData] = useState(false)
 
   const [currentPass, setCurrentPass] = useState('')
   const [newPass, setNewPass] = useState('')
@@ -261,21 +262,32 @@ export function ProfilePage() {
 
         {/* Alias de cuenta */}
         <Card className="p-8 mb-6">
-          <div className="flex items-center gap-3 mb-6">
-            <AtSign size={18} className="text-slate-secondary" />
-            <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Alias de cuenta</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <AtSign size={18} className="text-slate-secondary" />
+              <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Alias de cuenta</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowData((v) => !v)}
+              className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
+              aria-label={showData ? 'Ocultar CBU y alias' : 'Mostrar CBU y alias'}
+            >
+              {showData ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
           <form onSubmit={handleSaveAlias} className="flex flex-col gap-4">
             <div>
               <Input
                 label="Alias"
+                type={showData ? 'text' : 'password'}
                 value={aliasInput}
                 onChange={(e) => setAliasInput(e.target.value)}
                 placeholder="palabra.palabra.palabra"
                 required
               />
               <p className="text-xs text-slate-secondary font-body mt-1">
-                CBU: {cuenta?.cbu ?? '—'}
+                CBU: {showData ? (cuenta?.cbu ?? '—') : '•••••••••••••••••••••'}
               </p>
             </div>
             {aliasError && <p className="text-sm text-red-500 dark:text-red-400 font-body">{aliasError}</p>}
