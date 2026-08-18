@@ -30,17 +30,20 @@ export function OnboardingTour({ steps, onComplete }: Props) {
   // Keep stepRef in sync so the resize handler always has the latest step
   useEffect(() => { stepRef.current = step }, [step])
 
-  // Lock the page's scroll container while the tour is active — the spotlight/tooltip
-  // are positioned from a rect measured once per step, so a manual scroll would desync them.
+  // Lock scroll while the tour is active — the spotlight/tooltip are positioned from a rect
+  // measured once per step, so a manual scroll would desync them. `<main>` is the intended
+  // scroll container (overflow-y-auto), but PageWrapper's ancestors only set min-h-screen
+  // (not h-screen), so tall pages actually grow past 100vh and the document itself scrolls
+  // instead — lock html + body too so this holds regardless of which one ends up scrolling.
   useEffect(() => {
-    const scrollable = document.querySelector('main')
-    if (!(scrollable instanceof HTMLElement)) return
+    const candidates = [document.documentElement, document.body, document.querySelector('main')]
+    const targets = candidates.filter((el): el is HTMLElement => el instanceof HTMLElement)
+    const prevOverflow = targets.map(el => el.style.overflow)
 
-    const prevOverflow = scrollable.style.overflow
-    scrollable.style.overflow = 'hidden'
+    targets.forEach(el => { el.style.overflow = 'hidden' })
 
     return () => {
-      scrollable.style.overflow = prevOverflow
+      targets.forEach((el, i) => { el.style.overflow = prevOverflow[i] })
     }
   }, [])
 
@@ -48,7 +51,10 @@ export function OnboardingTour({ steps, onComplete }: Props) {
     const el = document.getElementById(steps[stepIdx].targetId)
     if (!el) return
 
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    // 'center' (not 'nearest') guarantees maximum breathing room on both sides — with
+    // 'nearest', an element already partially in view barely moves, leaving no room for
+    // the tooltip and forcing it to overlap the very element it's pointing at.
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
     setTimeout(() => {
       const r = el.getBoundingClientRect()
@@ -58,12 +64,16 @@ export function OnboardingTour({ steps, onComplete }: Props) {
       const spotW = r.width + PAD * 2
       const spotH = r.height + PAD * 2
 
-      // Place tooltip below or above — never overlapping the spotlight
-      const isLower = r.top + r.height / 2 > window.innerHeight * 0.58
+      // Place tooltip on whichever side (above/below the spotlight) has more room —
+      // never overlapping the spotlight when there's enough space for either side.
+      const spaceAbove = spotT
+      const spaceBelow = window.innerHeight - (spotT + spotH)
+      const placeBelow = spaceBelow >= spaceAbove
+
       const tipL = Math.max(16, Math.min(spotL, window.innerWidth - TIP_W - 16))
-      const tipT = isLower
-        ? Math.max(16, spotT - TIP_H - 8)
-        : Math.min(spotT + spotH + 8, window.innerHeight - TIP_H - 16)
+      const tipT = placeBelow
+        ? Math.min(spotT + spotH + 8, window.innerHeight - TIP_H - 16)
+        : Math.max(spotT - TIP_H - 8, 16)
 
       setPos({ spot: { left: spotL, top: spotT, width: spotW, height: spotH }, tip: { left: tipL, top: tipT } })
     }, 360)
