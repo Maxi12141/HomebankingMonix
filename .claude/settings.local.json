@@ -31,10 +31,15 @@
       "Bash(curl -sI --max-time 5 https://www.google.com)",
       "Bash(curl -sI --max-time 5 https://raw.githubusercontent.com)",
       "Bash(curl -s --max-time 15 \"https://raw.githubusercontent.com/simple-icons/simple-icons/develop/data/simple-icons.json\" -o /tmp/si.json)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "mcp__supabase__list_tables"
     ],
     "additionalDirectories": [
       "\\tmp"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

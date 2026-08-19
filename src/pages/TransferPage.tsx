@@ -4,7 +4,7 @@ import { CheckCircle, Search, Star, Home, UserPlus, ChevronDown } from 'lucide-r
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
-import { transferir, buscarPorCBU, buscarPorAlias } from '../services/bancoCentral'
+import { transferir, buscarDestinatarioBC } from '../services/bancoCentral'
 import { useCuenta } from '../hooks/useCuenta'
 import { useCuentaStore } from '../store/cuentaStore'
 import { useAuthStore } from '../store/authStore'
@@ -24,6 +24,7 @@ interface Destinatario {
   dni: string | null
   cbu: string
   alias: string | null
+  moneda: 'ARS' | 'USD'
   cuentaId?: string
   saldoActual?: number
 }
@@ -122,7 +123,7 @@ export function TransferPage() {
 
       let localQuery = supabase
         .from('cuentas')
-        .select('id, saldo, cbu, alias, personas(nombre, apellido, dni)')
+        .select('id, saldo, cbu, alias, moneda, personas(nombre, apellido, dni)')
         .eq('activa', true)
       localQuery = esCBU ? localQuery.eq('cbu', input) : localQuery.ilike('alias', input)
       const { data: cuentaLocal } = await localQuery.maybeSingle()
@@ -135,19 +136,21 @@ export function TransferPage() {
           dni: p.dni,
           cbu: cuentaLocal.cbu,
           alias: cuentaLocal.alias,
+          moneda: cuentaLocal.moneda,
           cuentaId: cuentaLocal.id,
           saldoActual: cuentaLocal.saldo,
         })
         return
       }
 
-      const bcPersona = esCBU ? await buscarPorCBU(input) : await buscarPorAlias(input)
+      const bc = await buscarDestinatarioBC(input, esCBU)
       setDestinatario({
-        nombre: bcPersona.nombre,
-        apellido: bcPersona.apellido,
-        dni: bcPersona.dni,
-        cbu: bcPersona.cbu,
-        alias: null,
+        nombre: bc.nombre,
+        apellido: bc.apellido,
+        dni: bc.dni,
+        cbu: bc.cbu,
+        alias: bc.alias,
+        moneda: bc.moneda,
       })
     } catch {
       setBusquedaError('No se encontró ninguna cuenta con ese CBU o alias')
@@ -183,6 +186,7 @@ export function TransferPage() {
     if (isNaN(montoNum) || montoNum <= 0) { setError('Ingresá un monto válido'); return }
     if (montoNum > cuenta.saldo) { setError('Saldo insuficiente para realizar la transferencia'); return }
     if (destinatario.cbu === cuenta.cbu) { setError('No podés transferirte a vos mismo'); return }
+    if (destinatario.moneda !== cuenta.moneda) { setError('Todavía no se pueden hacer transferencias entre cuentas de distinta moneda'); return }
     setStep('confirm')
   }
 

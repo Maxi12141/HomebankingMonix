@@ -15,6 +15,7 @@ export interface Cuenta {
   persona_id: string
   numero_cuenta: string
   tipo: 'caja_ahorro' | 'cuenta_corriente'
+  moneda: 'ARS' | 'USD'
   saldo: number
   activa: boolean
   cbu: string | null

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Search, Pencil, Trash2, Check, X, UserPlus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { buscarPorCBU, buscarPorAlias } from '../services/bancoCentral'
+import { buscarDestinatarioBC } from '../services/bancoCentral'
 import { useContactos } from '../hooks/useContactos'
 import { Card } from './ui/Card'
 import type { Contacto } from '../types'
@@ -60,8 +60,8 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
         return
       }
 
-      const bc = esCBU ? await buscarPorCBU(input) : await buscarPorAlias(input)
-      setPersonaEncontrada({ nombre: bc.nombre, apellido: bc.apellido, cbu: bc.cbu, alias: null })
+      const bc = await buscarDestinatarioBC(input, esCBU)
+      setPersonaEncontrada({ nombre: bc.nombre, apellido: bc.apellido, cbu: bc.cbu, alias: bc.alias })
     } catch {
       setErrorBusqueda('No se encontró ninguna cuenta con ese CBU o alias')
     } finally {
