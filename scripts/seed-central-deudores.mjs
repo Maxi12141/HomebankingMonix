@@ -4,9 +4,12 @@
 //
 // Uso: node --env-file=.env scripts/seed-central-deudores.mjs
 //
-// Antes de correrlo: completar DEUDAS_FICTICIAS con los DNI reales de las
-// personas de prueba que ya existen en la tabla `personas` de Supabase.
-// Corre siempre contra x-environment: test.
+// DNIs tomados de la tabla `personas` de Supabase (vía MCP, 19 ago 2026) —
+// sólo las 17 personas que ya tienen una cuenta activa; las 3 sin cuenta
+// (23906742, 23623890, 21438034) no pueden pasar por el flujo de apertura de
+// USD igual, así que no hace falta informarles nada. Corre siempre contra
+// x-environment: test. Volver a correr con otro valor pisa el informe
+// anterior de Monix para ese DNI (un banco tiene un solo informe activo por DNI).
 
 const BASE_URL = 'https://centralbank.brocoly.cc/api'
 const API_KEY = process.env.VITE_BC_API_KEY
@@ -29,11 +32,23 @@ const HEADERS = {
 // su perfil completo. Pisa el informe anterior de Monix para el mismo DNI si
 // se vuelve a correr con otro valor.
 const DEUDAS_FICTICIAS = [
-  // { dni: '11111111', monto: 0,       situacion: 1 }, // sin problemas — aprueba USD
-  // { dni: '22222222', monto: 15000,   situacion: 2 }, // riesgo bajo — aprueba USD
-  // { dni: '33333333', monto: 250000,  situacion: 3 }, // riesgo medio — rechaza
-  // { dni: '44444444', monto: 900000,  situacion: 4 }, // riesgo alto — rechaza
-  // { dni: '55555555', monto: 3000000, situacion: 5 }, // irrecuperable — rechaza
+  { dni: '41595650', monto: 0,       situacion: 1 }, // Diego Urenda — aprueba USD
+  { dni: '41595666', monto: 0,       situacion: 1 }, // dieguito urendita — aprueba USD
+  { dni: '66578765', monto: 0,       situacion: 1 }, // Bruno Trevisan — aprueba USD
+  { dni: '35486125', monto: 0,       situacion: 1 }, // tatatito tutututun — aprueba USD
+  { dni: '23338391', monto: 0,       situacion: 1 }, // Test Tour — aprueba USD
+  { dni: '29859649', monto: 0,       situacion: 1 }, // Test Tour — aprueba USD
+  { dni: '23434567', monto: 25000,   situacion: 2 }, // juancho perez — riesgo bajo, aprueba USD
+  { dni: '87675678', monto: 40000,   situacion: 2 }, // diego23 urendax — riesgo bajo, aprueba USD
+  { dni: '44556677', monto: 18000,   situacion: 2 }, // Juan Perezito — riesgo bajo, aprueba USD
+  { dni: '41559441', monto: 12000,   situacion: 2 }, // Diego Urenda — riesgo bajo, aprueba USD
+  { dni: '25673182', monto: 30000,   situacion: 2 }, // Test Tour — riesgo bajo, aprueba USD
+  { dni: '5553334',  monto: 300000,  situacion: 3 }, // Diegote Malote — riesgo medio, rechaza
+  { dni: '26518960', monto: 200000,  situacion: 3 }, // Test Tour — riesgo medio, rechaza
+  { dni: '47583239', monto: 850000,  situacion: 4 }, // Maxi Turaglio — riesgo alto, rechaza
+  { dni: '23678363', monto: 700000,  situacion: 4 }, // Test Tour — riesgo alto, rechaza
+  { dni: '12345345', monto: 2500000, situacion: 5 }, // maxi turaglio — irrecuperable, rechaza
+  { dni: '21999705', monto: 4000000, situacion: 5 }, // Test Tour — irrecuperable, rechaza
 ]
 
 if (DEUDAS_FICTICIAS.length === 0) {
