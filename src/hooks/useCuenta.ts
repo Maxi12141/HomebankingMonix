@@ -17,6 +17,7 @@ export function useCuenta() {
   const { user } = useAuthStore()
   const userId = user?.id
   const [interesHoy, setInteresHoy] = useState(0)
+  const [interesHoyPorCuenta, setInteresHoyPorCuenta] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (userId) fetchCuentas(userId)
@@ -44,6 +45,7 @@ export function useCuenta() {
     setCuentas(todas)
     setCuenta(todas.find((c) => c.moneda === 'ARS') ?? todas[0])
     setInteresHoy(accrued.find((a) => a.cuenta.moneda === 'ARS')?.interes ?? 0)
+    setInteresHoyPorCuenta(Object.fromEntries(accrued.map((a) => [a.cuenta.id, a.interes])))
   }
 
   async function accrueInterest(current: Cuenta): Promise<{ cuenta: Cuenta; interes: number }> {
@@ -80,13 +82,12 @@ export function useCuenta() {
       return { cuenta: current, interes: 0 }
     }
 
-    // Optional movement record for transparency
     await supabase.from('movimientos').insert({
       cuenta_id: current.id,
       tipo: 'deposito',
       monto: interest,
       saldo_resultante: nuevoSaldo,
-      descripcion: 'Rendimiento diario|Interés sobre saldo disponible',
+      descripcion: 'Rendimiento de Reserva',
     })
 
     return { cuenta: updated as Cuenta, interes: interest }
@@ -119,5 +120,5 @@ export function useCuenta() {
     if (user) await fetchCuentas(user.id)
   }
 
-  return { cuenta, cuentas, refreshCuenta, interesHoy }
+  return { cuenta, cuentas, refreshCuenta, interesHoy, interesHoyPorCuenta }
 }

@@ -36,13 +36,22 @@ export function useReserva(cuentaId?: string | null) {
       if (error) throw error
 
       if (!data) {
-        const { data: created, error: errCreate } = await supabase
+        // upsert + refetch en vez de insert directo: React StrictMode dispara este
+        // efecto dos veces en desarrollo, y dos inserts concurrentes para el mismo
+        // cuenta_id chocan contra la unique constraint. ignoreDuplicates hace que el
+        // que pierde la carrera no falle, sólo no haga nada.
+        const { error: errUpsert } = await supabase
           .from('reservas')
-          .insert({ cuenta_id: id, saldo: 0, tasa_anual: 32 })
+          .upsert({ cuenta_id: id, saldo: 0, tasa_anual: 32 }, { onConflict: 'cuenta_id', ignoreDuplicates: true })
+        if (errUpsert) throw errUpsert
+
+        const { data: refetched, error: errRefetch } = await supabase
+          .from('reservas')
           .select('*')
+          .eq('cuenta_id', id)
           .single()
-        if (errCreate) throw errCreate
-        data = created
+        if (errRefetch) throw errRefetch
+        data = refetched
       }
 
       const current = data as Reserva
@@ -63,6 +72,15 @@ export function useReserva(cuentaId?: string | null) {
           .select('*')
           .single()
         if (errUp) throw errUp
+
+        await supabase.from('movimientos').insert({
+          cuenta_id: current.cuenta_id,
+          tipo: 'deposito',
+          monto: interest,
+          saldo_resultante: nuevoSaldo,
+          descripcion: 'Rendimiento de Reserva',
+        })
+
         setReserva(updated as Reserva)
         setInteresHoy(interest)
       } else {

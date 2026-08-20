@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CheckCircle } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useCuenta } from '../hooks/useCuenta'
 import { useCuentaStore } from '../store/cuentaStore'
+import { formatMonto } from '../utils/cuenta'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import type { Cuenta } from '../types'
 
 type Step = 'form' | 'success'
 
@@ -19,20 +21,27 @@ const stepVariants = {
 }
 
 export function DepositPage() {
-  const { cuenta, refreshCuenta } = useCuenta()
-  const { updateSaldo } = useCuentaStore()
+  const { cuenta, cuentas, refreshCuenta } = useCuenta()
+  const { updateSaldoCuenta } = useCuentaStore()
 
   const [step, setStep] = useState<Step>('form')
+  const [cuentaDestino, setCuentaDestino] = useState<Cuenta | null>(null)
   const [monto, setMonto] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
+
+  useEffect(() => {
+    if (!cuentaDestino && cuenta) setCuentaDestino(cuenta)
+  }, [cuenta, cuentaDestino])
+
   const montoNum = parseFloat(monto)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!cuenta) return
+    if (!cuentaDestino) return
     if (isNaN(montoNum) || montoNum <= 0) {
       setError('Ingresá un monto válido')
       return
@@ -42,16 +51,16 @@ export function DepositPage() {
     setError('')
 
     try {
-      const nuevoSaldo = cuenta.saldo + montoNum
+      const nuevoSaldo = cuentaDestino.saldo + montoNum
 
       const { error: errSaldo } = await supabase
         .from('cuentas')
         .update({ saldo: nuevoSaldo })
-        .eq('id', cuenta.id)
+        .eq('id', cuentaDestino.id)
       if (errSaldo) throw new Error('No se pudo actualizar el saldo')
 
       const { error: errMov } = await supabase.from('movimientos').insert({
-        cuenta_id: cuenta.id,
+        cuenta_id: cuentaDestino.id,
         tipo: 'deposito',
         monto: montoNum,
         saldo_resultante: nuevoSaldo,
@@ -59,7 +68,7 @@ export function DepositPage() {
       })
       if (errMov) throw new Error('No se pudo registrar el movimiento')
 
-      updateSaldo(nuevoSaldo)
+      updateSaldoCuenta(cuentaDestino.id, nuevoSaldo)
       await refreshCuenta()
       setStep('success')
       toast.success('¡Depósito realizado con éxito!')
@@ -79,8 +88,9 @@ export function DepositPage() {
     setError('')
   }
 
-  const saldoFormateado = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(cuenta?.saldo ?? 0)
-  const montoFormateado = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(montoNum || 0)
+  const moneda = cuentaDestino?.moneda ?? 'ARS'
+  const saldoFormateado = formatMonto(cuentaDestino?.saldo ?? 0, moneda)
+  const montoFormateado = formatMonto(montoNum || 0, moneda)
 
   return (
     <PageWrapper>
@@ -91,6 +101,33 @@ export function DepositPage() {
           {step === 'form' && (
             <motion.div key="form" variants={stepVariants} initial="initial" animate="animate" exit="exit">
               <Card className="p-8">
+                {cuentaUSD && (
+                  <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setCuentaDestino(cuenta)}
+                      className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
+                        moneda === 'ARS'
+                          ? 'bg-mint text-navy'
+                          : 'text-slate-secondary hover:text-navy dark:hover:text-white'
+                      }`}
+                    >
+                      Cuenta en pesos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCuentaDestino(cuentaUSD)}
+                      className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
+                        moneda === 'USD'
+                          ? 'bg-mint text-navy'
+                          : 'text-slate-secondary hover:text-navy dark:hover:text-white'
+                      }`}
+                    >
+                      Cuenta en dólares
+                    </button>
+                  </div>
+                )}
+
                 <p className="font-body text-sm text-slate-secondary mb-1">Saldo actual</p>
                 <p className="font-display text-2xl font-bold text-mint mb-6">{saldoFormateado}</p>
 

@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuenta } from '../hooks/useCuenta'
 import { abrirCuenta, asignarAliasCuenta, esAptoParaUSD } from '../services/bancoCentral'
-import { generateNumeroCuenta, generateAlias } from '../utils/cuenta'
+import { generateNumeroCuenta, generateAlias, formatMonto } from '../utils/cuenta'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -13,15 +13,6 @@ import { Modal } from '../components/ui/Modal'
 import type { Cuenta } from '../types'
 
 type Estado = 'idle' | 'confirmar' | 'evaluando' | 'rechazada'
-
-function formatMonto(n: number, moneda: 'ARS' | 'USD') {
-  if (moneda === 'USD') {
-    // Intl con currency:'USD' también renderiza el símbolo como "$", igual que ARS
-    // y confunde qué cuenta es cuál — se prefija "US$" a mano para distinguirlas.
-    return `US$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}`
-  }
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
-}
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copiado, setCopiado] = useState(false)
@@ -93,12 +84,10 @@ export function CuentasPage() {
 
       const bcCuenta = await abrirCuenta(persona.dni, 'USD')
       const alias = generateAlias()
-      try {
-        await asignarAliasCuenta(bcCuenta.cbu, alias)
-      } catch {
-        // El alias es un extra sobre el CBU — si falla (ej. colisión rara),
-        // igual seguimos: la cuenta ya quedó creada en el Banco Central.
-      }
+      // El Banco Central tiene que conocer nuestro alias sí o sí, igual que con
+      // la caja en pesos — si esto falla, no seguimos con una cuenta cuyo alias
+      // real no coincide con el que le informamos al banco.
+      await asignarAliasCuenta(bcCuenta.cbu, alias)
 
       const { error: insertError } = await supabase.from('cuentas').insert({
         persona_id: persona.id,
@@ -153,7 +142,7 @@ export function CuentasPage() {
               </div>
 
               <p className="font-body text-sm text-slate-secondary mb-4">
-                Abrí una cuenta en USD con CBU y alias propios. Está sujeta a evaluación crediticia.
+                Abrí una cuenta en USD con CBU y alias propios. Te mantendremos actualizado sobre tu solicitud.
               </p>
 
               {estado === 'rechazada' && (

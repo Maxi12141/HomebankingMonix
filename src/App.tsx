@@ -16,6 +16,7 @@ import { HistorialPage } from './pages/HistorialPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { DepositPage } from './pages/DepositPage'
 import { CuentasPage } from './pages/CuentasPage'
+import { CompraVentaDolaresPage } from './pages/CompraVentaDolaresPage'
 import { ContactosPage } from './pages/ContactosPage'
 import { TarjetaPage } from './pages/TarjetaPage'
 import { ReservasPage } from './pages/ReservasPage'
@@ -47,6 +48,7 @@ function AppRoutes() {
       <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
       <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
       <Route path="/cuentas" element={<RequireAuth><CuentasPage /></RequireAuth>} />
+      <Route path="/dolares" element={<RequireAuth><CompraVentaDolaresPage /></RequireAuth>} />
       <Route path="/transferir" element={<RequireAuth><TransferPage /></RequireAuth>} />
       <Route path="/historial" element={<RequireAuth><HistorialPage /></RequireAuth>} />
       <Route path="/depositar" element={<RequireAuth><DepositPage /></RequireAuth>} />

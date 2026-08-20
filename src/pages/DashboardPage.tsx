@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, Receipt } from 'lucide-react'
+import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, Receipt, ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CountUp from 'react-countup'
 import { useAuthStore } from '../store/authStore'
@@ -16,8 +16,9 @@ import { TransactionDetailModal } from '../components/TransactionDetailModal'
 import { ReservasHomeCard } from '../components/ReservasHomeCard'
 import { AdBanner } from '../components/ui/AdBanner'
 import { estimacionDiaria } from '../hooks/useReserva'
+import { formatMonto as formatMoneda } from '../utils/cuenta'
 import type { TourStep } from '../components/OnboardingTour'
-import type { Movimiento } from '../types'
+import type { Movimiento, Cuenta } from '../types'
 
 function formatMonto(monto: number, tipo: string) {
   const esEntrada = tipo === 'deposito' || tipo === 'transferencia_entrada'
@@ -70,23 +71,14 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 }
 
-export function DashboardPage() {
-  const navigate = useNavigate()
-  const { persona, user } = useAuthStore()
-  const { cuenta, interesHoy } = useCuenta()
-  const { movimientos, loading: loadingMov } = useMovimientos(5)
-  const bankNames = useBankNames(movimientos)
+function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy: number; titulo: string }) {
+  const isUSD = cuenta.moneda === 'USD'
+  const tasa = Number(cuenta.tasa_anual ?? 32)
+  const rendimientoDiario = estimacionDiaria(cuenta.saldo, tasa)
 
-  const [showWelcome, setShowWelcome] = useState(false)
-  const [selectedMovimiento, setSelectedMovimiento] = useState<Movimiento | null>(null)
-  const [showTour, setShowTour] = useState(false)
   const [showData, setShowData] = useState(false)
   const [copiedCbu, setCopiedCbu] = useState(false)
   const [copiedAlias, setCopiedAlias] = useState(false)
-
-  const saldo = cuenta?.saldo ?? 0
-  const tasaSaldo = Number(cuenta?.tasa_anual ?? 32)
-  const rendimientoDiario = estimacionDiaria(saldo, tasaSaldo)
   const prevSaldoRef = useRef<number>(0)
   const [countStart, setCountStart] = useState(0)
   const [animKey, setAnimKey] = useState(0)
@@ -94,28 +86,20 @@ export function DashboardPage() {
   const deltaTimerRef = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
-    if (saldo === prevSaldoRef.current) return
+    if (cuenta.saldo === prevSaldoRef.current) return
     const prev = prevSaldoRef.current
     if (prev !== 0) {
-      const d = saldo - prev
+      const d = cuenta.saldo - prev
       setDelta(d)
       clearTimeout(deltaTimerRef.current)
       deltaTimerRef.current = setTimeout(() => setDelta(null), 2500)
     }
     setCountStart(prev)
-    setAnimKey(k => k + 1)
-    prevSaldoRef.current = saldo
-  }, [saldo])
+    setAnimKey((k) => k + 1)
+    prevSaldoRef.current = cuenta.saldo
+  }, [cuenta.saldo])
 
   useEffect(() => () => clearTimeout(deltaTimerRef.current), [])
-
-  useEffect(() => {
-    if (!user) return
-    if (localStorage.getItem('monix_new_user') === '1') {
-      localStorage.removeItem('monix_new_user')
-      setShowWelcome(true)
-    }
-  }, [user])
 
   function handleCopy(text: string, field: 'cbu' | 'alias') {
     navigator.clipboard.writeText(text)
@@ -127,6 +111,124 @@ export function DashboardPage() {
       setTimeout(() => setCopiedAlias(false), 2000)
     }
   }
+
+  return (
+    <Card className="p-8">
+      <p className="font-body text-sm text-slate-secondary mb-2">{titulo}</p>
+      <p className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-mint leading-none min-w-0">
+        <CountUp
+          key={animKey}
+          start={countStart}
+          end={cuenta.saldo}
+          duration={1.4}
+          decimals={2}
+          decimal={isUSD ? '.' : ','}
+          separator={isUSD ? ',' : '.'}
+          prefix={isUSD ? 'US$' : '$ '}
+          useEasing={true}
+        />
+      </p>
+      <AnimatePresence>
+        {delta !== null && (
+          <motion.p
+            key="delta"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.3 }}
+            className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint' : 'text-red-500 dark:text-red-400'}`}
+          >
+            {delta > 0 ? '+' : ''}{formatMoneda(delta, cuenta.moneda)}
+            {delta > 0 ? ' recibido' : ' enviado'}
+          </motion.p>
+        )}
+      </AnimatePresence>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
+        <p className="font-body text-xs text-slate-secondary">
+          TNA <span className="text-navy dark:text-white font-medium">{tasa.toFixed(2)}%</span>
+        </p>
+        <p className="font-body text-xs text-slate-secondary">
+          Hoy ~{' '}
+          <span className="text-navy dark:text-white font-medium">
+            +{formatMoneda(rendimientoDiario, cuenta.moneda)}
+          </span>
+        </p>
+        {interesHoy > 0 && (
+          <p className="font-body text-xs text-mint inline-flex items-center gap-1">
+            <TrendingUp size={12} />
+            +{formatMoneda(interesHoy, cuenta.moneda)} acreditados
+          </p>
+        )}
+      </div>
+
+      <p className="font-body text-sm text-slate-secondary mt-3">
+        Cuenta N° {cuenta.numero_cuenta ?? '—'} · {cuenta.tipo === 'caja_ahorro' ? 'Caja de Ahorro' : 'Cuenta Corriente'}
+      </p>
+
+      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="font-body text-xs text-slate-secondary">CBU</span>
+          <span className="font-body text-xs font-medium text-navy dark:text-white font-mono">
+            {showData ? (cuenta.cbu ?? '—') : '•••••••••••••••••••••'}
+          </span>
+          <button onClick={() => handleCopy(cuenta.cbu ?? '', 'cbu')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar CBU">
+            {copiedCbu ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
+          </button>
+        </div>
+
+        <span className="text-slate-200 dark:text-white/10 select-none">|</span>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="font-body text-xs text-slate-secondary">Alias</span>
+          <span className="font-body text-xs font-medium text-navy dark:text-white">
+            {showData ? (cuenta.alias ?? '—') : '••••••••••••••'}
+          </span>
+          <button onClick={() => handleCopy(cuenta.alias ?? '', 'alias')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar Alias">
+            {copiedAlias ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
+          </button>
+        </div>
+
+        <button
+          onClick={() => setShowData((v) => !v)}
+          className="ml-auto text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
+          aria-label={showData ? 'Ocultar datos' : 'Mostrar datos'}
+        >
+          {showData ? <EyeOff size={14} /> : <Eye size={14} />}
+        </button>
+      </div>
+    </Card>
+  )
+}
+
+export function DashboardPage() {
+  const navigate = useNavigate()
+  const { persona, user } = useAuthStore()
+  const { cuenta, cuentas, interesHoyPorCuenta } = useCuenta()
+  const { movimientos, loading: loadingMov } = useMovimientos(5)
+  const bankNames = useBankNames(movimientos)
+
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [selectedMovimiento, setSelectedMovimiento] = useState<Movimiento | null>(null)
+  const [showTour, setShowTour] = useState(false)
+  const [monedaActiva, setMonedaActiva] = useState<'ARS' | 'USD'>('ARS')
+  const [direction, setDirection] = useState(1)
+
+  const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
+  const cuentaMostrada = monedaActiva === 'USD' && cuentaUSD ? cuentaUSD : cuenta
+
+  function toggleCuenta(dir: 1 | -1) {
+    setDirection(dir)
+    setMonedaActiva((m) => (m === 'ARS' ? 'USD' : 'ARS'))
+  }
+
+  useEffect(() => {
+    if (!user) return
+    if (localStorage.getItem('monix_new_user') === '1') {
+      localStorage.removeItem('monix_new_user')
+      setShowWelcome(true)
+    }
+  }, [user])
 
   function handleWelcomeClose() {
     setShowWelcome(false)
@@ -153,92 +255,44 @@ export function DashboardPage() {
         </motion.h1>
 
         {/* Saldo principal */}
-        <motion.div variants={itemVariants} id="tour-saldo">
-          <Card className="p-8 mb-6">
-            <p className="font-body text-sm text-slate-secondary mb-2">Saldo disponible</p>
-            <p className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-mint leading-none min-w-0">
-              <CountUp
-                key={animKey}
-                start={countStart}
-                end={saldo}
-                duration={1.4}
-                decimals={2}
-                decimal=","
-                separator="."
-                prefix="$ "
-                useEasing={true}
-              />
-            </p>
-            <AnimatePresence>
-              {delta !== null && (
-                <motion.p
-                  key="delta"
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.3 }}
-                  className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint' : 'text-red-500 dark:text-red-400'}`}
-                >
-                  {delta > 0 ? '+' : ''}{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(delta)}
-                  {delta > 0 ? ' recibido' : ' enviado'}
-                </motion.p>
-              )}
-            </AnimatePresence>
-
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
-              <p className="font-body text-xs text-slate-secondary">
-                TNA <span className="text-navy dark:text-white font-medium">{tasaSaldo.toFixed(2)}%</span>
-              </p>
-              <p className="font-body text-xs text-slate-secondary">
-                Hoy ~{' '}
-                <span className="text-navy dark:text-white font-medium">
-                  +{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(rendimientoDiario)}
-                </span>
-              </p>
-              {interesHoy > 0 && (
-                <p className="font-body text-xs text-mint inline-flex items-center gap-1">
-                  <TrendingUp size={12} />
-                  +{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(interesHoy)} acreditados
-                </p>
-              )}
-            </div>
-
-            <p className="font-body text-sm text-slate-secondary mt-3">
-              Cuenta N° {cuenta?.numero_cuenta ?? '—'} · {cuenta?.tipo === 'caja_ahorro' ? 'Caja de Ahorro' : 'Cuenta Corriente'}
-            </p>
-
-            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="font-body text-xs text-slate-secondary">CBU</span>
-                <span className="font-body text-xs font-medium text-navy dark:text-white font-mono">
-                  {showData ? (cuenta?.cbu ?? '—') : '•••••••••••••••••••••'}
-                </span>
-                <button onClick={() => handleCopy(cuenta?.cbu ?? '', 'cbu')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar CBU">
-                  {copiedCbu ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
-                </button>
-              </div>
-
-              <span className="text-slate-200 dark:text-white/10 select-none">|</span>
-
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="font-body text-xs text-slate-secondary">Alias</span>
-                <span className="font-body text-xs font-medium text-navy dark:text-white">
-                  {showData ? (cuenta?.alias ?? '—') : '••••••••••••••'}
-                </span>
-                <button onClick={() => handleCopy(cuenta?.alias ?? '', 'alias')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar Alias">
-                  {copiedAlias ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
-                </button>
-              </div>
-
-              <button
-                onClick={() => setShowData(v => !v)}
-                className="ml-auto text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
-                aria-label={showData ? 'Ocultar datos' : 'Mostrar datos'}
+        <motion.div variants={itemVariants} id="tour-saldo" className="relative mb-6">
+          <AnimatePresence mode="wait" custom={direction}>
+            {cuentaMostrada && (
+              <motion.div
+                key={cuentaMostrada.id}
+                custom={direction}
+                initial={{ opacity: 0, x: direction * 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: direction * -20 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               >
-                {showData ? <EyeOff size={14} /> : <Eye size={14} />}
+                <SaldoCard
+                  cuenta={cuentaMostrada}
+                  interesHoy={interesHoyPorCuenta[cuentaMostrada.id] ?? 0}
+                  titulo={cuentaUSD ? (monedaActiva === 'USD' ? 'Saldo disponible en dólares' : 'Saldo disponible en pesos') : 'Saldo disponible'}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {cuentaUSD && (
+            <>
+              <button
+                onClick={() => toggleCuenta(-1)}
+                aria-label="Ver la otra cuenta"
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-9 h-9 rounded-full bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-center text-slate-secondary hover:text-mint hover:border-mint/30 transition-colors"
+              >
+                <ChevronLeft size={18} strokeWidth={1.5} />
               </button>
-            </div>
-          </Card>
+              <button
+                onClick={() => toggleCuenta(1)}
+                aria-label="Ver la otra cuenta"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-9 h-9 rounded-full bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-center text-slate-secondary hover:text-mint hover:border-mint/30 transition-colors"
+              >
+                <ChevronRight size={18} strokeWidth={1.5} />
+              </button>
+            </>
+          )}
         </motion.div>
 
         {/* Acciones rápidas */}
