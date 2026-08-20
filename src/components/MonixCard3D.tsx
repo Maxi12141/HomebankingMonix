@@ -8,17 +8,19 @@ interface MonixCard3DProps {
   cbu?: string | null
   alias?: string | null
   tipo?: 'caja_ahorro' | 'cuenta_corriente' | string | null
+  moneda?: 'ARS' | 'USD' | string | null
   showSensitive?: boolean
   frozen?: boolean
 }
 
 /** Número de tarjeta completo (fake, derivado de la cuenta) — mismo esquema que usa TarjetaPage. */
-export function buildPan(numeroCuenta?: string | null, revealed?: boolean) {
+export function buildPan(numeroCuenta?: string | null, revealed?: boolean, moneda?: string | null) {
   const digits = (numeroCuenta ?? '').replace(/\D/g, '')
   const last4 = digits.slice(-4).padStart(4, '0')
-  if (!revealed) return `4532  ••••  ••••  ${last4}`
+  const bin = moneda === 'USD' ? '5591' : '4532'
+  if (!revealed) return `${bin}  ••••  ••••  ${last4}`
   const mid = digits.slice(0, 2).padEnd(2, '0')
-  return `4532  8814  62${mid}  ${last4}`
+  return `${bin}  8814  62${mid}  ${last4}`
 }
 
 /** CVV fake determinístico, derivado de la cuenta (misma cuenta → mismo CVV siempre). */
@@ -45,6 +47,7 @@ export function MonixCard3D({
   cbu,
   alias,
   tipo,
+  moneda,
   showSensitive = false,
   frozen = false,
 }: MonixCard3DProps) {
@@ -67,7 +70,7 @@ export function MonixCard3D({
     return `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,0.35) 0%, transparent 45%)`
   })
 
-  const pan = useMemo(() => buildPan(numeroCuenta, showSensitive), [numeroCuenta, showSensitive])
+  const pan = useMemo(() => buildPan(numeroCuenta, showSensitive, moneda), [numeroCuenta, showSensitive, moneda])
   const cvv = useMemo(() => buildCvv(numeroCuenta), [numeroCuenta])
   const tipoLabel = tipo === 'cuenta_corriente' ? 'Cuenta Corriente' : 'Caja de Ahorro'
   const nombre = (titular || 'Titular MONIX').toUpperCase()
@@ -180,13 +183,19 @@ export function MonixCard3D({
                       MONIX
                     </p>
                     <p className="font-body text-[10px] uppercase tracking-[0.22em] text-mint/90 mt-0.5">
-                      Débito · {tipoLabel}
+                      Débito · {tipoLabel}{moneda === 'USD' ? ' · USD' : ''}
                     </p>
                   </div>
-                  <div className="h-8 w-11 rounded-md bg-gradient-to-br from-[#f0c040] via-[#f8de80] to-[#c8980a] shadow-inner relative overflow-hidden">
-                    <div className="absolute inset-x-0 top-[30%] h-px bg-[#8B6914]/55" />
-                    <div className="absolute inset-x-0 top-[55%] h-px bg-[#8B6914]/55" />
-                    <div className="absolute inset-y-0 left-[40%] w-px bg-[#8B6914]/55" />
+                  <div
+                    className={`h-8 w-11 rounded-md shadow-inner relative overflow-hidden ${
+                      moneda === 'USD'
+                        ? 'bg-gradient-to-br from-[#dfe4ea] via-[#f4f6f8] to-[#b7bdc6]'
+                        : 'bg-gradient-to-br from-[#f0c040] via-[#f8de80] to-[#c8980a]'
+                    }`}
+                  >
+                    <div className={`absolute inset-x-0 top-[30%] h-px ${moneda === 'USD' ? 'bg-[#6b7280]/55' : 'bg-[#8B6914]/55'}`} />
+                    <div className={`absolute inset-x-0 top-[55%] h-px ${moneda === 'USD' ? 'bg-[#6b7280]/55' : 'bg-[#8B6914]/55'}`} />
+                    <div className={`absolute inset-y-0 left-[40%] w-px ${moneda === 'USD' ? 'bg-[#6b7280]/55' : 'bg-[#8B6914]/55'}`} />
                   </div>
                 </div>
 

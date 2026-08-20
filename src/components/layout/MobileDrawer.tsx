@@ -12,7 +12,7 @@ const links = [
   { to: '/pagar', icon: Receipt, label: 'Pagar' },
   { to: '/depositar', icon: PiggyBank, label: 'Depositar' },
   { to: '/reservas', icon: Vault, label: 'Reservas' },
-  { to: '/tarjeta', icon: CreditCard, label: 'Mi tarjeta' },
+  { to: '/tarjeta', icon: CreditCard, label: 'Mis Tarjetas' },
   { to: '/historial', icon: History, label: 'Historial' },
   { to: '/contactos', icon: BookUser, label: 'Contactos' },
   { to: '/perfil', icon: User, label: 'Perfil' },

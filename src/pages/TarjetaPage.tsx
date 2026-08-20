@@ -12,40 +12,73 @@ function freezeKey(cuentaId: string) {
   return `monix_card_frozen_${cuentaId}`
 }
 
+const LIMITES: Record<'ARS' | 'USD', { comercios: string; cajeros: string; online: string }> = {
+  ARS: { comercios: '$ 250.000', cajeros: '$ 80.000', online: '$ 150.000' },
+  USD: { comercios: 'US$ 1.500', cajeros: 'US$ 500', online: 'US$ 1.000' },
+}
+
 export function TarjetaPage() {
   const { persona } = useAuthStore()
-  const { cuenta } = useCuenta()
+  const { cuenta, cuentas } = useCuenta()
   const [frozen, setFrozen] = useState(false)
   const [showSensitive, setShowSensitive] = useState(false)
+  const [monedaActiva, setMonedaActiva] = useState<'ARS' | 'USD'>('ARS')
+
+  const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
+  const cuentaMostrada = monedaActiva === 'USD' && cuentaUSD ? cuentaUSD : cuenta
 
   useEffect(() => {
-    if (!cuenta?.id) return
-    setFrozen(localStorage.getItem(freezeKey(cuenta.id)) === '1')
-  }, [cuenta?.id])
+    if (!cuentaMostrada?.id) return
+    setFrozen(localStorage.getItem(freezeKey(cuentaMostrada.id)) === '1')
+  }, [cuentaMostrada?.id])
 
   function toggleFreeze() {
-    if (!cuenta?.id) return
+    if (!cuentaMostrada?.id) return
     const next = !frozen
     setFrozen(next)
-    localStorage.setItem(freezeKey(cuenta.id), next ? '1' : '0')
+    localStorage.setItem(freezeKey(cuentaMostrada.id), next ? '1' : '0')
     toast.success(next ? 'Tarjeta congelada' : 'Tarjeta descongelada')
   }
 
-  const tipoLabel = cuenta?.tipo === 'cuenta_corriente' ? 'Cuenta Corriente' : 'Caja de Ahorro'
-  const panDisplay = buildPan(cuenta?.numero_cuenta, showSensitive)
-  const cvvDisplay = showSensitive ? buildCvv(cuenta?.numero_cuenta) : '•••'
+  const tipoLabel = cuentaMostrada?.tipo === 'cuenta_corriente' ? 'Cuenta Corriente' : 'Caja de Ahorro'
+  const panDisplay = buildPan(cuentaMostrada?.numero_cuenta, showSensitive, cuentaMostrada?.moneda)
+  const cvvDisplay = showSensitive ? buildCvv(cuentaMostrada?.numero_cuenta) : '•••'
+  const limites = LIMITES[monedaActiva === 'USD' && cuentaUSD ? 'USD' : 'ARS']
 
   return (
     <PageWrapper>
       <div className="max-w-lg mx-auto">
         <div className="mb-6">
           <h1 className="font-display text-2xl font-semibold text-mint">
-            Mi tarjeta
+            Mis Tarjetas
           </h1>
           <p className="font-body text-sm text-slate-secondary mt-1">
             Débito MONIX vinculada a tu {tipoLabel.toLowerCase()}
           </p>
         </div>
+
+        {cuentaUSD && (
+          <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
+            <button
+              type="button"
+              onClick={() => setMonedaActiva('ARS')}
+              className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
+                monedaActiva === 'ARS' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
+              }`}
+            >
+              Tarjeta en pesos
+            </button>
+            <button
+              type="button"
+              onClick={() => setMonedaActiva('USD')}
+              className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
+                monedaActiva === 'USD' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
+              }`}
+            >
+              Tarjeta en dólares
+            </button>
+          </div>
+        )}
 
         {frozen && (
           <Card className="p-4 mb-4 flex items-start gap-3 border-amber-400/30 bg-amber-50 dark:bg-amber-400/10">
@@ -62,11 +95,13 @@ export function TarjetaPage() {
         )}
 
         <MonixCard3D
+          key={cuentaMostrada?.id}
           titular={[persona?.nombre, persona?.apellido].filter(Boolean).join(' ')}
-          numeroCuenta={cuenta?.numero_cuenta}
-          cbu={cuenta?.cbu}
-          alias={cuenta?.alias}
-          tipo={cuenta?.tipo}
+          numeroCuenta={cuentaMostrada?.numero_cuenta}
+          cbu={cuentaMostrada?.cbu}
+          alias={cuentaMostrada?.alias}
+          tipo={cuentaMostrada?.tipo}
+          moneda={cuentaMostrada?.moneda}
           showSensitive={showSensitive}
           frozen={frozen}
         />
@@ -131,7 +166,7 @@ export function TarjetaPage() {
             <div className="flex items-center justify-between gap-3">
               <dt className="font-body text-xs text-slate-secondary uppercase tracking-wider">Cuenta</dt>
               <dd className="font-body text-sm text-navy dark:text-white text-right">
-                {cuenta?.numero_cuenta ?? '—'} · {tipoLabel}
+                {cuentaMostrada?.numero_cuenta ?? '—'} · {tipoLabel}
               </dd>
             </div>
           </dl>
@@ -145,9 +180,9 @@ export function TarjetaPage() {
             </h2>
           </div>
           <div className="space-y-3">
-            <LimitRow label="Compras en comercios" value="$ 250.000" />
-            <LimitRow label="Extracciones en cajeros" value="$ 80.000" />
-            <LimitRow label="Compras online" value="$ 150.000" />
+            <LimitRow label="Compras en comercios" value={limites.comercios} />
+            <LimitRow label="Extracciones en cajeros" value={limites.cajeros} />
+            <LimitRow label="Compras online" value={limites.online} />
           </div>
         </Card>
 
