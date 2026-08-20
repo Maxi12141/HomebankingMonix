@@ -13,35 +13,37 @@ function roundMoney(n: number) {
 }
 
 export function useCuenta() {
-  const { cuenta, setCuenta, updateSaldo } = useCuentaStore()
+  const { cuenta, setCuenta, cuentas, setCuentas, updateSaldoCuenta } = useCuentaStore()
   const { user } = useAuthStore()
   const userId = user?.id
   const [interesHoy, setInteresHoy] = useState(0)
 
   useEffect(() => {
-    if (userId) fetchCuenta(userId)
+    if (userId) fetchCuentas(userId)
   }, [userId])
 
-  async function fetchCuenta(personaId: string) {
+  async function fetchCuentas(personaId: string) {
     const { data, error } = await supabase
       .from('cuentas')
       .select('*')
       .eq('persona_id', personaId)
       .eq('activa', true)
-      .maybeSingle()
     if (error) {
-      console.error('Error al cargar cuenta:', error.message)
+      console.error('Error al cargar cuentas:', error.message)
       return
     }
-    if (!data) {
+    if (!data || data.length === 0) {
+      setCuentas([])
       setCuenta(null)
       setInteresHoy(0)
       return
     }
 
-    const accrued = await accrueInterest(data as Cuenta)
-    setCuenta(accrued.cuenta)
-    setInteresHoy(accrued.interes)
+    const accrued = await Promise.all((data as Cuenta[]).map(accrueInterest))
+    const todas = accrued.map((a) => a.cuenta)
+    setCuentas(todas)
+    setCuenta(todas.find((c) => c.moneda === 'ARS') ?? todas[0])
+    setInteresHoy(accrued.find((a) => a.cuenta.moneda === 'ARS')?.interes ?? 0)
   }
 
   async function accrueInterest(current: Cuenta): Promise<{ cuenta: Cuenta; interes: number }> {
@@ -90,29 +92,32 @@ export function useCuenta() {
     return { cuenta: updated as Cuenta, interes: interest }
   }
 
+  const cuentaIds = cuentas.map((c) => c.id).join(',')
+
   useEffect(() => {
-    const id = cuenta?.id
-    if (!id) return
+    if (!cuentaIds) return
 
-    const ch = supabase
-      .channel(`cuenta-rt-${id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'cuentas',
-        filter: `id=eq.${id}`,
-      }, (payload) => {
-        const newSaldo = (payload.new as Record<string, unknown>).saldo
-        if (typeof newSaldo === 'number') updateSaldo(newSaldo)
-      })
-      .subscribe()
+    const channels = cuentaIds.split(',').map((id) =>
+      supabase
+        .channel(`cuenta-rt-${id}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'cuentas',
+          filter: `id=eq.${id}`,
+        }, (payload) => {
+          const newSaldo = (payload.new as Record<string, unknown>).saldo
+          if (typeof newSaldo === 'number') updateSaldoCuenta(id, newSaldo)
+        })
+        .subscribe()
+    )
 
-    return () => { supabase.removeChannel(ch) }
-  }, [cuenta?.id])
+    return () => { channels.forEach((ch) => supabase.removeChannel(ch)) }
+  }, [cuentaIds])
 
   async function refreshCuenta() {
-    if (user) await fetchCuenta(user.id)
+    if (user) await fetchCuentas(user.id)
   }
 
-  return { cuenta, refreshCuenta, interesHoy }
+  return { cuenta, cuentas, refreshCuenta, interesHoy }
 }

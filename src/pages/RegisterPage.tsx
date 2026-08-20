@@ -6,27 +6,11 @@ import { useThemeStore } from '../stores/themeStore'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
 import { registrarPersona, asignarAlias } from '../services/bancoCentral'
+import { generateNumeroCuenta, generateAlias } from '../utils/cuenta'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { DatePicker } from '../components/ui/DatePicker'
 import type { RegisterFormData } from '../types'
-
-const PALABRAS = [
-  'sol', 'mar', 'rio', 'paz', 'luz', 'rey', 'pan', 'oro', 'voz',
-  'tren', 'nave', 'isla', 'faro', 'cabo', 'pino', 'roca', 'vino', 'miel',
-  'lago', 'flor', 'nube', 'vela', 'luna', 'boca', 'loma', 'duna', 'nota',
-  'pala', 'rama', 'zona', 'alba', 'foca', 'lana', 'mano', 'puma', 'ruta',
-  'taza', 'arco', 'cima', 'hoja', 'mesa', 'olmo', 'polo', 'soga', 'toro',
-]
-
-function generateNumeroCuenta(): string {
-  return Math.floor(1000000000 + Math.random() * 9000000000).toString()
-}
-
-function generateAlias(): string {
-  const pick = () => PALABRAS[Math.floor(Math.random() * PALABRAS.length)]
-  return `${pick()}.${pick()}.${pick()}`
-}
 
 export function RegisterPage() {
   const navigate = useNavigate()

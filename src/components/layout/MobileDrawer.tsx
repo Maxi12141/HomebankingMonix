@@ -1,11 +1,12 @@
 import { NavLink, Link } from 'react-router-dom'
-import { LayoutDashboard, ArrowRightLeft, History, User, LogOut, X, PiggyBank, BookUser, CreditCard, Vault, Receipt } from 'lucide-react'
+import { LayoutDashboard, ArrowRightLeft, History, User, LogOut, X, PiggyBank, BookUser, CreditCard, Vault, Receipt, Landmark } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useThemeStore } from '../../stores/themeStore'
 import { MonixLogoNavbar } from '../MonixLogoNavbar'
 
 const links = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Inicio' },
+  { to: '/cuentas', icon: Landmark, label: 'Cuentas' },
   { to: '/transferir', icon: ArrowRightLeft, label: 'Transferir' },
   { to: '/pagar', icon: Receipt, label: 'Pagar' },
   { to: '/depositar', icon: PiggyBank, label: 'Depositar' },

@@ -9,10 +9,19 @@ const HEADERS: HeadersInit = {
   'x-environment': 'test',
 }
 
-function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response> {
+async function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
-  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer))
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('La operación tardó demasiado. Probá de nuevo.')
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
@@ -139,6 +148,24 @@ export interface BCCuenta {
   apellido: string
   moneda: 'ARS' | 'USD'
   saldo: number
+}
+
+export async function abrirCuenta(dni: string, moneda: 'ARS' | 'USD'): Promise<BCCuenta> {
+  const res = await fetchWithTimeout(`${BASE_URL}/accounts`, {
+    method: 'POST',
+    headers: HEADERS,
+    body: JSON.stringify({ dni, moneda }),
+  })
+  return handleResponse<BCCuenta>(res)
+}
+
+export async function asignarAliasCuenta(cbu: string, alias: string): Promise<BCCuenta> {
+  const res = await fetchWithTimeout(`${BASE_URL}/accounts/${cbu}/alias`, {
+    method: 'PUT',
+    headers: HEADERS,
+    body: JSON.stringify({ alias }),
+  })
+  return handleResponse<BCCuenta>(res)
 }
 
 export async function buscarCuentaPorCBU(cbu: string): Promise<BCCuenta> {
