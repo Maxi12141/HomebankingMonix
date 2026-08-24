@@ -1,5 +1,7 @@
 # Monix — Homebanking Digital
 
+MAXI
+
 Aplicación de homebanking completa construida con **React + TypeScript + Vite** y **Supabase** como backend. Simula las operaciones de un banco digital argentino: registro, autenticación, transferencias, historial, contactos y más. Se integra con una **API externa del Banco Central** (de la cátedra de Práctica Profesional) para operar en un entorno bancario compartido entre todos los alumnos.
 
 ---
