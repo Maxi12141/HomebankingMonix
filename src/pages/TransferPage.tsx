@@ -10,6 +10,7 @@ import { useCuentaStore } from '../store/cuentaStore'
 import { useAuthStore } from '../store/authStore'
 import { useContactos } from '../hooks/useContactos'
 import { useTransferenciasRecientes } from '../hooks/useTransferenciasRecientes'
+import { formatMonto } from '../utils/cuenta'
 import { AgendaContactosPanel } from '../components/AgendaContactosPanel'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
@@ -83,17 +84,28 @@ const stepVariants = {
 export function TransferPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { cuenta, refreshCuenta } = useCuenta()
-  const { updateSaldo } = useCuentaStore()
+  const { cuenta, cuentas, refreshCuenta } = useCuenta()
+  const { updateSaldoCuenta } = useCuentaStore()
   const { persona } = useAuthStore()
   const { isGuardado, guardar, eliminar } = useContactos()
-  const recientes = useTransferenciasRecientes(6)
 
   const [step, setStep] = useState<Step>('form')
+  const [monedaOrigen, setMonedaOrigen] = useState<'ARS' | 'USD'>('ARS')
   const [destino, setDestino] = useState('')
   const [destinatario, setDestinatario] = useState<Destinatario | null>(null)
   const [buscando, setBuscando] = useState(false)
   const [busquedaError, setBusquedaError] = useState('')
+
+  const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
+  const cuentaOrigen = monedaOrigen === 'USD' && cuentaUSD ? cuentaUSD : cuenta
+  const recientes = useTransferenciasRecientes(cuentaOrigen?.id, 6)
+
+  function cambiarMonedaOrigen(m: 'ARS' | 'USD') {
+    setMonedaOrigen(m)
+    setDestino('')
+    setDestinatario(null)
+    setBusquedaError('')
+  }
 
   const [monto, setMonto] = useState('')
   const [descripcion, setDescripcion] = useState('Varios')
@@ -182,28 +194,28 @@ export function TransferPage() {
   function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    if (!cuenta || !destinatario) return
+    if (!cuentaOrigen || !destinatario) return
     if (isNaN(montoNum) || montoNum <= 0) { setError('Ingresá un monto válido'); return }
-    if (montoNum > cuenta.saldo) { setError('Saldo insuficiente para realizar la transferencia'); return }
-    if (destinatario.cbu === cuenta.cbu) { setError('No podés transferirte a vos mismo'); return }
-    if (destinatario.moneda !== cuenta.moneda) { setError('Todavía no se pueden hacer transferencias entre cuentas de distinta moneda'); return }
+    if (montoNum > cuentaOrigen.saldo) { setError('Saldo insuficiente para realizar la transferencia'); return }
+    if (destinatario.cbu === cuentaOrigen.cbu) { setError('No podés transferirte a vos mismo'); return }
+    if (destinatario.moneda !== cuentaOrigen.moneda) { setError('Todavía no se pueden hacer transferencias entre cuentas de distinta moneda'); return }
     setStep('confirm')
   }
 
   async function handleConfirm() {
-    if (!destinatario) return
-    if (!cuenta?.cbu) { setError('Tu cuenta no tiene CBU asignado. Contactá al soporte.'); return }
+    if (!destinatario || !cuentaOrigen) return
+    if (!cuentaOrigen.cbu) { setError('Tu cuenta no tiene CBU asignado. Contactá al soporte.'); return }
     setLoading(true)
     setError('')
 
     try {
-      await transferir(cuenta.cbu, destinatario.cbu, montoNum, cuenta.saldo)
+      await transferir(cuentaOrigen.cbu, destinatario.cbu, montoNum, cuentaOrigen.saldo)
 
-      const nuevoSaldoOrigen = cuenta.saldo - montoNum
+      const nuevoSaldoOrigen = cuentaOrigen.saldo - montoNum
       const descValue = mensaje.trim() ? `${descripcion}|${mensaje.trim()}` : descripcion
 
       const { error: errSaldoOrigen } = await supabase
-        .from('cuentas').update({ saldo: nuevoSaldoOrigen }).eq('id', cuenta.id)
+        .from('cuentas').update({ saldo: nuevoSaldoOrigen }).eq('id', cuentaOrigen.id)
       if (errSaldoOrigen) throw new Error()
 
       if (destinatario.cuentaId && destinatario.saldoActual !== undefined) {
@@ -215,17 +227,17 @@ export function TransferPage() {
           monto: montoNum,
           saldo_resultante: nuevoSaldoDestino,
           descripcion: descValue,
-          cuenta_destino_id: cuenta.id,
+          cuenta_destino_id: cuentaOrigen.id,
           destinatario_nombre: persona?.nombre ?? null,
           destinatario_apellido: persona?.apellido ?? null,
           destinatario_dni: persona?.dni ?? null,
-          destino_cbu: cuenta.cbu ?? null,
-          destino_alias: cuenta.alias ?? null,
+          destino_cbu: cuentaOrigen.cbu ?? null,
+          destino_alias: cuentaOrigen.alias ?? null,
         })
       }
 
       await supabase.from('movimientos').insert({
-        cuenta_id: cuenta.id,
+        cuenta_id: cuentaOrigen.id,
         tipo: 'transferencia_salida',
         monto: montoNum,
         saldo_resultante: nuevoSaldoOrigen,
@@ -238,7 +250,7 @@ export function TransferPage() {
         destino_alias: destinatario.alias ?? null,
       })
 
-      updateSaldo(nuevoSaldoOrigen)
+      updateSaldoCuenta(cuentaOrigen.id, nuevoSaldoOrigen)
       await refreshCuenta()
       setStep('success')
       toast.success('¡Transferencia realizada con éxito!')
@@ -262,8 +274,9 @@ export function TransferPage() {
     setError('')
   }
 
-  const saldoFormateado = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(cuenta?.saldo ?? 0)
-  const montoFormateado = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(montoNum || 0)
+  const monedaActual = cuentaOrigen?.moneda ?? 'ARS'
+  const saldoFormateado = formatMonto(cuentaOrigen?.saldo ?? 0, monedaActual)
+  const montoFormateado = formatMonto(montoNum || 0, monedaActual)
   const recientesFiltrados = recientes.filter((r) => !isGuardado(r.cbu))
 
   return (
@@ -289,12 +302,37 @@ export function TransferPage() {
             {step === 'form' && (
               <motion.div key="form" variants={stepVariants} initial="initial" animate="animate" exit="exit">
                 <Card className="p-8">
+                  {cuentaUSD && (
+                    <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
+                      <button
+                        type="button"
+                        onClick={() => cambiarMonedaOrigen('ARS')}
+                        className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
+                          monedaOrigen === 'ARS' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
+                        }`}
+                      >
+                        Desde pesos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => cambiarMonedaOrigen('USD')}
+                        className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
+                          monedaOrigen === 'USD' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
+                        }`}
+                      >
+                        Desde dólares
+                      </button>
+                    </div>
+                  )}
+
                   <p className="font-body text-sm text-slate-secondary mb-1">Saldo disponible</p>
                   <p className="font-display text-2xl font-bold text-mint mb-6">{saldoFormateado}</p>
 
                   <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
                     <div>
-                      <label className="block text-sm font-body text-slate-secondary mb-1">CBU o alias destino</label>
+                      <label className="block text-sm font-body text-slate-secondary mb-1">
+                        CBU o alias destino {monedaOrigen === 'USD' && <span className="text-slate-secondary/70">(cuenta en dólares)</span>}
+                      </label>
                       <div className="flex gap-2">
                         <input
                           className="flex-1 bg-slate-input dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-xl px-4 py-3 text-navy dark:text-white font-body text-sm placeholder-slate-secondary focus:outline-none focus:border-mint/50 transition-colors"
@@ -322,8 +360,7 @@ export function TransferPage() {
                               {destinatario.nombre} {destinatario.apellido}
                             </p>
                             <p className="text-xs font-body text-slate-secondary mt-0.5 truncate">
-                              CBU: {destinatario.cbu}
-                              {!destinatario.cuentaId && ' · Banco externo'}
+                              CBU: {destinatario.cbu} · {destinatario.moneda === 'USD' ? 'Cuenta en dólares' : 'Cuenta en pesos'}
                             </p>
                           </div>
                           {isGuardado(destinatario.cbu) ? (

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { useCuentaStore } from '../store/cuentaStore'
 
 export interface TransferenciaReciente {
   nombre: string
@@ -10,17 +9,20 @@ export interface TransferenciaReciente {
   fecha: string
 }
 
-export function useTransferenciasRecientes(limit = 6): TransferenciaReciente[] {
-  const { cuenta } = useCuentaStore()
+/** Transferencias recientes hechas DESDE la cuenta indicada — cada cuenta (ARS/USD) tiene las suyas. */
+export function useTransferenciasRecientes(cuentaId: string | undefined, limit = 6): TransferenciaReciente[] {
   const [recientes, setRecientes] = useState<TransferenciaReciente[]>([])
 
   useEffect(() => {
-    if (!cuenta?.id) return
+    if (!cuentaId) {
+      setRecientes([])
+      return
+    }
 
     supabase
       .from('movimientos')
       .select('destinatario_nombre, destinatario_apellido, destino_cbu, destino_alias, created_at')
-      .eq('cuenta_id', cuenta.id)
+      .eq('cuenta_id', cuentaId)
       .eq('tipo', 'transferencia_salida')
       .not('destino_cbu', 'is', null)
       .order('created_at', { ascending: false })
@@ -43,7 +45,7 @@ export function useTransferenciasRecientes(limit = 6): TransferenciaReciente[] {
         }
         setRecientes(unique)
       })
-  }, [cuenta?.id, limit])
+  }, [cuentaId, limit])
 
   return recientes
 }

@@ -36,10 +36,17 @@ export interface BCPersona {
   cbu: string
   nombre: string
   apellido: string
-  dni: string
-  // No documentado en el schema de GET /persons/{cbu} y /persons/alias/{alias},
-  // pero POST /persons sí lo devuelve cuando el DNI ya estaba registrado.
+  // dni sólo viene en la respuesta de POST /persons — GET /persons/{cbu} y
+  // /persons/alias/{alias} no lo incluyen (confirmado contra test 19 ago 2026).
+  dni?: string
   alias?: string | null
+  // La búsqueda de /persons es GLOBAL: devuelve cualquier cuenta que matchee
+  // el CBU/alias, sea ARS o USD, con su moneda real — no está limitada a la
+  // caja en pesos como se asumía antes (confirmado contra test 19 ago 2026:
+  // GET /persons/alias/{alias} de un alias USD devuelve moneda:"USD").
+  moneda?: 'ARS' | 'USD' | string
+  bankCode?: number
+  saldo?: number
 }
 
 export interface BCTransaccion {
@@ -183,21 +190,26 @@ export async function buscarCuentaPorAlias(alias: string): Promise<BCCuenta> {
 export interface BCDestinatario {
   nombre: string
   apellido: string
-  dni: string
+  dni: string | null
   cbu: string
   alias: string | null
   moneda: 'ARS' | 'USD'
+  bankCode?: number
 }
 
 function esNotFound(err: unknown): boolean {
   return err instanceof Error && err.message.startsWith('[404]')
 }
 
+function monedaValida(m: string | undefined): 'ARS' | 'USD' {
+  return m === 'USD' ? 'USD' : 'ARS'
+}
+
 /**
- * Busca un CBU o alias probando primero /persons (cuenta en ARS) y, si no
- * aparece ahí, reintenta contra /accounts (cuenta en otra moneda). Los cuatro
- * endpoints de búsqueda del Banco Central no tienen schema de respuesta
- * documentado — validar campos reales contra `test` si algo no calza.
+ * Busca un CBU o alias. /persons es una búsqueda GLOBAL — devuelve cualquier
+ * cuenta (ARS o USD) que matchee, con su `moneda` real — así que alcanza como
+ * primer intento. Se mantiene el reintento contra /accounts por las dudas
+ * (algún caso no cubierto por /persons), pero hoy no debería hacer falta.
  */
 export async function buscarDestinatarioBC(input: string, esCBU: boolean): Promise<BCDestinatario> {
   try {
@@ -205,10 +217,11 @@ export async function buscarDestinatarioBC(input: string, esCBU: boolean): Promi
     return {
       nombre: persona.nombre,
       apellido: persona.apellido,
-      dni: persona.dni,
+      dni: persona.dni ?? null,
       cbu: persona.cbu,
       alias: persona.alias ?? null,
-      moneda: 'ARS',
+      moneda: monedaValida(persona.moneda),
+      bankCode: persona.bankCode,
     }
   } catch (err) {
     if (!esNotFound(err)) throw err
@@ -218,10 +231,10 @@ export async function buscarDestinatarioBC(input: string, esCBU: boolean): Promi
   return {
     nombre: cuenta.nombre,
     apellido: cuenta.apellido,
-    dni: cuenta.dni,
+    dni: cuenta.dni ?? null,
     cbu: cuenta.cbu,
     alias: cuenta.alias,
-    moneda: cuenta.moneda,
+    moneda: monedaValida(cuenta.moneda),
   }
 }
 
