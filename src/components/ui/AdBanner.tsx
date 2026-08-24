@@ -14,7 +14,7 @@ import {
   CalendarClock,
 } from 'lucide-react'
 
-type PanelId = 'ofertas' | 'cashback' | 'financiacion' | null
+type PanelId = 'ofertas' | 'cashback' | 'financiacion'
 
 const OFERTAS = [
   { icon: Store, title: '10% supermercados', detail: 'Todos los martes en cadenas adheridas' },
@@ -34,10 +34,68 @@ const PLANES = [
   { icon: CalendarClock, title: '12 cuotas', detail: 'Cuotas fijas mensuales' },
 ]
 
-export function AdBanner() {
-  const [open, setOpen] = useState<PanelId>(null)
+const PROMO_CARDS: {
+  id: PanelId
+  href: string
+  title: string
+  subtitle: string
+  accent: 'mint' | 'navy' | 'slate'
+  icon: ReactNode
+  items: { icon: LucideIcon; title: string; detail: string }[]
+  cta: string
+}[] = [
+  {
+    id: 'ofertas',
+    href: '/promos',
+    title: 'Ofertas Monix',
+    subtitle: 'Descuentos exclusivos para clientes',
+    accent: 'mint',
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect x="2" y="4" width="20" height="16" rx="3" fill="#E6FFFA" />
+        <path d="M7 10h10M7 14h6" stroke="#2DD4BF" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+    items: OFERTAS,
+    cta: 'Ver todas las ofertas',
+  },
+  {
+    id: 'cashback',
+    href: '/cashback',
+    title: 'Cashback',
+    subtitle: 'Recibí devolución en compras seleccionadas',
+    accent: 'navy',
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle cx="12" cy="12" r="9" fill="#EEF2FF" />
+        <path d="M12 8v8M8 12h8" stroke="#3730A3" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+    items: CASHBACKS,
+    cta: 'Ver mi cashback',
+  },
+  {
+    id: 'financiacion',
+    href: '/financiacion',
+    title: 'Financiá con Monix',
+    subtitle: 'Planes flexibles pensados para vos',
+    accent: 'slate',
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect x="3" y="6" width="18" height="12" rx="2" className="fill-slate-100 dark:fill-white/10" />
+        <path d="M8 12h8M8 15h5" stroke="#0F172A" className="dark:stroke-white" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+    items: PLANES,
+    cta: 'Simular cuotas',
+  },
+]
 
-  function toggle(id: Exclude<PanelId, null>) {
+export function AdBanner() {
+  const [open, setOpen] = useState<PanelId | null>(null)
+  const active = PROMO_CARDS.find((card) => card.id === open) ?? null
+
+  function toggle(id: PanelId) {
     setOpen((prev) => (prev === id ? null : id))
   }
 
@@ -76,57 +134,56 @@ export function AdBanner() {
         </div>
       </Link>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <PromoCard
-          active={open === 'ofertas'}
-          onToggle={() => toggle('ofertas')}
-          href="/promos"
-          title="Ofertas Monix"
-          subtitle="Descuentos exclusivos para clientes"
-          accent="mint"
-          icon={
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <rect x="2" y="4" width="20" height="16" rx="3" fill="#E6FFFA" />
-              <path d="M7 10h10M7 14h6" stroke="#2DD4BF" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          }
-          items={OFERTAS}
-          cta="Ver todas las ofertas"
-        />
+      <div>
+        <div className="truco-hand" data-fanned={open ? 'true' : undefined}>
+          {PROMO_CARDS.map((card) => (
+            <PromoCard
+              key={card.id}
+              active={open === card.id}
+              onToggle={() => toggle(card.id)}
+              title={card.title}
+              subtitle={card.subtitle}
+              accent={card.accent}
+              icon={card.icon}
+            />
+          ))}
+        </div>
 
-        <PromoCard
-          active={open === 'cashback'}
-          onToggle={() => toggle('cashback')}
-          href="/cashback"
-          title="Cashback"
-          subtitle="Recibí devolución en compras seleccionadas"
-          accent="navy"
-          icon={
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <circle cx="12" cy="12" r="9" fill="#EEF2FF" />
-              <path d="M12 8v8M8 12h8" stroke="#3730A3" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          }
-          items={CASHBACKS}
-          cta="Ver mi cashback"
-        />
-
-        <PromoCard
-          active={open === 'financiacion'}
-          onToggle={() => toggle('financiacion')}
-          href="/financiacion"
-          title="Financiá con Monix"
-          subtitle="Planes flexibles pensados para vos"
-          accent="slate"
-          icon={
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <rect x="3" y="6" width="18" height="12" rx="2" className="fill-slate-100 dark:fill-white/10" />
-              <path d="M8 12h8M8 15h5" stroke="#0F172A" className="dark:stroke-white" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          }
-          items={PLANES}
-          cta="Simular cuotas"
-        />
+        <AnimatePresence initial={false}>
+          {active && (
+            <motion.div
+              key={active.id}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-1 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-navy/40 px-4 pb-4 pt-3 space-y-2">
+                {active.items.map((item) => (
+                  <div
+                    key={item.title}
+                    className="flex items-start gap-2.5 rounded-xl bg-white/70 dark:bg-navy/40 px-3 py-2.5"
+                  >
+                    <item.icon size={16} className="text-mint shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="font-body text-sm font-medium text-navy dark:text-white">
+                        {item.title}
+                      </p>
+                      <p className="font-body text-xs text-slate-secondary">{item.detail}</p>
+                    </div>
+                  </div>
+                ))}
+                <Link
+                  to={active.href}
+                  className="block text-center rounded-xl bg-mint text-navy font-body text-sm font-semibold py-2.5 hover:bg-mint-hover transition-colors"
+                >
+                  {active.cta}
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
@@ -135,23 +192,17 @@ export function AdBanner() {
 function PromoCard({
   active,
   onToggle,
-  href,
   title,
   subtitle,
   accent,
   icon,
-  items,
-  cta,
 }: {
   active: boolean
   onToggle: () => void
-  href: string
   title: string
   subtitle: string
   accent: 'mint' | 'navy' | 'slate'
   icon: ReactNode
-  items: { icon: LucideIcon; title: string; detail: string }[]
-  cta: string
 }) {
   const shell =
     accent === 'mint'
@@ -165,65 +216,33 @@ function PromoCard({
 
   return (
     <div
-      className={`rounded-lg border transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${shell} ${
-        active
-          ? 'shadow-md ring-1 ring-mint/30'
-          : 'hover:shadow-md hover:-translate-y-0.5'
+      className={`truco-card rounded-xl border ${shell} ${
+        active ? 'ring-1 ring-mint/30' : ''
       }`}
+      data-lifted={active ? 'true' : undefined}
     >
       <button
         type="button"
         onClick={onToggle}
-        className="w-full text-left p-4 flex items-center gap-3"
+        className="w-full h-full text-left p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 cursor-pointer"
         aria-expanded={active}
       >
-        <div className="shrink-0">{icon}</div>
+        <div className="shrink-0 hidden sm:block">{icon}</div>
         <div className="flex-1 min-w-0">
-          <div className={`text-lg font-semibold ${titleCls}`}>{title}</div>
-          <div className="text-sm text-slate-secondary mt-1">{subtitle}</div>
+          <div className={`text-xs sm:text-lg font-semibold leading-tight line-clamp-2 sm:line-clamp-1 ${titleCls}`}>
+            {title}
+          </div>
+          <div className="hidden sm:block text-sm text-slate-secondary mt-1 line-clamp-2">
+            {subtitle}
+          </div>
         </div>
         <ChevronDown
-          size={18}
+          size={16}
           className={`shrink-0 text-slate-secondary transition-transform duration-200 ${
             active ? 'rotate-180 text-mint' : ''
           }`}
         />
       </button>
-
-      <AnimatePresence initial={false}>
-        {active && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4 space-y-2 border-t border-slate-200/70 dark:border-white/10 pt-3">
-              {items.map((item) => (
-                <div
-                  key={item.title}
-                  className="flex items-start gap-2.5 rounded-xl bg-white/70 dark:bg-navy/40 px-3 py-2.5"
-                >
-                  <item.icon size={16} className="text-mint shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="font-body text-sm font-medium text-navy dark:text-white">
-                      {item.title}
-                    </p>
-                    <p className="font-body text-xs text-slate-secondary">{item.detail}</p>
-                  </div>
-                </div>
-              ))}
-              <Link
-                to={href}
-                className="block text-center rounded-xl bg-mint text-navy font-body text-sm font-semibold py-2.5 hover:bg-mint-hover transition-colors"
-              >
-                {cta}
-              </Link>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
