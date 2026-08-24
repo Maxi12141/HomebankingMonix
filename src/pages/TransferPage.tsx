@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle, Search, Star, Home, UserPlus, ChevronDown } from 'lucide-react'
+import { CheckCircle, Search, Star, Home, UserPlus, ChevronDown, ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
@@ -10,6 +10,7 @@ import { useCuentaStore } from '../store/cuentaStore'
 import { useAuthStore } from '../store/authStore'
 import { useContactos } from '../hooks/useContactos'
 import { useTransferenciasRecientes } from '../hooks/useTransferenciasRecientes'
+import { useMercadoFinanciero } from '../hooks/useMercadoFinanciero'
 import { formatMonto } from '../utils/cuenta'
 import { AgendaContactosPanel } from '../components/AgendaContactosPanel'
 import { PageWrapper } from '../components/layout/PageWrapper'
@@ -17,7 +18,8 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 
-type Step = 'form' | 'confirm' | 'success'
+type Step = 'buscar' | 'detalle' | 'resumen' | 'exito'
+type Moneda = 'ARS' | 'USD'
 
 interface Destinatario {
   nombre: string
@@ -25,7 +27,7 @@ interface Destinatario {
   dni: string | null
   cbu: string
   alias: string | null
-  moneda: 'ARS' | 'USD'
+  moneda: Moneda
   cuentaId?: string
   saldoActual?: number
 }
@@ -81,6 +83,21 @@ const stepVariants = {
   exit: { opacity: 0, x: -40, transition: { duration: 0.2 } },
 }
 
+const REFRESH_COTIZACION_MS = 30_000
+
+function roundMoney(n: number) {
+  return Math.round((n + Number.EPSILON) * 100) / 100
+}
+
+/** Convierte un monto entre ARS y USD a la cotización oficial del día — misma
+ * convención que la pantalla de Compra y Venta: comprar USD usa "venta",
+ * vender USD usa "compra". */
+function convertir(monto: number, monedaOrigen: Moneda, monedaDestino: Moneda, oficial: { compra: number; venta: number }): number {
+  if (monedaOrigen === monedaDestino) return monto
+  if (monedaOrigen === 'ARS' && monedaDestino === 'USD') return roundMoney(monto / oficial.venta)
+  return roundMoney(monto * oficial.compra)
+}
+
 export function TransferPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -88,24 +105,14 @@ export function TransferPage() {
   const { updateSaldoCuenta } = useCuentaStore()
   const { persona } = useAuthStore()
   const { isGuardado, guardar, eliminar } = useContactos()
+  const { data: mercado } = useMercadoFinanciero(REFRESH_COTIZACION_MS)
 
-  const [step, setStep] = useState<Step>('form')
-  const [monedaOrigen, setMonedaOrigen] = useState<'ARS' | 'USD'>('ARS')
+  const [step, setStep] = useState<Step>('buscar')
+  const [monedaOrigen, setMonedaOrigen] = useState<Moneda>('ARS')
   const [destino, setDestino] = useState('')
   const [destinatario, setDestinatario] = useState<Destinatario | null>(null)
   const [buscando, setBuscando] = useState(false)
   const [busquedaError, setBusquedaError] = useState('')
-
-  const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
-  const cuentaOrigen = monedaOrigen === 'USD' && cuentaUSD ? cuentaUSD : cuenta
-  const recientes = useTransferenciasRecientes(cuentaOrigen?.id, 6)
-
-  function cambiarMonedaOrigen(m: 'ARS' | 'USD') {
-    setMonedaOrigen(m)
-    setDestino('')
-    setDestinatario(null)
-    setBusquedaError('')
-  }
 
   const [monto, setMonto] = useState('')
   const [descripcion, setDescripcion] = useState('Varios')
@@ -113,7 +120,19 @@ export function TransferPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const montoNum = parseFloat(monto)
+  const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
+  const cuentaOrigen = monedaOrigen === 'USD' && cuentaUSD ? cuentaUSD : cuenta
+  const recientes = useTransferenciasRecientes(cuentaOrigen?.id, 6)
+
+  const oficial = mercado?.dolares.find((d) => d.casa === 'oficial')
+  const montoNum = parseFloat(monto) || 0
+  const esConversion = !!(cuentaOrigen && destinatario && cuentaOrigen.moneda !== destinatario.moneda)
+  const montoDestino = esConversion && oficial && cuentaOrigen && destinatario
+    ? convertir(montoNum, cuentaOrigen.moneda, destinatario.moneda, oficial)
+    : montoNum
+  const precioUsado = esConversion && oficial && cuentaOrigen
+    ? (cuentaOrigen.moneda === 'ARS' ? oficial.venta : oficial.compra)
+    : null
 
   useEffect(() => {
     const state = location.state as { cbu?: string } | null
@@ -191,15 +210,27 @@ export function TransferPage() {
     }
   }
 
-  function handleFormSubmit(e: React.FormEvent) {
+  function irADetalle() {
+    if (!destinatario) return
+    // Si el destinatario es de la otra moneda, arrancamos el origen en la
+    // misma moneda que él para que el caso simple (sin conversión) sea el
+    // default — el usuario puede cambiarlo igual en el paso siguiente.
+    if (destinatario.moneda !== monedaOrigen && !(destinatario.moneda === 'USD' && !cuentaUSD)) {
+      setMonedaOrigen(destinatario.moneda)
+    }
+    setError('')
+    setStep('detalle')
+  }
+
+  function handleDetalleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     if (!cuentaOrigen || !destinatario) return
     if (isNaN(montoNum) || montoNum <= 0) { setError('Ingresá un monto válido'); return }
     if (montoNum > cuentaOrigen.saldo) { setError('Saldo insuficiente para realizar la transferencia'); return }
     if (destinatario.cbu === cuentaOrigen.cbu) { setError('No podés transferirte a vos mismo'); return }
-    if (destinatario.moneda !== cuentaOrigen.moneda) { setError('Todavía no se pueden hacer transferencias entre cuentas de distinta moneda'); return }
-    setStep('confirm')
+    if (esConversion && !oficial) { setError('No pudimos obtener la cotización del día. Probá de nuevo en un momento.'); return }
+    setStep('resumen')
   }
 
   async function handleConfirm() {
@@ -209,9 +240,12 @@ export function TransferPage() {
     setError('')
 
     try {
-      await transferir(cuentaOrigen.cbu, destinatario.cbu, montoNum, cuentaOrigen.saldo)
+      // El importe que viaja al Banco Central es el que recibe la cuenta
+      // destino, en SU moneda — así lo puede acreditar cualquier banco que
+      // lea la transacción (nuestro propio sync incluido).
+      await transferir(cuentaOrigen.cbu, destinatario.cbu, montoDestino, cuentaOrigen.saldo)
 
-      const nuevoSaldoOrigen = cuentaOrigen.saldo - montoNum
+      const nuevoSaldoOrigen = roundMoney(cuentaOrigen.saldo - montoNum)
       const descValue = mensaje.trim() ? `${descripcion}|${mensaje.trim()}` : descripcion
 
       const { error: errSaldoOrigen } = await supabase
@@ -219,12 +253,12 @@ export function TransferPage() {
       if (errSaldoOrigen) throw new Error()
 
       if (destinatario.cuentaId && destinatario.saldoActual !== undefined) {
-        const nuevoSaldoDestino = destinatario.saldoActual + montoNum
+        const nuevoSaldoDestino = roundMoney(destinatario.saldoActual + montoDestino)
         await supabase.from('cuentas').update({ saldo: nuevoSaldoDestino }).eq('id', destinatario.cuentaId)
         await supabase.from('movimientos').insert({
           cuenta_id: destinatario.cuentaId,
           tipo: 'transferencia_entrada',
-          monto: montoNum,
+          monto: montoDestino,
           saldo_resultante: nuevoSaldoDestino,
           descripcion: descValue,
           cuenta_destino_id: cuentaOrigen.id,
@@ -252,19 +286,19 @@ export function TransferPage() {
 
       updateSaldoCuenta(cuentaOrigen.id, nuevoSaldoOrigen)
       await refreshCuenta()
-      setStep('success')
+      setStep('exito')
       toast.success('¡Transferencia realizada con éxito!')
     } catch {
       setError('Ocurrió un error al procesar la transferencia')
       toast.error('No se pudo completar la transferencia')
-      setStep('form')
+      setStep('resumen')
     } finally {
       setLoading(false)
     }
   }
 
   function handleReset() {
-    setStep('form')
+    setStep('buscar')
     setDestino('')
     setDestinatario(null)
     setBusquedaError('')
@@ -277,36 +311,142 @@ export function TransferPage() {
   const monedaActual = cuentaOrigen?.moneda ?? 'ARS'
   const saldoFormateado = formatMonto(cuentaOrigen?.saldo ?? 0, monedaActual)
   const montoFormateado = formatMonto(montoNum || 0, monedaActual)
+  const montoDestinoFormateado = destinatario ? formatMonto(montoDestino, destinatario.moneda) : ''
   const recientesFiltrados = recientes.filter((r) => !isGuardado(r.cbu))
 
   return (
     <PageWrapper>
       <div className="flex gap-6 items-start max-w-4xl mx-auto">
 
-        {/* Agenda — solo desktop */}
-        <aside className="hidden lg:block w-72 shrink-0 sticky top-6">
-          <AgendaContactosPanel onSelectContacto={seleccionarAcceso} />
-        </aside>
+        {/* Agenda — sólo en el paso de búsqueda, desktop */}
+        {step === 'buscar' && (
+          <aside className="hidden lg:block w-72 shrink-0 sticky top-6">
+            <AgendaContactosPanel onSelectContacto={seleccionarAcceso} />
+          </aside>
+        )}
 
         {/* Columna principal */}
         <div className="flex-1 min-w-0 flex flex-col gap-4">
           <h1 className="font-display text-2xl font-semibold text-navy dark:text-white">Transferir</h1>
 
-          {/* Agenda en mobile */}
-          <MobileAgendaAccordion onSelectContacto={seleccionarAcceso} />
+          {/* Agenda en mobile — sólo en el paso de búsqueda */}
+          {step === 'buscar' && <MobileAgendaAccordion onSelectContacto={seleccionarAcceso} />}
 
           {/* Steps con AnimatePresence */}
           <AnimatePresence mode="wait">
 
-            {/* ── Paso: Formulario ── */}
-            {step === 'form' && (
-              <motion.div key="form" variants={stepVariants} initial="initial" animate="animate" exit="exit">
+            {/* ── Paso 1: Buscar destinatario ── */}
+            {step === 'buscar' && (
+              <motion.div key="buscar" variants={stepVariants} initial="initial" animate="animate" exit="exit">
                 <Card className="p-8">
+                  <div>
+                    <label className="block text-sm font-body text-slate-secondary mb-1">CBU o alias destino</label>
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 bg-slate-input dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-xl px-4 py-3 text-navy dark:text-white font-body text-sm placeholder-slate-secondary focus:outline-none focus:border-mint/50 transition-colors"
+                        placeholder="22 dígitos o alias.banco"
+                        value={destino}
+                        onChange={(e) => { setDestino(e.target.value); setDestinatario(null); setBusquedaError('') }}
+                        onKeyDown={(e) => e.key === 'Enter' && buscarDestinatario()}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => buscarDestinatario()}
+                        disabled={!destino.trim() || buscando}
+                        className="px-4 rounded-xl bg-mint/10 border border-mint/20 text-mint hover:bg-mint/20 transition-colors disabled:opacity-40"
+                      >
+                        <Search size={18} />
+                      </button>
+                    </div>
+
+                    {busquedaError && <p className="text-xs text-red-500 dark:text-red-400 font-body mt-1">{busquedaError}</p>}
+                    {buscando && <p className="text-xs text-slate-secondary font-body mt-1">Buscando...</p>}
+
+                    {destinatario && (
+                      <div className="mt-3 px-4 py-3 rounded-xl bg-mint/10 border border-mint/20 flex items-center gap-3">
+                        <Iniciales nombre={destinatario.nombre} apellido={destinatario.apellido} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-body font-medium text-mint truncate">
+                            {destinatario.nombre} {destinatario.apellido}
+                          </p>
+                          <p className="text-xs font-body text-slate-secondary mt-0.5 truncate">
+                            CBU: {destinatario.cbu}
+                          </p>
+                          <span className={`inline-block mt-1 text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            destinatario.moneda === 'USD' ? 'bg-mint/20 text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
+                          }`}>
+                            {destinatario.moneda === 'USD' ? 'Cuenta en dólares' : 'Cuenta en pesos'}
+                          </span>
+                        </div>
+                        {isGuardado(destinatario.cbu) ? (
+                          <button
+                            type="button"
+                            onClick={toggleAgenda}
+                            title="En tu agenda — click para quitar"
+                            className="shrink-0 text-mint hover:text-mint/60 transition-colors"
+                          >
+                            <Star size={18} fill="currentColor" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={toggleAgenda}
+                            title="Agregar a agenda"
+                            className="shrink-0 text-slate-secondary hover:text-mint transition-colors"
+                          >
+                            <UserPlus size={17} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    type="button"
+                    className="w-full mt-6 flex items-center justify-center gap-2"
+                    disabled={!destinatario}
+                    onClick={irADetalle}
+                  >
+                    Continuar
+                    <ArrowRight size={16} />
+                  </Button>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* ── Paso 2: Monto y cuenta origen ── */}
+            {step === 'detalle' && destinatario && (
+              <motion.div key="detalle" variants={stepVariants} initial="initial" animate="animate" exit="exit">
+                <Card className="p-8">
+                  <button
+                    type="button"
+                    onClick={() => setStep('buscar')}
+                    className="flex items-center gap-1.5 text-sm font-body text-slate-secondary hover:text-navy dark:hover:text-white transition-colors mb-4"
+                  >
+                    <ArrowLeft size={15} />
+                    Cambiar destinatario
+                  </button>
+
+                  <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-xl bg-slate-input dark:bg-white/5">
+                    <Iniciales nombre={destinatario.nombre} apellido={destinatario.apellido} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-body font-medium text-navy dark:text-white truncate">
+                        {destinatario.nombre} {destinatario.apellido}
+                      </p>
+                      <p className="text-xs font-body text-slate-secondary truncate">{destinatario.alias ?? destinatario.cbu}</p>
+                    </div>
+                    <span className={`shrink-0 text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      destinatario.moneda === 'USD' ? 'bg-mint/20 text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
+                    }`}>
+                      {destinatario.moneda === 'USD' ? 'USD' : 'ARS'}
+                    </span>
+                  </div>
+
                   {cuentaUSD && (
                     <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
                       <button
                         type="button"
-                        onClick={() => cambiarMonedaOrigen('ARS')}
+                        onClick={() => setMonedaOrigen('ARS')}
                         className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
                           monedaOrigen === 'ARS' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
                         }`}
@@ -315,7 +455,7 @@ export function TransferPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => cambiarMonedaOrigen('USD')}
+                        onClick={() => setMonedaOrigen('USD')}
                         className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
                           monedaOrigen === 'USD' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
                         }`}
@@ -328,66 +468,24 @@ export function TransferPage() {
                   <p className="font-body text-sm text-slate-secondary mb-1">Saldo disponible</p>
                   <p className="font-display text-2xl font-bold text-mint mb-6">{saldoFormateado}</p>
 
-                  <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
-                    <div>
-                      <label className="block text-sm font-body text-slate-secondary mb-1">
-                        CBU o alias destino {monedaOrigen === 'USD' && <span className="text-slate-secondary/70">(cuenta en dólares)</span>}
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          className="flex-1 bg-slate-input dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-xl px-4 py-3 text-navy dark:text-white font-body text-sm placeholder-slate-secondary focus:outline-none focus:border-mint/50 transition-colors"
-                          placeholder="22 dígitos o alias.banco"
-                          value={destino}
-                          onChange={(e) => { setDestino(e.target.value); setDestinatario(null); setBusquedaError('') }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => buscarDestinatario()}
-                          disabled={!destino.trim() || buscando}
-                          className="px-4 rounded-xl bg-mint/10 border border-mint/20 text-mint hover:bg-mint/20 transition-colors disabled:opacity-40"
-                        >
-                          <Search size={18} />
-                        </button>
-                      </div>
-
-                      {busquedaError && <p className="text-xs text-red-500 dark:text-red-400 font-body mt-1">{busquedaError}</p>}
-                      {buscando && <p className="text-xs text-slate-secondary font-body mt-1">Buscando...</p>}
-
-                      {destinatario && (
-                        <div className="mt-2 px-4 py-3 rounded-xl bg-mint/10 border border-mint/20 flex items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-body font-medium text-mint truncate">
-                              {destinatario.nombre} {destinatario.apellido}
-                            </p>
-                            <p className="text-xs font-body text-slate-secondary mt-0.5 truncate">
-                              CBU: {destinatario.cbu} · {destinatario.moneda === 'USD' ? 'Cuenta en dólares' : 'Cuenta en pesos'}
-                            </p>
-                          </div>
-                          {isGuardado(destinatario.cbu) ? (
-                            <button
-                              type="button"
-                              onClick={toggleAgenda}
-                              title="En tu agenda — click para quitar"
-                              className="shrink-0 text-mint hover:text-mint/60 transition-colors"
-                            >
-                              <Star size={18} fill="currentColor" />
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={toggleAgenda}
-                              title="Agregar a agenda"
-                              className="shrink-0 text-slate-secondary hover:text-mint transition-colors"
-                            >
-                              <UserPlus size={17} />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <Input label="Monto" type="number" min="0.01" step="0.01" placeholder="0.00"
+                  <form onSubmit={handleDetalleSubmit} className="flex flex-col gap-4">
+                    <Input label={`Monto en ${monedaActual === 'USD' ? 'dólares' : 'pesos'}`} type="number" min="0.01" step="0.01" placeholder="0.00"
                       value={monto} onChange={(e) => setMonto(e.target.value)} required />
+
+                    {esConversion && (
+                      <div className="rounded-xl bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 px-4 py-3 flex gap-2.5">
+                        <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                        <p className="font-body text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                          {montoNum > 0 && oficial ? (
+                            <>Este monto se convertirá a <strong>{montoDestinoFormateado}</strong> según la cotización oficial del día (${oficial.compra.toLocaleString('es-AR')} / ${oficial.venta.toLocaleString('es-AR')}).{' '}</>
+                          ) : (
+                            'El monto se va a convertir según la cotización oficial del día. '
+                          )}
+                          Recordá que la cuenta destino es {destinatario.moneda === 'USD' ? 'una cuenta en dólares' : 'una cuenta en pesos'}.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="flex flex-col gap-1.5">
                       <label className="text-sm font-body font-medium text-slate-secondary">
                         Motivo
@@ -428,34 +526,68 @@ export function TransferPage() {
 
                     {error && <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3">{error}</p>}
 
-                    <Button type="submit" className="w-full mt-2" disabled={!destinatario}>
+                    <Button type="submit" className="w-full mt-2 flex items-center justify-center gap-2">
                       Continuar
+                      <ArrowRight size={16} />
                     </Button>
                   </form>
                 </Card>
               </motion.div>
             )}
 
-            {/* ── Paso: Confirmar ── */}
-            {step === 'confirm' && destinatario && (
-              <motion.div key="confirm" variants={stepVariants} initial="initial" animate="animate" exit="exit">
+            {/* ── Paso 3: Resumen y confirmación ── */}
+            {step === 'resumen' && destinatario && cuentaOrigen && (
+              <motion.div key="resumen" variants={stepVariants} initial="initial" animate="animate" exit="exit">
                 <Card className="p-8">
-                  <h2 className="font-display text-lg font-semibold text-navy dark:text-white mb-6">Confirmá la transferencia</h2>
+                  <button
+                    type="button"
+                    onClick={() => setStep('detalle')}
+                    className="flex items-center gap-1.5 text-sm font-body text-slate-secondary hover:text-navy dark:hover:text-white transition-colors mb-4"
+                    disabled={loading}
+                  >
+                    <ArrowLeft size={15} />
+                    Volver
+                  </button>
+
+                  <h2 className="font-display text-lg font-semibold text-navy dark:text-white mb-6">Revisá la transferencia</h2>
                   <div className="flex flex-col gap-4 mb-8">
                     <div className="flex justify-between">
                       <span className="font-body text-slate-secondary text-sm">Destinatario</span>
-                      <span className="font-body font-medium text-navy dark:text-white text-sm">{destinatario.nombre} {destinatario.apellido}</span>
+                      <span className="font-body font-medium text-navy dark:text-white text-sm text-right">{destinatario.nombre} {destinatario.apellido}</span>
                     </div>
                     <div className="h-px bg-slate-200 dark:bg-white/10" />
                     <div className="flex justify-between">
                       <span className="font-body text-slate-secondary text-sm">CBU</span>
-                      <span className="font-body text-navy dark:text-white text-sm">{destinatario.cbu}</span>
+                      <span className="font-body text-navy dark:text-white text-sm text-right">{destinatario.cbu}</span>
                     </div>
                     <div className="h-px bg-slate-200 dark:bg-white/10" />
                     <div className="flex justify-between">
-                      <span className="font-body text-slate-secondary text-sm">Monto</span>
+                      <span className="font-body text-slate-secondary text-sm">Desde</span>
+                      <span className="font-body text-navy dark:text-white text-sm">
+                        {cuentaOrigen.moneda === 'USD' ? 'Tu cuenta en dólares' : 'Tu cuenta en pesos'}
+                      </span>
+                    </div>
+                    <div className="h-px bg-slate-200 dark:bg-white/10" />
+                    <div className="flex justify-between">
+                      <span className="font-body text-slate-secondary text-sm">Enviás</span>
                       <span className="font-display font-bold text-mint text-lg">{montoFormateado}</span>
                     </div>
+                    {esConversion && (
+                      <>
+                        <div className="h-px bg-slate-200 dark:bg-white/10" />
+                        <div className="flex justify-between">
+                          <span className="font-body text-slate-secondary text-sm">
+                            {destinatario.nombre} recibe
+                          </span>
+                          <span className="font-display font-bold text-navy dark:text-white text-lg">{montoDestinoFormateado}</span>
+                        </div>
+                        {precioUsado != null && (
+                          <p className="font-body text-xs text-slate-secondary -mt-2">
+                            Cotización oficial utilizada: ${precioUsado.toLocaleString('es-AR')}
+                          </p>
+                        )}
+                      </>
+                    )}
                     <div className="h-px bg-slate-200 dark:bg-white/10" />
                     <div className="flex justify-between">
                       <span className="font-body text-slate-secondary text-sm">Motivo</span>
@@ -473,16 +605,16 @@ export function TransferPage() {
                   </div>
                   {error && <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3 mb-4">{error}</p>}
                   <div className="flex gap-3">
-                    <Button variant="secondary" className="flex-1" onClick={() => setStep('form')} disabled={loading}>Volver</Button>
+                    <Button variant="secondary" className="flex-1" onClick={() => setStep('detalle')} disabled={loading}>Editar</Button>
                     <Button className="flex-1" loading={loading} onClick={handleConfirm}>Confirmar</Button>
                   </div>
                 </Card>
               </motion.div>
             )}
 
-            {/* ── Paso: Éxito ── */}
-            {step === 'success' && (
-              <motion.div key="success" variants={stepVariants} initial="initial" animate="animate" exit="exit">
+            {/* ── Paso 4: Éxito ── */}
+            {step === 'exito' && (
+              <motion.div key="exito" variants={stepVariants} initial="initial" animate="animate" exit="exit">
                 <Card className="p-8 text-center">
                   <motion.div
                     initial={{ scale: 0.5, opacity: 0 }}
@@ -499,6 +631,7 @@ export function TransferPage() {
                     <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-2">¡Transferencia exitosa!</h2>
                     <p className="font-body text-slate-secondary mb-2">
                       Enviaste {montoFormateado} a {destinatario?.nombre} {destinatario?.apellido}
+                      {esConversion && <> ({destinatario?.nombre} recibió {montoDestinoFormateado})</>}
                     </p>
                     <p className="font-body text-sm text-slate-secondary mb-8">
                       Nuevo saldo: <span className="text-mint font-medium">{saldoFormateado}</span>
@@ -536,8 +669,8 @@ export function TransferPage() {
             )}
           </AnimatePresence>
 
-          {/* Transferencias recientes */}
-          {step === 'form' && recientesFiltrados.length > 0 && (
+          {/* Transferencias recientes — sólo en el paso de búsqueda */}
+          {step === 'buscar' && recientesFiltrados.length > 0 && (
             <div>
               <p className="font-body text-xs text-slate-secondary uppercase tracking-wider mb-3">Recientes</p>
               <div className="flex flex-col gap-1.5">

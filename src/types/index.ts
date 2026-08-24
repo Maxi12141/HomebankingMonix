@@ -38,6 +38,10 @@ export interface Movimiento {
   id: string
   cuenta_id: string
   tipo: 'deposito' | 'extraccion' | 'transferencia_entrada' | 'transferencia_salida'
+  // No es una columna propia — se completa en useMovimientos.ts leyendo la
+  // cuenta a la que pertenece cada movimiento, para poder formatear cada
+  // monto en su moneda real (ARS o USD).
+  moneda: 'ARS' | 'USD'
   monto: number
   saldo_resultante: number | null
   descripcion: string | null

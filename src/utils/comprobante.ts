@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import type { Movimiento } from '../types'
+import { formatMonto } from './cuenta'
 import logoBlanco from '../assets/logos/logo-blanco.png'
 
 const TIPO_LABEL: Record<string, string> = {
@@ -8,10 +9,6 @@ const TIPO_LABEL: Record<string, string> = {
   extraccion:            'Extracción',
   transferencia_entrada: 'Transferencia recibida',
   transferencia_salida:  'Transferencia enviada',
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
 }
 
 function row(label: string, value: string, last = false): string {
@@ -70,7 +67,7 @@ function buildHTML(mov: Movimiento, bankName?: string): string {
     },
   ]
   if (mov.saldo_resultante !== null) {
-    infoRows.push({ label: 'Saldo resultante', value: fmt(mov.saldo_resultante) })
+    infoRows.push({ label: 'Saldo resultante', value: formatMonto(mov.saldo_resultante, mov.moneda) })
   }
   if (motivo) infoRows.push({ label: 'Motivo', value: motivo })
   if (mensajeParsed) infoRows.push({ label: 'Mensaje', value: mensajeParsed })
@@ -138,7 +135,7 @@ function buildHTML(mov: Movimiento, bankName?: string): string {
           line-height: 1;
           margin-bottom: 16px;
           letter-spacing: -1px;
-        ">${entrada ? '+' : '-'}${fmt(mov.monto)}</div>
+        ">${entrada ? '+' : '-'}${formatMonto(mov.monto, mov.moneda)}</div>
 
         <div style="
           display: inline-block;

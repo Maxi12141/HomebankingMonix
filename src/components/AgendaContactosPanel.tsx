@@ -26,7 +26,7 @@ function Iniciales({ nombre, apellido }: { nombre: string; apellido: string }) {
 }
 
 export function AgendaContactosPanel({ onSelectContacto }: Props) {
-  const { contactos, guardar, eliminar, editarApodo, isGuardado } = useContactos()
+  const { contactos, guardar, eliminar, editarApodo, editarAlias, isGuardado } = useContactos()
 
   const [mostrarForm, setMostrarForm] = useState(false)
   const [inputBusqueda, setInputBusqueda] = useState('')
@@ -37,6 +37,7 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
 
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [apodoEditado, setApodoEditado] = useState('')
+  const [aliasEditado, setAliasEditado] = useState('')
 
   async function buscarPersona() {
     const input = inputBusqueda.trim()
@@ -87,10 +88,12 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
   function iniciarEdicion(c: Contacto) {
     setEditandoId(c.id)
     setApodoEditado(c.apodo ?? '')
+    setAliasEditado(c.alias ?? '')
   }
 
   function confirmarEdicion(cbu: string) {
     editarApodo(cbu, apodoEditado.trim() || null)
+    editarAlias(cbu, aliasEditado.trim() || null)
     setEditandoId(null)
   }
 
@@ -210,6 +213,9 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
                       </p>
                     )}
                     <p className="font-body text-xs text-slate-secondary truncate">{c.cbu}</p>
+                    {c.alias && (
+                      <p className="font-body text-xs text-slate-secondary/80 truncate">@{c.alias}</p>
+                    )}
                   </div>
                 </button>
 
@@ -217,7 +223,7 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   <button
                     onClick={() => iniciarEdicion(c)}
-                    title="Editar apodo"
+                    title="Editar contacto"
                     className="p-1.5 rounded-lg text-slate-secondary hover:text-mint hover:bg-mint/10 transition-colors"
                   >
                     <Pencil size={14} />
@@ -232,11 +238,11 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
                 </div>
               </div>
 
-              {/* Editor de apodo inline */}
+              {/* Editor de apodo + alias inline */}
               {editandoId === c.id && (
-                <div className="flex gap-2 mt-1 px-1">
+                <div className="flex flex-col gap-2 mt-1.5 px-1 pb-1">
                   <input
-                    className="flex-1 bg-slate-input dark:bg-white/5 border border-mint/30 rounded-xl px-3 py-1.5 text-navy dark:text-white font-body text-sm placeholder-slate-secondary focus:outline-none focus:border-mint/60 transition-colors"
+                    className="bg-slate-input dark:bg-white/5 border border-mint/30 rounded-xl px-3 py-1.5 text-navy dark:text-white font-body text-sm placeholder-slate-secondary focus:outline-none focus:border-mint/60 transition-colors"
                     placeholder="Apodo (vacío para quitar)"
                     value={apodoEditado}
                     onChange={(e) => setApodoEditado(e.target.value)}
@@ -246,18 +252,31 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
                     }}
                     autoFocus
                   />
-                  <button
-                    onClick={() => confirmarEdicion(c.cbu)}
-                    className="p-1.5 rounded-xl bg-mint/20 text-mint hover:bg-mint/30 transition-colors"
-                  >
-                    <Check size={16} />
-                  </button>
-                  <button
-                    onClick={() => setEditandoId(null)}
-                    className="p-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
+                  <input
+                    className="bg-slate-input dark:bg-white/5 border border-mint/30 rounded-xl px-3 py-1.5 text-navy dark:text-white font-body text-sm placeholder-slate-secondary focus:outline-none focus:border-mint/60 transition-colors"
+                    placeholder="Alias (vacío para quitar)"
+                    value={aliasEditado}
+                    onChange={(e) => setAliasEditado(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') confirmarEdicion(c.cbu)
+                      if (e.key === 'Escape') setEditandoId(null)
+                    }}
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => setEditandoId(null)}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-slate-secondary hover:text-navy dark:hover:text-white transition-colors text-sm font-body"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => confirmarEdicion(c.cbu)}
+                      className="px-3 py-1.5 rounded-xl bg-mint/20 text-mint hover:bg-mint/30 transition-colors text-sm font-body font-medium flex items-center gap-1.5"
+                    >
+                      <Check size={15} />
+                      Guardar
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

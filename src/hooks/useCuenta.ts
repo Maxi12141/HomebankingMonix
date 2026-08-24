@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
 import { useAuthStore } from '../store/authStore'
@@ -18,34 +18,45 @@ export function useCuenta() {
   const userId = user?.id
   const [interesHoy, setInteresHoy] = useState(0)
   const [interesHoyPorCuenta, setInteresHoyPorCuenta] = useState<Record<string, number>>({})
+  // React.StrictMode dispara este efecto dos veces en desarrollo — sin este
+  // guard, dos fetchCuentas concurrentes podían acreditar el mismo interés
+  // dos veces (dos inserts de movimiento duplicados) al no leer nada nuevo
+  // hasta que el primero termina de escribir.
+  const fetchingRef = useRef(false)
 
   useEffect(() => {
     if (userId) fetchCuentas(userId)
   }, [userId])
 
   async function fetchCuentas(personaId: string) {
-    const { data, error } = await supabase
-      .from('cuentas')
-      .select('*')
-      .eq('persona_id', personaId)
-      .eq('activa', true)
-    if (error) {
-      console.error('Error al cargar cuentas:', error.message)
-      return
-    }
-    if (!data || data.length === 0) {
-      setCuentas([])
-      setCuenta(null)
-      setInteresHoy(0)
-      return
-    }
+    if (fetchingRef.current) return
+    fetchingRef.current = true
+    try {
+      const { data, error } = await supabase
+        .from('cuentas')
+        .select('*')
+        .eq('persona_id', personaId)
+        .eq('activa', true)
+      if (error) {
+        console.error('Error al cargar cuentas:', error.message)
+        return
+      }
+      if (!data || data.length === 0) {
+        setCuentas([])
+        setCuenta(null)
+        setInteresHoy(0)
+        return
+      }
 
-    const accrued = await Promise.all((data as Cuenta[]).map(accrueInterest))
-    const todas = accrued.map((a) => a.cuenta)
-    setCuentas(todas)
-    setCuenta(todas.find((c) => c.moneda === 'ARS') ?? todas[0])
-    setInteresHoy(accrued.find((a) => a.cuenta.moneda === 'ARS')?.interes ?? 0)
-    setInteresHoyPorCuenta(Object.fromEntries(accrued.map((a) => [a.cuenta.id, a.interes])))
+      const accrued = await Promise.all((data as Cuenta[]).map(accrueInterest))
+      const todas = accrued.map((a) => a.cuenta)
+      setCuentas(todas)
+      setCuenta(todas.find((c) => c.moneda === 'ARS') ?? todas[0])
+      setInteresHoy(accrued.find((a) => a.cuenta.moneda === 'ARS')?.interes ?? 0)
+      setInteresHoyPorCuenta(Object.fromEntries(accrued.map((a) => [a.cuenta.id, a.interes])))
+    } finally {
+      fetchingRef.current = false
+    }
   }
 
   async function accrueInterest(current: Cuenta): Promise<{ cuenta: Cuenta; interes: number }> {

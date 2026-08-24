@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { useMovimientos } from '../hooks/useMovimientos'
 import { useBankNames } from '../hooks/useBankNames'
+import { formatMonto } from '../utils/cuenta'
 import { DatePicker } from '../components/ui/DatePicker'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
@@ -165,9 +166,9 @@ export function HistorialPage() {
           <div className="flex flex-col gap-2">
             {movimientosFiltrados.map((mov) => {
               const entrada = esEntrada(mov.tipo)
-              const montoFormateado = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(mov.monto)
+              const montoFormateado = formatMonto(mov.monto, mov.moneda)
               const saldoFormateado = mov.saldo_resultante !== null
-                ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(mov.saldo_resultante)
+                ? formatMonto(mov.saldo_resultante, mov.moneda)
                 : null
 
               return (

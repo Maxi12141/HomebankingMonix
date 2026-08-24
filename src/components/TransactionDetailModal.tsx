@@ -3,6 +3,7 @@ import { Download, Loader2 } from 'lucide-react'
 import { Modal } from './ui/Modal'
 import { Card } from './ui/Card'
 import { downloadComprobante } from '../utils/comprobante'
+import { formatMonto } from '../utils/cuenta'
 import type { Movimiento } from '../types'
 
 interface Props {
@@ -44,12 +45,9 @@ export function TransactionDetailModal({ movimiento, bankName, onClose }: Props)
   }
 
   const entrada = esEntrada(movimiento.tipo)
-  const montoFormateado = new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-  }).format(movimiento.monto)
+  const montoFormateado = formatMonto(movimiento.monto, movimiento.moneda)
   const saldoFormateado = movimiento.saldo_resultante !== null
-    ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(movimiento.saldo_resultante)
+    ? formatMonto(movimiento.saldo_resultante, movimiento.moneda)
     : null
   const fecha = new Date(movimiento.created_at)
   const fechaFormateada = fecha.toLocaleDateString('es-AR', {

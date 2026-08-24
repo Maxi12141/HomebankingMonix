@@ -4,25 +4,31 @@ import { useCuentaStore } from '../store/cuentaStore'
 import { listarTransacciones } from '../services/bancoCentral'
 
 export function useSyncTransferenciasEntrantes() {
-  const { cuenta, updateSaldo, triggerRefresh } = useCuentaStore()
+  const { cuentas, updateSaldoCuenta, triggerRefresh } = useCuentaStore()
   const syncingRef = useRef(false)
 
-  const cuentaId = cuenta?.id
-  const cuentaCbu = cuenta?.cbu
+  // string estable para el dependency array — cuentas cambia de referencia en cada fetch
+  const cuentaIds = cuentas.map((c) => c.id).join(',')
 
   const sync = useCallback(async () => {
-    if (!cuentaCbu || !cuentaId || syncingRef.current) return
+    if (cuentas.length === 0 || syncingRef.current) return
     syncingRef.current = true
 
     try {
       const transacciones = await listarTransacciones(1440)
+      // Cada CBU es de una cuenta puntual (ARS o USD) — se matchea por CBU y se
+      // acredita esa cuenta específica, así que una misma pasada cubre ambas monedas.
+      const porCbu = new Map(cuentas.map((c) => [c.cbu, c]))
       const entrantes = transacciones.filter(
-        t => t.cbuDestino === cuentaCbu && t.estado === 'aprobada',
+        t => t.estado === 'aprobada' && porCbu.has(t.cbuDestino),
       )
 
       let procesadas = 0
 
       for (const t of entrantes) {
+        const cuentaDestino = porCbu.get(t.cbuDestino)
+        if (!cuentaDestino) continue
+
         const { data: existente } = await supabase
           .from('movimientos')
           .select('id')
@@ -41,7 +47,7 @@ export function useSyncTransferenciasEntrantes() {
         const { data: cuentaActual } = await supabase
           .from('cuentas')
           .select('saldo')
-          .eq('id', cuentaId)
+          .eq('id', cuentaDestino.id)
           .single()
         if (!cuentaActual) continue
 
@@ -50,11 +56,11 @@ export function useSyncTransferenciasEntrantes() {
         const { error: errSaldo } = await supabase
           .from('cuentas')
           .update({ saldo: nuevoSaldo })
-          .eq('id', cuentaId)
+          .eq('id', cuentaDestino.id)
         if (errSaldo) continue
 
         const { error: errMov } = await supabase.from('movimientos').insert({
-          cuenta_id: cuentaId,
+          cuenta_id: cuentaDestino.id,
           tipo: 'transferencia_entrada',
           monto: t.importe,
           saldo_resultante: nuevoSaldo,
@@ -68,7 +74,7 @@ export function useSyncTransferenciasEntrantes() {
         })
 
         if (!errMov) {
-          updateSaldo(nuevoSaldo)
+          updateSaldoCuenta(cuentaDestino.id, nuevoSaldo)
           procesadas++
         }
       }
@@ -79,7 +85,7 @@ export function useSyncTransferenciasEntrantes() {
     } finally {
       syncingRef.current = false
     }
-  }, [cuentaId, cuentaCbu])
+  }, [cuentaIds])
 
   useEffect(() => {
     sync()

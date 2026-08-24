@@ -20,10 +20,9 @@ import { formatMonto as formatMoneda } from '../utils/cuenta'
 import type { TourStep } from '../components/OnboardingTour'
 import type { Movimiento, Cuenta } from '../types'
 
-function formatMonto(monto: number, tipo: string) {
+function formatMonto(monto: number, tipo: string, moneda: 'ARS' | 'USD') {
   const esEntrada = tipo === 'deposito' || tipo === 'transferencia_entrada'
-  const formatted = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(monto)
-  return { text: `${esEntrada ? '+' : '-'}${formatted}`, esEntrada }
+  return { text: `${esEntrada ? '+' : '-'}${formatMoneda(monto, moneda)}`, esEntrada }
 }
 
 const tipoLabel: Record<string, string> = {
@@ -114,19 +113,32 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
 
   return (
     <Card className="p-8">
-      <p className="font-body text-sm text-slate-secondary mb-2">{titulo}</p>
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <p className="font-body text-sm text-slate-secondary">{titulo}</p>
+        <button
+          onClick={() => setShowData((v) => !v)}
+          className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors shrink-0"
+          aria-label={showData ? 'Ocultar saldo' : 'Mostrar saldo'}
+        >
+          {showData ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
       <p className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-mint leading-none min-w-0">
-        <CountUp
-          key={animKey}
-          start={countStart}
-          end={cuenta.saldo}
-          duration={1.4}
-          decimals={2}
-          decimal={isUSD ? '.' : ','}
-          separator={isUSD ? ',' : '.'}
-          prefix={isUSD ? 'US$' : '$ '}
-          useEasing={true}
-        />
+        {showData ? (
+          <CountUp
+            key={animKey}
+            start={countStart}
+            end={cuenta.saldo}
+            duration={1.4}
+            decimals={2}
+            decimal={isUSD ? '.' : ','}
+            separator={isUSD ? ',' : '.'}
+            prefix={isUSD ? 'US$' : '$ '}
+            useEasing={true}
+          />
+        ) : (
+          <span>{isUSD ? 'US$' : '$ '}••••••</span>
+        )}
       </p>
       <AnimatePresence>
         {delta !== null && (
@@ -138,7 +150,11 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             transition={{ duration: 0.3 }}
             className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint' : 'text-red-500 dark:text-red-400'}`}
           >
-            {delta > 0 ? '+' : ''}{formatMoneda(delta, cuenta.moneda)}
+            {showData ? (
+              <>{delta > 0 ? '+' : ''}{formatMoneda(delta, cuenta.moneda)}</>
+            ) : (
+              <>{delta > 0 ? '+' : '-'}••••</>
+            )}
             {delta > 0 ? ' recibido' : ' enviado'}
           </motion.p>
         )}
@@ -151,13 +167,13 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
         <p className="font-body text-xs text-slate-secondary">
           Hoy ~{' '}
           <span className="text-navy dark:text-white font-medium">
-            +{formatMoneda(rendimientoDiario, cuenta.moneda)}
+            +{showData ? formatMoneda(rendimientoDiario, cuenta.moneda) : '••••'}
           </span>
         </p>
         {interesHoy > 0 && (
           <p className="font-body text-xs text-mint inline-flex items-center gap-1">
             <TrendingUp size={12} />
-            +{formatMoneda(interesHoy, cuenta.moneda)} acreditados
+            +{showData ? formatMoneda(interesHoy, cuenta.moneda) : '••••'} acreditados
           </p>
         )}
       </div>
@@ -188,14 +204,6 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             {copiedAlias ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
           </button>
         </div>
-
-        <button
-          onClick={() => setShowData((v) => !v)}
-          className="ml-auto text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
-          aria-label={showData ? 'Ocultar datos' : 'Mostrar datos'}
-        >
-          {showData ? <EyeOff size={14} /> : <Eye size={14} />}
-        </button>
       </div>
     </Card>
   )
@@ -341,7 +349,7 @@ export function DashboardPage() {
           ) : (
             <div className="flex flex-col gap-2">
               {movimientos.map((mov, i) => {
-                const { text, esEntrada } = formatMonto(mov.monto, mov.tipo)
+                const { text, esEntrada } = formatMonto(mov.monto, mov.tipo, mov.moneda)
                 return (
                   <motion.div
                     key={mov.id}

@@ -7,6 +7,7 @@ interface ContactosState {
   guardar: (c: Omit<Contacto, 'id' | 'savedAt'>) => void
   eliminar: (cbu: string) => void
   editarApodo: (cbu: string, apodo: string | null) => void
+  editarAlias: (cbu: string, alias: string | null) => void
   isGuardado: (cbu: string) => boolean
 }
 
@@ -29,6 +30,10 @@ const useContactosStore = create<ContactosState>()(
       editarApodo: (cbu, apodo) =>
         set((state) => ({
           contactos: state.contactos.map((x) => (x.cbu === cbu ? { ...x, apodo } : x)),
+        })),
+      editarAlias: (cbu, alias) =>
+        set((state) => ({
+          contactos: state.contactos.map((x) => (x.cbu === cbu ? { ...x, alias } : x)),
         })),
       isGuardado: (cbu) => get().contactos.some((x) => x.cbu === cbu),
     }),
