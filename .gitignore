@@ -23,3 +23,10 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Native / APK (plataforma generada, no el plugin)
+/android/
+/ios/
+.capacitor/
+plugins/**/android/build/
+

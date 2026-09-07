@@ -18,6 +18,8 @@ export interface Cuenta {
   moneda: 'ARS' | 'USD'
   saldo: number
   activa: boolean
+  tarjeta_congelada?: boolean
+  nfc_contacto_activo?: boolean
   cbu: string | null
   alias: string | null
   tasa_anual: number

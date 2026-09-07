@@ -186,6 +186,7 @@ export function MonixCard3D({
                       Débito · {tipoLabel}{moneda === 'USD' ? ' · USD' : ''}
                     </p>
                   </div>
+                  <div className="flex items-center gap-2">
                   <div
                     className={`h-8 w-11 rounded-md shadow-inner relative overflow-hidden ${
                       moneda === 'USD'
@@ -196,6 +197,13 @@ export function MonixCard3D({
                     <div className={`absolute inset-x-0 top-[30%] h-px ${moneda === 'USD' ? 'bg-[#6b7280]/55' : 'bg-[#8B6914]/55'}`} />
                     <div className={`absolute inset-x-0 top-[55%] h-px ${moneda === 'USD' ? 'bg-[#6b7280]/55' : 'bg-[#8B6914]/55'}`} />
                     <div className={`absolute inset-y-0 left-[40%] w-px ${moneda === 'USD' ? 'bg-[#6b7280]/55' : 'bg-[#8B6914]/55'}`} />
+                  </div>
+                  <svg viewBox="0 0 36 36" className="w-9 h-9 text-white/80" aria-hidden="true">
+                    <circle cx="8" cy="18" r="2.2" fill="currentColor" />
+                    <path d="M13 10.5a11 11 0 0 1 0 15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+                    <path d="M19 6a16 16 0 0 1 0 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" opacity="0.75" />
+                    <path d="M25 2a22 22 0 0 1 0 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+                  </svg>
                   </div>
                 </div>
 

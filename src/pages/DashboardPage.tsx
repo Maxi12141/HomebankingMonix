@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, Receipt, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, Receipt, ChevronLeft, ChevronRight, Bluetooth } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CountUp from 'react-countup'
 import { useAuthStore } from '../store/authStore'
@@ -304,10 +304,14 @@ export function DashboardPage() {
         </motion.div>
 
         {/* Acciones rápidas */}
-        <motion.div variants={itemVariants} id="tour-acciones" className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+        <motion.div variants={itemVariants} id="tour-acciones" className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
           <Button variant="primary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/transferir')}>
             <ArrowRightLeft size={20} />
             <span className="text-sm">Transferir</span>
+          </Button>
+          <Button variant="secondary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/cerca')}>
+            <Bluetooth size={20} />
+            <span className="text-sm">Cerca</span>
           </Button>
           <Button variant="secondary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/pagar')}>
             <Receipt size={20} />

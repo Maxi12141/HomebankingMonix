@@ -135,10 +135,13 @@ export function TransferPage() {
     : null
 
   useEffect(() => {
-    const state = location.state as { cbu?: string } | null
+    const state = location.state as { cbu?: string; fromCerca?: boolean } | null
     if (state?.cbu) {
       setDestino(state.cbu)
       buscarDestinatario(state.cbu)
+      if (state.fromCerca) {
+        toast.success('Persona identificada al acercar el celular')
+      }
     }
   }, [])
 

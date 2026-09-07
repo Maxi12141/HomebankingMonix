@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { CheckCircle, Gamepad2, Receipt } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { CheckCircle, Gamepad2, Nfc, QrCode, Receipt } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
@@ -8,8 +9,10 @@ import { useCuentaStore } from '../store/cuentaStore'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
+import { CobrarNfcPanel, PagarNfcPanel } from '../components/NfcPayPanels'
 
 type Step = 'lista' | 'confirmar' | 'success'
+type Tab = 'servicios' | 'cobrar' | 'nfc'
 
 interface Servicio {
   id: string
@@ -81,7 +84,10 @@ function roundMoney(n: number) {
 export function PagarPage() {
   const { cuenta, refreshCuenta } = useCuenta()
   const { updateSaldo } = useCuentaStore()
+  const [params] = useSearchParams()
+  const cobroInicial = params.get('cobro') ?? undefined
 
+  const [tab, setTab] = useState<Tab>(cobroInicial ? 'nfc' : 'servicios')
   const [step, setStep] = useState<Step>('lista')
   const [servicio, setServicio] = useState<Servicio | null>(null)
   const [pagados, setPagados] = useState<string[]>([])
@@ -156,14 +162,37 @@ export function PagarPage() {
             Pagar
           </h1>
           <p className="font-body text-sm text-slate-secondary mt-1">
-            Suscripciones y servicios digitales
+            Servicios, cobro con QR o pago contactless
           </p>
+          <div className="grid grid-cols-3 gap-1 mt-4 p-1 rounded-xl bg-slate-input dark:bg-white/5">
+            {([
+              { id: 'servicios' as const, label: 'Servicios', icon: Receipt },
+              { id: 'cobrar' as const, label: 'Cobrar', icon: QrCode },
+              { id: 'nfc' as const, label: 'NFC', icon: Nfc },
+            ]).map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                className={`rounded-lg py-2 font-body text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                  tab === id ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
+                }`}
+              >
+                <Icon size={14} />
+                {label}
+              </button>
+            ))}
+          </div>
           <p className="font-body text-xs text-slate-secondary mt-2">
             Saldo disponible:{' '}
             <span className="text-mint font-medium">{formatARS(cuenta?.saldo ?? 0)}</span>
           </p>
         </div>
 
+        {tab === 'cobrar' && <CobrarNfcPanel />}
+        {tab === 'nfc' && <PagarNfcPanel cobroIdInicial={cobroInicial} />}
+
+        {tab === 'servicios' && (
         <AnimatePresence mode="wait">
           {step === 'lista' && (
             <motion.div key="lista" variants={stepVariants} initial="initial" animate="animate" exit="exit">
@@ -295,6 +324,7 @@ export function PagarPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        )}
       </div>
     </PageWrapper>
   )

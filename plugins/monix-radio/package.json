@@ -1,0 +1,15 @@
+{
+  "name": "monix-radio",
+  "version": "1.0.0",
+  "main": "index.js",
+  "types": "definitions.d.ts",
+  "files": ["android", "index.js", "definitions.d.ts"],
+  "peerDependencies": {
+    "@capacitor/core": ">=7.0.0"
+  },
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  }
+}
