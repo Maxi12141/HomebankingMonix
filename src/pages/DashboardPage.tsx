@@ -303,8 +303,8 @@ export function DashboardPage() {
           )}
         </motion.div>
 
-        {/* Acciones rápidas */}
-        <motion.div variants={itemVariants} id="tour-acciones" className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
+        {/* Acciones rápidas: en celular van fijas abajo (Navbar). Cerca solo en notebook/PC. */}
+        <motion.div variants={itemVariants} id="tour-acciones" className="hidden md:grid grid-cols-5 gap-3 mb-8">
           <Button variant="primary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/transferir')}>
             <ArrowRightLeft size={20} />
             <span className="text-sm">Transferir</span>

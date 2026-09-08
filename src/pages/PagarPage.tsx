@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, useEffect, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CheckCircle, Gamepad2, Nfc, QrCode, Receipt } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -86,13 +86,29 @@ export function PagarPage() {
   const { updateSaldo } = useCuentaStore()
   const [params] = useSearchParams()
   const cobroInicial = params.get('cobro') ?? undefined
+  const tabParam = params.get('tab')
 
-  const [tab, setTab] = useState<Tab>(cobroInicial ? 'nfc' : 'servicios')
+  const [tab, setTab] = useState<Tab>(() => {
+    if (cobroInicial) return 'nfc'
+    if (tabParam === 'cobrar' || tabParam === 'nfc') return tabParam
+    return 'servicios'
+  })
   const [step, setStep] = useState<Step>('lista')
   const [servicio, setServicio] = useState<Servicio | null>(null)
   const [pagados, setPagados] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const query = params.toString()
+  useEffect(() => {
+    if (params.get('cobro')) {
+      setTab('nfc')
+      return
+    }
+    const t = params.get('tab')
+    if (t === 'cobrar' || t === 'nfc') setTab(t)
+    else setTab('servicios')
+  }, [query])
 
   // Catálogo fresco al entrar a la página; los pagos de esta visita se ocultan hasta salir y volver
   const disponibles = useMemo(

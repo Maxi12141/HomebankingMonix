@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Menu, Sun, Moon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { MobileDrawer } from './MobileDrawer'
+import { Navbar } from './Navbar'
 import { MonixLogoNavbar } from '../MonixLogoNavbar'
 import { NotificationBell } from '../NotificationBell'
 import { useSyncTransferenciasEntrantes } from '../../hooks/useSyncTransferenciasEntrantes'
@@ -69,9 +70,10 @@ export function PageWrapper({ children }: PageWrapperProps) {
           </div>
         </header>
 
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-6 pb-28 md:pb-6 overflow-y-auto">
           {children}
         </main>
+        <Navbar />
       </div>
     </div>
   )

@@ -62,7 +62,13 @@ export function OnboardingTour({ steps, onComplete }: Props) {
   }, [])
 
   const measure = useCallback((stepIdx: number) => {
-    const el = document.getElementById(steps[stepIdx].targetId)
+    const id = steps[stepIdx].targetId
+    const candidates = [document.getElementById(id), document.getElementById(`${id}-mobile`)]
+    const el = candidates.find((node) => {
+      if (!node) return false
+      const r = node.getBoundingClientRect()
+      return r.width > 0 && r.height > 0
+    }) ?? candidates[0]
     if (!el) return
 
     // 'center' (not 'nearest') guarantees maximum breathing room on both sides — with
