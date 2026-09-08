@@ -42,7 +42,7 @@ export function useCerca() {
 
 function useCercaRuntime() {
   const { cuenta } = useCuenta()
-  const { user } = useAuthStore()
+  const { user, loading: authLoading } = useAuthStore()
   const [visible, setVisible] = useState(() => localStorage.getItem(VISIBLE_KEY) === '1')
   const [buscando, setBuscando] = useState(false)
   const [nearby, setNearby] = useState<PersonaCerca[]>([])
@@ -54,14 +54,15 @@ function useCercaRuntime() {
 
   const publish = useCallback(async () => {
     if (!cuenta?.id || !visible) return
+    const session = (await supabase.auth.getSession()).data.session
+    if (!session?.access_token) return
     const token = randomToken()
     tokenRef.current = token
     await activarPresencia(cuenta.id, token)
-    const session = (await supabase.auth.getSession()).data.session
     await monixRadio.startAdvertising({
       token,
       cuentaId: cuenta.id,
-      accessToken: session?.access_token,
+      accessToken: session.access_token,
       supabaseUrl: import.meta.env.VITE_SUPABASE_URL as string,
       supabaseKey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
     })
@@ -80,9 +81,8 @@ function useCercaRuntime() {
   }, [user])
 
   useEffect(() => {
-    if (!user || !cuenta?.id) {
-      if (!user) {
-        desactivarPresencia().catch(() => undefined)
+    if (authLoading || !user || !cuenta?.id) {
+      if (!authLoading && !user) {
         monixRadio.stopAdvertising().catch(() => undefined)
       }
       return
@@ -94,12 +94,19 @@ function useCercaRuntime() {
       return
     }
     localStorage.setItem(VISIBLE_KEY, '1')
-    publish().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo activar Cerca'))
+    publish().catch((err) => {
+      const msg = err instanceof Error ? err.message : 'No se pudo activar Cerca'
+      if (/401|403|42501|JWT|autenticad|permission denied|not authorized/i.test(msg)) {
+        console.warn('Monix Cerca: no se pudo activar presencia', msg)
+        return
+      }
+      setError(msg)
+    })
     const id = window.setInterval(() => {
       publish().catch(() => undefined)
     }, HEARTBEAT_MS)
     return () => window.clearInterval(id)
-  }, [user, cuenta?.id, visible, publish])
+  }, [authLoading, user, cuenta?.id, visible, publish])
 
   const handleToken = useCallback(async (token: string, rssi?: number) => {
     if (!token || token === tokenRef.current) return

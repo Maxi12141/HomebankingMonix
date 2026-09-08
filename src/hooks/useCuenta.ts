@@ -12,8 +12,95 @@ function roundMoney(n: number) {
   return Math.round((n + Number.EPSILON) * 100) / 100
 }
 
+/**
+ * Una sola suscripción Realtime por cuenta, compartida entre todos los
+ * `useCuenta()` montados (CercaProvider + cada página).
+ *
+ * supabase-js reutiliza el canal si el nombre coincide. Si un segundo
+ * mount hace `.on('postgres_changes')` sobre un canal ya en `subscribe()`,
+ * tira: "cannot add postgres_changes callbacks after subscribe()".
+ *
+ * React 18 StrictMode desmonta al toque: si removeChannel() corre en ese
+ * cleanup, el WebSocket se cierra antes de conectar. Por eso el unsubscribe
+ * espera un tick.
+ */
+const UNMOUNT_GRACE_MS = 400
+let realtimeSeq = 0
+const realtimeRefCount = new Map<string, number>()
+const realtimeChannels = new Map<string, ReturnType<typeof supabase.channel>>()
+const pendingUnsub = new Map<string, number>()
+
+function retainCuentaRealtime(ids: string[]) {
+  for (const id of ids) {
+    const pending = pendingUnsub.get(id)
+    if (pending != null) {
+      window.clearTimeout(pending)
+      pendingUnsub.delete(id)
+    }
+
+    const prev = realtimeRefCount.get(id) ?? 0
+    realtimeRefCount.set(id, prev + 1)
+    if (realtimeChannels.has(id)) continue
+
+    try {
+      const channel = supabase
+        .channel(`cuenta-rt-${id}-${++realtimeSeq}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'cuentas',
+          filter: `id=eq.${id}`,
+        }, (payload) => {
+          const newSaldo = (payload.new as Record<string, unknown>).saldo
+          if (typeof newSaldo === 'number') {
+            useCuentaStore.getState().updateSaldoCuenta(id, newSaldo)
+          }
+        })
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('Realtime de cuenta no disponible:', status)
+          }
+        })
+      realtimeChannels.set(id, channel)
+    } catch (err) {
+      realtimeRefCount.delete(id)
+      console.error('No se pudo suscribir a cambios de la cuenta:', err)
+    }
+  }
+
+  return () => {
+    for (const id of ids) {
+      const next = (realtimeRefCount.get(id) ?? 1) - 1
+      if (next > 0) {
+        realtimeRefCount.set(id, next)
+        continue
+      }
+      realtimeRefCount.set(id, 0)
+      const t = window.setTimeout(() => {
+        pendingUnsub.delete(id)
+        if ((realtimeRefCount.get(id) ?? 0) > 0) return
+        realtimeRefCount.delete(id)
+        const channel = realtimeChannels.get(id)
+        realtimeChannels.delete(id)
+        if (channel) void supabase.removeChannel(channel)
+      }, UNMOUNT_GRACE_MS)
+      pendingUnsub.set(id, t)
+    }
+  }
+}
+
+function useCuentaRealtime() {
+  const cuentas = useCuentaStore((s) => s.cuentas)
+  const cuentaIds = cuentas.map((c) => c.id).join(',')
+
+  useEffect(() => {
+    if (!cuentaIds) return
+    return retainCuentaRealtime(cuentaIds.split(','))
+  }, [cuentaIds])
+}
+
 export function useCuenta() {
-  const { cuenta, setCuenta, cuentas, setCuentas, updateSaldoCuenta } = useCuentaStore()
+  const { cuenta, setCuenta, cuentas, setCuentas } = useCuentaStore()
   const { user } = useAuthStore()
   const userId = user?.id
   const [interesHoy, setInteresHoy] = useState(0)
@@ -23,6 +110,8 @@ export function useCuenta() {
   // dos veces (dos inserts de movimiento duplicados) al no leer nada nuevo
   // hasta que el primero termina de escribir.
   const fetchingRef = useRef(false)
+
+  useCuentaRealtime()
 
   useEffect(() => {
     if (userId) fetchCuentas(userId)
@@ -103,29 +192,6 @@ export function useCuenta() {
 
     return { cuenta: updated as Cuenta, interes: interest }
   }
-
-  const cuentaIds = cuentas.map((c) => c.id).join(',')
-
-  useEffect(() => {
-    if (!cuentaIds) return
-
-    const channels = cuentaIds.split(',').map((id) =>
-      supabase
-        .channel(`cuenta-rt-${id}`)
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'cuentas',
-          filter: `id=eq.${id}`,
-        }, (payload) => {
-          const newSaldo = (payload.new as Record<string, unknown>).saldo
-          if (typeof newSaldo === 'number') updateSaldoCuenta(id, newSaldo)
-        })
-        .subscribe()
-    )
-
-    return () => { channels.forEach((ch) => supabase.removeChannel(ch)) }
-  }, [cuentaIds])
 
   async function refreshCuenta() {
     if (user) await fetchCuentas(user.id)

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
 import { useAuth } from './hooks/useAuth'
 import { useThemeStore } from './stores/themeStore'
 import { isSupabaseConfigured } from './lib/supabaseClient'
 import { LoadingScreen } from './components/LoadingScreen'
 import { MissingEnvScreen } from './components/MissingEnvScreen'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { CercaProvider } from './hooks/useCerca'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
@@ -73,17 +74,23 @@ function AppShell() {
   const { loading } = useAuth()
   const { theme } = useThemeStore()
   const [minTimePassed, setMinTimePassed] = useState(false)
+  const [splashTimedOut, setSplashTimedOut] = useState(false)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
   useEffect(() => {
-    const t = setTimeout(() => setMinTimePassed(true), 2400)
-    return () => clearTimeout(t)
+    const min = window.setTimeout(() => setMinTimePassed(true), 2400)
+    // Si auth o Realtime se cuelgan, no dejar el logo azul tapando la app.
+    const max = window.setTimeout(() => setSplashTimedOut(true), 4500)
+    return () => {
+      window.clearTimeout(min)
+      window.clearTimeout(max)
+    }
   }, [])
 
-  const showLoader = loading || !minTimePassed
+  const showLoader = !splashTimedOut && (loading || !minTimePassed)
 
   return (
     <>
@@ -107,21 +114,17 @@ function AppShell() {
           },
         }}
       />
-      <AnimatePresence>
-        {showLoader
-          ? <LoadingScreen key="loader" />
-          : (
-            <motion.div
-              key="app"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-            >
-              <AppRoutes />
-            </motion.div>
-          )
-        }
-      </AnimatePresence>
+      {showLoader ? (
+        <LoadingScreen />
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <AppRoutes />
+        </motion.div>
+      )}
     </>
   )
 }
@@ -132,10 +135,12 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
-      <CercaProvider>
-        <AppShell />
-      </CercaProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <CercaProvider>
+          <AppShell />
+        </CercaProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }

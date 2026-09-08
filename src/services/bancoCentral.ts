@@ -128,8 +128,15 @@ export async function transferir(
 }
 
 export async function listarTransacciones(minutos: number): Promise<BCTransaccionEntrante[]> {
-  const res = await fetchWithTimeout(`${BASE_URL}/transactions?minutos=${minutos}`, { headers: HEADERS })
-  return handleResponse<BCTransaccionEntrante[]>(res)
+  if (!BASE_URL) return []
+  try {
+    const res = await fetchWithTimeout(`${BASE_URL}/transactions?minutos=${minutos}`, { headers: HEADERS })
+    if (res.status === 404) return []
+    return await handleResponse<BCTransaccionEntrante[]>(res)
+  } catch (err) {
+    if (esNotFound(err)) return []
+    throw err
+  }
 }
 
 export interface BCBank {

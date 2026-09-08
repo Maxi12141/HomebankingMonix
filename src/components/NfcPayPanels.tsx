@@ -45,23 +45,34 @@ export function CobrarNfcPanel() {
 
   useEffect(() => {
     if (!cobro || cobro.estado !== 'pendiente') return
-    const channel = supabase
-      .channel(`cobro-${cobro.id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'cobros_nfc',
-        filter: `id=eq.${cobro.id}`,
-      }, (payload) => {
-        const estado = (payload.new as { estado?: string }).estado
-        if (estado === 'pagado') {
-          setCobro((c) => c ? { ...c, estado: 'pagado' } : c)
-          void refreshCuenta()
-          toast.success('Pago recibido')
-        }
-      })
-      .subscribe()
-    return () => { void supabase.removeChannel(channel) }
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    try {
+      channel = supabase
+        .channel(`cobro-${cobro.id}-${Math.random().toString(36).slice(2, 8)}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'cobros_nfc',
+          filter: `id=eq.${cobro.id}`,
+        }, (payload) => {
+          const estado = (payload.new as { estado?: string }).estado
+          if (estado === 'pagado') {
+            setCobro((c) => c ? { ...c, estado: 'pagado' } : c)
+            void refreshCuenta()
+            toast.success('Pago recibido')
+          }
+        })
+        .subscribe()
+    } catch (err) {
+      console.error('No se pudo escuchar el cobro en tiempo real:', err)
+      return
+    }
+    return () => {
+      const ch = channel
+      window.setTimeout(() => {
+        if (ch) void supabase.removeChannel(ch)
+      }, 400)
+    }
   }, [cobro?.id, cobro?.estado, refreshCuenta])
 
   useEffect(() => {

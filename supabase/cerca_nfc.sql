@@ -291,10 +291,13 @@ begin
 end;
 $$;
 
+-- Los wrappers públicos DEBEN ser SECURITY DEFINER: authenticated no tiene
+-- USAGE/EXECUTE sobre schema private, así que INVOKER devolvía HTTP 403.
+-- La autorización sigue en private.* (auth.uid() + cuenta_propia).
 create or replace function public.activar_presencia(p_cuenta_id uuid, p_token text)
 returns void
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select private.activar_presencia(p_cuenta_id, p_token);
@@ -324,7 +327,7 @@ $$;
 create or replace function public.desactivar_presencia()
 returns void
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select private.desactivar_presencia();
@@ -382,7 +385,7 @@ $$;
 create or replace function public.resolver_presencia(p_token text)
 returns table(nombre text, apellido text, alias text)
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select * from private.resolver_presencia(p_token);
@@ -461,7 +464,7 @@ returns table(
   moneda text
 )
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select * from private.abrir_destino_cerca(p_token);
@@ -499,7 +502,7 @@ $$;
 create or replace function public.registrar_tarjeta_nfc(p_cuenta_id uuid, p_token text)
 returns void
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select private.registrar_tarjeta_nfc(p_cuenta_id, p_token);
@@ -537,7 +540,7 @@ $$;
 create or replace function public.generar_criptograma_nfc(p_cuenta_id uuid, p_token text)
 returns void
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select private.generar_criptograma_nfc(p_cuenta_id, p_token);
@@ -593,7 +596,7 @@ create or replace function public.crear_cobro_nfc(
 )
 returns uuid
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select private.crear_cobro_nfc(p_cuenta_id, p_monto, p_descripcion);
@@ -671,7 +674,7 @@ returns table(
   moneda text
 )
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select * from private.obtener_cobro_nfc(p_cobro_id);
@@ -707,7 +710,7 @@ $$;
 create or replace function public.cancelar_cobro_nfc(p_cobro_id uuid)
 returns void
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select private.cancelar_cobro_nfc(p_cobro_id);
@@ -915,7 +918,7 @@ $$;
 create or replace function public.pagar_cobro_nfc(p_cobro_id uuid, p_secreto text)
 returns void
 language sql
-security invoker
+security definer
 set search_path = ''
 as $$
   select private.pagar_cobro_nfc(p_cobro_id, p_secreto);
@@ -968,5 +971,15 @@ begin
       and tablename = 'cobros_nfc'
   ) then
     execute 'alter publication supabase_realtime add table public.cobros_nfc';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'cuentas'
+  ) then
+    execute 'alter publication supabase_realtime add table public.cuentas';
   end if;
 end $$;
