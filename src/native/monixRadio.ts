@@ -51,11 +51,19 @@ export function radioCapabilities(): RadioCapabilities {
   }
 }
 
+export function isAbortError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const name = 'name' in err ? String(err.name) : ''
+  const message = 'message' in err ? String(err.message) : ''
+  return name === 'AbortError' || /signal is aborted/i.test(message)
+}
+
 export class MonixRadio {
   private nearbyHandlers = new Set<NearbyHandler>()
   private nfcHandlers = new Set<NfcHandler>()
   private ndef: NDEFReader | null = null
   private scanAbort: AbortController | null = null
+  private webNfcActive = false
   private pluginUnsubs: Array<{ remove: () => Promise<void> }> = []
   private advertising = false
 
@@ -129,6 +137,7 @@ export class MonixRadio {
   async stopScan() {
     const plugin = await getPlugin()
     if (plugin) await plugin.stopScan()
+    this.webNfcActive = false
     this.scanAbort?.abort()
     this.scanAbort = null
     this.ndef = null
@@ -154,10 +163,19 @@ export class MonixRadio {
     if (!hasNdef()) {
       throw new Error('Este navegador no soporta NFC. Usá Chrome en Android o la APK de Monix.')
     }
-    this.scanAbort?.abort()
+    if (this.webNfcActive) return
     this.scanAbort = new AbortController()
     this.ndef = new NDEFReader()
-    await this.ndef.scan({ signal: this.scanAbort.signal })
+    this.webNfcActive = true
+    try {
+      await this.ndef.scan({ signal: this.scanAbort.signal })
+    } catch (err) {
+      this.webNfcActive = false
+      this.ndef = null
+      if (isAbortError(err)) return
+      throw err
+    }
+    if (!this.ndef) return
     this.ndef.onreading = (event) => {
       for (const record of event.message.records) {
         try {

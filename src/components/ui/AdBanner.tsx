@@ -135,7 +135,7 @@ export function AdBanner() {
       </Link>
 
       <div>
-        <div className="truco-hand" data-fanned={open ? 'true' : undefined}>
+        <div className="truco-hand">
           {PROMO_CARDS.map((card) => (
             <PromoCard
               key={card.id}
@@ -219,26 +219,28 @@ function PromoCard({
       className={`truco-card rounded-xl border ${shell} ${
         active ? 'ring-1 ring-mint/30' : ''
       }`}
-      data-lifted={active ? 'true' : undefined}
     >
       <button
         type="button"
-        onClick={onToggle}
-        className="w-full h-full text-left p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 cursor-pointer"
+        onClick={(e) => {
+          onToggle()
+          e.currentTarget.blur()
+        }}
+        className="w-full h-full text-left p-2.5 sm:p-3.5 flex items-start sm:items-center gap-2 sm:gap-3 cursor-pointer"
         aria-expanded={active}
       >
         <div className="shrink-0 hidden sm:block">{icon}</div>
         <div className="flex-1 min-w-0">
-          <div className={`text-xs sm:text-lg font-semibold leading-tight line-clamp-2 sm:line-clamp-1 ${titleCls}`}>
+          <div className={`text-[13px] sm:text-base font-semibold leading-snug ${titleCls}`}>
             {title}
           </div>
-          <div className="hidden sm:block text-sm text-slate-secondary mt-1 line-clamp-2">
+          <div className="text-[11px] sm:text-sm text-slate-secondary mt-0.5 leading-snug">
             {subtitle}
           </div>
         </div>
         <ChevronDown
           size={16}
-          className={`shrink-0 text-slate-secondary transition-transform duration-200 ${
+          className={`shrink-0 mt-0.5 sm:mt-0 text-slate-secondary transition-transform duration-200 ${
             active ? 'rotate-180 text-mint' : ''
           }`}
         />

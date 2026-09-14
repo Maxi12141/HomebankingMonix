@@ -5,7 +5,7 @@ import { useCuenta } from './useCuenta'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabaseClient'
 import { randomToken, parseRadioPayload } from '../lib/tokens'
-import { monixRadio, radioCapabilities, type RadioCapabilities } from '../native/monixRadio'
+import { isAbortError, monixRadio, radioCapabilities, type RadioCapabilities } from '../native/monixRadio'
 import { CercaPrompt } from '../components/CercaPrompt'
 import {
   activarPresencia,
@@ -95,6 +95,7 @@ function useCercaRuntime() {
     }
     localStorage.setItem(VISIBLE_KEY, '1')
     publish().catch((err) => {
+      if (isAbortError(err)) return
       const msg = err instanceof Error ? err.message : 'No se pudo activar Cerca'
       if (/401|403|42501|JWT|autenticad|permission denied|not authorized/i.test(msg)) {
         console.warn('Monix Cerca: no se pudo activar presencia', msg)
@@ -127,6 +128,7 @@ function useCercaRuntime() {
         setPrompt(found)
       }
     } catch (err) {
+      if (isAbortError(err)) return
       setError(err instanceof Error ? err.message : 'No se pudo identificar')
     }
   }, [])
@@ -150,8 +152,11 @@ function useCercaRuntime() {
     setBuscando(true)
     try {
       await monixRadio.startScan()
-      await monixRadio.startNfcListen().catch(() => undefined)
+      await monixRadio.startNfcListen().catch((err) => {
+        if (!isAbortError(err)) throw err
+      })
     } catch (err) {
+      if (isAbortError(err)) return
       setBuscando(false)
       const msg = err instanceof Error ? err.message : 'No se pudo buscar personas cerca'
       setError(msg)
