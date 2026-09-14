@@ -3,9 +3,10 @@ import type { ButtonHTMLAttributes } from 'react'
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'secondary-light' | 'ghost'
   loading?: boolean
+  loadingLabel?: string
 }
 
-export function Button({ variant = 'primary', loading, children, className = '', disabled, ...props }: ButtonProps) {
+export function Button({ variant = 'primary', loading, loadingLabel = 'Cargando...', children, className = '', disabled, ...props }: ButtonProps) {
   const base = 'rounded-xl font-body font-medium px-5 py-3 transition-[transform,box-shadow,background-color,color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none'
 
   const variants = {
@@ -24,7 +25,7 @@ export function Button({ variant = 'primary', loading, children, className = '',
       {loading ? (
         <span className="flex items-center justify-center gap-2">
           <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          Cargando...
+          {loadingLabel}
         </span>
       ) : children}
     </button>

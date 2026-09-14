@@ -189,17 +189,20 @@ export class MonixRadio {
     }
   }
 
-  async writeNfc(payload: string) {
+  async writeNfc(payload: string, options?: { signal?: AbortSignal }) {
     const plugin = await getPlugin()
     if (plugin) {
       await plugin.writeNfc({ payload })
       return
     }
     if (!hasNdef()) {
-      throw new Error('Acercá una tarjeta NFC al teléfono (Chrome Android) o usá la APK.')
+      throw new Error('En este navegador no se puede grabar NFC. Probá Chrome en Android con un sticker, o la APK.')
     }
     const writer = new NDEFReader()
-    await writer.write({ records: [{ recordType: 'text', data: payload, lang: 'es' }] })
+    await writer.write(
+      { records: [{ recordType: 'text', data: payload, lang: 'es' }] },
+      options?.signal ? { signal: options.signal } : undefined,
+    )
   }
 
   async startHce(payload: string) {

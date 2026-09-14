@@ -36,6 +36,7 @@ const faceBaseStyle: CSSProperties = {
   position: 'absolute',
   inset: 0,
   borderRadius: 16,
+  overflow: 'hidden',
   backfaceVisibility: 'hidden',
   WebkitBackfaceVisibility: 'hidden',
   transformStyle: 'preserve-3d',
@@ -139,7 +140,7 @@ export function MonixCard3D({
           }}
           animate={{ scale: frozen ? [1, 0.96, 1] : 1 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="relative w-full aspect-[1.586/1]"
+          className="relative w-full aspect-[1.45/1] sm:aspect-[1.586/1]"
         >
           {/* Flip layer */}
           <motion.div
@@ -241,66 +242,68 @@ export function MonixCard3D({
                 border: '1px solid rgba(255,255,255,0.1)',
               }}
             >
-              <div className="mt-5 h-11 w-full bg-black/70" />
-              <div className="px-5 sm:px-6 pt-4 space-y-3 text-left">
-                <div className="rounded-md bg-white/90 px-3 py-2 flex items-center justify-between">
-                  <span className="font-body text-[10px] text-navy/50 uppercase tracking-wider">CVV</span>
-                  <span className="font-mono text-sm text-navy tracking-widest">
-                    {showSensitive ? cvv : '•••'}
-                  </span>
-                </div>
+              <div className="flex h-full flex-col text-left">
+                <div className="mt-3 sm:mt-5 h-8 sm:h-10 w-full shrink-0 bg-black/70" />
+                <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 py-2.5 sm:px-5 sm:py-3">
+                  <div className="flex shrink-0 items-center justify-between rounded-md bg-white/90 px-3 py-1.5">
+                    <span className="font-body text-[10px] uppercase tracking-wider text-navy/50">CVV</span>
+                    <span className="font-mono text-sm tracking-widest text-navy">
+                      {showSensitive ? cvv : '•••'}
+                    </span>
+                  </div>
 
-                <div className="rounded-xl bg-white/5 border border-white/10 p-3 space-y-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-body text-[10px] uppercase tracking-[0.16em] text-slate-secondary">
-                        CBU
-                      </p>
-                      <p className="font-mono text-[11px] sm:text-xs text-white break-all mt-0.5">
+                  <div className="flex min-h-0 flex-1 flex-col justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-body text-[10px] uppercase tracking-[0.16em] text-slate-secondary">
+                          CBU
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void copyField(cbu ?? '', 'cbu')
+                          }}
+                          className="shrink-0 text-slate-secondary transition-colors hover:text-mint"
+                          aria-label="Copiar CBU"
+                        >
+                          {copied === 'cbu' ? <Check size={14} className="text-mint" /> : <Copy size={14} />}
+                        </button>
+                      </div>
+                      <p className="mt-0.5 break-all font-mono text-[10px] leading-tight tracking-wide text-white sm:text-xs">
                         {cbu || '—'}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        copyField(cbu ?? '', 'cbu')
-                      }}
-                      className="shrink-0 text-slate-secondary hover:text-mint transition-colors"
-                      aria-label="Copiar CBU"
-                    >
-                      {copied === 'cbu' ? <Check size={14} className="text-mint" /> : <Copy size={14} />}
-                    </button>
-                  </div>
 
-                  <div className="h-px bg-white/10" />
+                    <div className="h-px shrink-0 bg-white/10" />
 
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-body text-[10px] uppercase tracking-[0.16em] text-slate-secondary">
-                        Alias
-                      </p>
-                      <p className="font-body text-sm text-white truncate mt-0.5">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-body text-[10px] uppercase tracking-[0.16em] text-slate-secondary">
+                          Alias
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void copyField(alias ?? '', 'alias')
+                          }}
+                          className="shrink-0 text-slate-secondary transition-colors hover:text-mint"
+                          aria-label="Copiar Alias"
+                        >
+                          {copied === 'alias' ? <Check size={14} className="text-mint" /> : <Copy size={14} />}
+                        </button>
+                      </div>
+                      <p className="mt-0.5 truncate font-body text-sm text-white">
                         {alias || '—'}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        copyField(alias ?? '', 'alias')
-                      }}
-                      className="shrink-0 text-slate-secondary hover:text-mint transition-colors"
-                      aria-label="Copiar Alias"
-                    >
-                      {copied === 'alias' ? <Check size={14} className="text-mint" /> : <Copy size={14} />}
-                    </button>
                   </div>
-                </div>
 
-                <p className="font-body text-[10px] text-slate-secondary/80">
-                  Datos para recibir transferencias · MONIX Débito
-                </p>
+                  <p className="shrink-0 font-body text-[9px] leading-tight text-slate-secondary/80 sm:text-[10px]">
+                    Datos para recibir transferencias · MONIX Débito
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>

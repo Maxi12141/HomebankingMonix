@@ -7,10 +7,12 @@ import { useCuentaStore } from '../store/cuentaStore'
 import { Card } from './ui/Card'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
+import { QrBox } from './QrBox'
 import { NfcWaves } from './NfcWaves'
 import { formatMonto } from '../utils/cuenta'
 import { encodeCobroQr, encodePayPayload, parseRadioPayload, randomToken } from '../lib/tokens'
-import { monixRadio } from '../native/monixRadio'
+import { detectQrUntil, isIosDevice, startQrCamera, stopMediaStream, waitForVideo } from '../lib/scanQr'
+import { isAbortError, monixRadio, radioCapabilities } from '../native/monixRadio'
 import {
   cancelarCobroNfc,
   crearCobroNfc,
@@ -20,19 +22,14 @@ import {
   type CobroNfc,
 } from '../services/nfcPago'
 
-function QrBox({ value }: { value: string }) {
-  const [src, setSrc] = useState('')
-  useEffect(() => {
-    let alive = true
-    void import('qrcode').then((QR) =>
-      QR.toDataURL(value, { width: 280, margin: 1, color: { dark: '#0D2B52', light: '#ffffff' } }).then((url) => {
-        if (alive) setSrc(url)
-      }),
-    )
-    return () => { alive = false }
-  }, [value])
-  if (!src) return <div className="w-56 h-56 rounded-xl bg-slate-input dark:bg-white/5 animate-pulse mx-auto" />
-  return <img src={src} alt="QR de cobro Monix" className="w-56 h-56 mx-auto rounded-xl" />
+async function leerQrDeCamara(video: HTMLVideoElement, signal: AbortSignal) {
+  const stream = await startQrCamera(video)
+  try {
+    return await detectQrUntil(video, signal)
+  } finally {
+    stopMediaStream(stream)
+    video.srcObject = null
+  }
 }
 
 export function CobrarNfcPanel() {
@@ -42,6 +39,11 @@ export function CobrarNfcPanel() {
   const [cobro, setCobro] = useState<CobroNfc | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const scanAbortRef = useRef<AbortController | null>(null)
+  const apple = isIosDevice()
+  const caps = radioCapabilities()
 
   useEffect(() => {
     if (!cobro || cobro.estado !== 'pendiente') return
@@ -93,6 +95,36 @@ export function CobrarNfcPanel() {
     return () => { off() }
   }, [cobro, refreshCuenta])
 
+  async function escanearChipCliente() {
+    if (!cobro) return
+    scanAbortRef.current?.abort()
+    const controller = new AbortController()
+    scanAbortRef.current = controller
+    setScanning(true)
+    setError('')
+    try {
+      const video = await waitForVideo(() => videoRef.current, controller.signal)
+      const raw = await leerQrDeCamara(video, controller.signal)
+      const parsed = parseRadioPayload(raw)
+      if (parsed?.kind !== 'pay' && parsed?.kind !== 'id') {
+        throw new Error('Ese QR no es un chip Monix. Pedile que muestre el QR de su tarjeta.')
+      }
+      await pagarCobroNfc(cobro.id, parsed.value)
+      const fresh = await obtenerCobroNfc(cobro.id)
+      setCobro(fresh)
+      await refreshCuenta()
+      toast.success('Pago recibido')
+    } catch (err) {
+      if (!isAbortError(err)) {
+        setError(err instanceof Error ? err.message : 'No se pudo leer el QR')
+        toast.error(err instanceof Error ? err.message : 'No se pudo leer el QR')
+      }
+    } finally {
+      if (scanAbortRef.current === controller) scanAbortRef.current = null
+      setScanning(false)
+    }
+  }
+
   async function crear() {
     if (!cuenta) return
     const n = parseFloat(monto)
@@ -110,6 +142,7 @@ export function CobrarNfcPanel() {
   }
 
   async function cancelar() {
+    scanAbortRef.current?.abort()
     if (!cobro) return
     await cancelarCobroNfc(cobro.id)
     setCobro(null)
@@ -134,15 +167,39 @@ export function CobrarNfcPanel() {
   if (cobro) {
     return (
       <Card className="p-6">
-        <p className="font-body text-xs text-slate-secondary uppercase tracking-wider text-center">Mostrá el QR o acercá la tarjeta</p>
+        <p className="font-body text-xs text-slate-secondary uppercase tracking-wider text-center">
+          {apple || !caps.nfc ? 'Mostrá el QR a quien paga' : 'Mostrá el QR o acercá la tarjeta'}
+        </p>
         <p className="font-display text-2xl font-bold text-mint text-center my-3">
           {formatMonto(cobro.monto, cobro.moneda)}
         </p>
-        <QrBox value={encodeCobroQr(cobro.id)} />
-        <div className="flex items-center justify-center gap-2 mt-4 text-mint">
-          <NfcWaves className="w-8 h-8" />
-          <p className="font-body text-sm">Esperando chip o teléfono…</p>
-        </div>
+        <QrBox value={encodeCobroQr(cobro.id)} alt="QR de cobro Monix" />
+        {scanning ? (
+          <div className="mt-4">
+            <video ref={videoRef} className="w-full rounded-xl bg-black aspect-[4/3] object-cover" muted playsInline />
+            <Button variant="secondary" className="w-full mt-3" type="button" onClick={() => scanAbortRef.current?.abort()}>
+              Cancelar cámara
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-center gap-2 mt-4 text-mint">
+              <NfcWaves className="w-8 h-8" />
+              <p className="font-body text-sm">
+                {apple || !caps.nfc ? 'Esperando que escaneen tu QR…' : 'Esperando chip, QR o teléfono…'}
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              className="w-full mt-4"
+              type="button"
+              onClick={() => { void escanearChipCliente() }}
+            >
+              Escanear QR del cliente
+            </Button>
+          </>
+        )}
+        {error && <p className="text-sm text-red-500 dark:text-red-400 mt-3">{error}</p>}
         <Button variant="secondary" className="w-full mt-5" type="button" onClick={() => { void cancelar() }}>
           Cancelar cobro
         </Button>
@@ -179,6 +236,9 @@ export function PagarNfcPanel({ cobroIdInicial }: { cobroIdInicial?: string }) {
   const cryptoRef = useRef('')
   const videoRef = useRef<HTMLVideoElement>(null)
   const [scanning, setScanning] = useState(false)
+  const scanAbortRef = useRef<AbortController | null>(null)
+  const caps = radioCapabilities()
+  const apple = isIosDevice()
 
   useEffect(() => {
     if (cobroIdInicial) void cargar(cobroIdInicial)
@@ -235,38 +295,24 @@ export function PagarNfcPanel({ cobroIdInicial }: { cobroIdInicial?: string }) {
   }
 
   async function escanearQr() {
+    scanAbortRef.current?.abort()
+    const controller = new AbortController()
+    scanAbortRef.current = controller
     setScanning(true)
     setError('')
     try {
-      const Detector = (window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => { detect: (src: ImageBitmapSource) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector
-      if (!Detector) throw new Error('Este navegador no lee QR. Pegá el código del cobro.')
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-      const detector = new Detector({ formats: ['qr_code'] })
-      const tick = async () => {
-        if (!videoRef.current || videoRef.current.readyState < 2) {
-          requestAnimationFrame(() => { void tick() })
-          return
-        }
-        const codes = await detector.detect(videoRef.current)
-        const raw = codes[0]?.rawValue
-        if (raw) {
-          stream.getTracks().forEach((t) => t.stop())
-          setScanning(false)
-          const parsed = parseRadioPayload(raw)
-          if (parsed?.kind === 'cobro') await cargar(parsed.value)
-          else await cargar(raw)
-          return
-        }
-        requestAnimationFrame(() => { void tick() })
-      }
-      void tick()
+      const video = await waitForVideo(() => videoRef.current, controller.signal)
+      const raw = await leerQrDeCamara(video, controller.signal)
+      const parsed = parseRadioPayload(raw)
+      if (parsed?.kind === 'cobro') await cargar(parsed.value)
+      else await cargar(raw.replace(/^MONIXPAY:/i, ''))
     } catch (err) {
+      if (!isAbortError(err)) {
+        setError(err instanceof Error ? err.message : 'No se pudo abrir la cámara')
+      }
+    } finally {
+      if (scanAbortRef.current === controller) scanAbortRef.current = null
       setScanning(false)
-      setError(err instanceof Error ? err.message : 'No se pudo abrir la cámara')
     }
   }
 
@@ -299,7 +345,14 @@ export function PagarNfcPanel({ cobroIdInicial }: { cobroIdInicial?: string }) {
             Cargar
           </Button>
         </div>
-        {scanning && <video ref={videoRef} className="mt-3 w-full rounded-xl bg-black" muted playsInline />}
+        {scanning && (
+          <>
+            <video ref={videoRef} className="mt-3 w-full rounded-xl bg-black aspect-[4/3] object-cover" muted playsInline />
+            <Button variant="secondary" className="w-full mt-2" type="button" onClick={() => scanAbortRef.current?.abort()}>
+              Cancelar cámara
+            </Button>
+          </>
+        )}
       </Card>
 
       {cobro && (
@@ -311,17 +364,30 @@ export function PagarNfcPanel({ cobroIdInicial }: { cobroIdInicial?: string }) {
           {cobro.comercio_alias && <p className="font-body text-xs text-slate-secondary">@{cobro.comercio_alias}</p>}
           <p className="font-display text-2xl font-bold text-mint my-3">{formatMonto(cobro.monto, cobro.moneda)}</p>
           {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
-          <Button className="w-full flex items-center justify-center gap-2" type="button" onClick={() => { void activarTelefono() }}>
-            <Smartphone size={16} />
-            Acercar este teléfono
-          </Button>
-          <Button variant="secondary" className="w-full mt-2 flex items-center justify-center gap-2" type="button" loading={loading} onClick={() => { void pagarConChipTelefono() }}>
+          {caps.native && (
+            <Button className="w-full flex items-center justify-center gap-2" type="button" onClick={() => { void activarTelefono() }}>
+              <Smartphone size={16} />
+              Acercar este teléfono
+            </Button>
+          )}
+          <Button
+            className={`w-full flex items-center justify-center gap-2 ${caps.native ? 'mt-2' : ''}`}
+            variant={caps.native ? 'secondary' : 'primary'}
+            type="button"
+            loading={loading}
+            onClick={() => { void pagarConChipTelefono() }}
+          >
             <Nfc size={16} />
-            Confirmar pago
+            {apple || !caps.native ? 'Pagar' : 'Confirmar pago'}
           </Button>
           {listoParaTocar && (
             <p className="font-body text-xs text-mint text-center mt-3">
               Teléfono listo. Acercarlo al lector o confirmá el pago acá.
+            </p>
+          )}
+          {!caps.native && (
+            <p className="font-body text-xs text-slate-secondary text-center mt-3">
+              En iPhone pagás con el QR. Escaneá el cobro y confirmá.
             </p>
           )}
         </Card>

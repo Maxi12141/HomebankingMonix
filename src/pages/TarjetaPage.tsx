@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { CreditCard, Eye, EyeOff, Lock, Nfc, ShieldCheck, Snowflake, Wallet } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { CreditCard, Eye, EyeOff, Lock, Nfc, QrCode, Share2, ShieldCheck, Snowflake, Wallet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../store/authStore'
 import { useCuenta } from '../hooks/useCuenta'
@@ -7,12 +7,18 @@ import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { MonixCard3D, buildPan, buildCvv } from '../components/MonixCard3D'
+import { QrBox } from '../components/QrBox'
 import { encodePayPayload, randomToken } from '../lib/tokens'
-import { monixRadio } from '../native/monixRadio'
+import { isIosDevice } from '../lib/scanQr'
+import { isAbortError, monixRadio, radioCapabilities } from '../native/monixRadio'
 import { registrarTarjetaNfc, setTarjetaFlags } from '../services/nfcPago'
 
 function freezeKey(cuentaId: string) {
   return `monix_card_frozen_${cuentaId}`
+}
+
+function chipKey(cuentaId: string) {
+  return `monix_card_chip_${cuentaId}`
 }
 
 const LIMITES: Record<'ARS' | 'USD', { comercios: string; cajeros: string; online: string }> = {
@@ -28,6 +34,12 @@ export function TarjetaPage() {
   const [grabando, setGrabando] = useState(false)
   const [showSensitive, setShowSensitive] = useState(false)
   const [monedaActiva, setMonedaActiva] = useState<'ARS' | 'USD'>('ARS')
+  const [chipPayload, setChipPayload] = useState('')
+  const [qrDataUrl, setQrDataUrl] = useState('')
+  const writeAbortRef = useRef<AbortController | null>(null)
+  const caps = radioCapabilities()
+  const apple = isIosDevice()
+  const useQrChip = apple || !caps.nfc
 
   const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
   const cuentaMostrada = monedaActiva === 'USD' && cuentaUSD ? cuentaUSD : cuenta
@@ -36,7 +48,15 @@ export function TarjetaPage() {
     if (!cuentaMostrada) return
     setFrozen(Boolean(cuentaMostrada.tarjeta_congelada) || localStorage.getItem(freezeKey(cuentaMostrada.id)) === '1')
     setNfcOn(Boolean(cuentaMostrada.nfc_contacto_activo))
+    setChipPayload(localStorage.getItem(chipKey(cuentaMostrada.id)) ?? '')
+    setQrDataUrl('')
   }, [cuentaMostrada?.id, cuentaMostrada?.tarjeta_congelada, cuentaMostrada?.nfc_contacto_activo])
+
+  useEffect(() => {
+    return () => {
+      writeAbortRef.current?.abort()
+    }
+  }, [])
 
   async function toggleFreeze() {
     if (!cuentaMostrada?.id) return
@@ -64,20 +84,82 @@ export function TarjetaPage() {
     }
   }
 
-  async function grabarChip() {
-    if (!cuentaMostrada?.id) return
+  async function activarChipQr() {
+    if (!cuentaMostrada?.id || grabando) return
     setGrabando(true)
     try {
       const token = randomToken()
       await registrarTarjetaNfc(cuentaMostrada.id, token)
+      const payload = encodePayPayload(token)
+      localStorage.setItem(chipKey(cuentaMostrada.id), payload)
+      setChipPayload(payload)
       setNfcOn(true)
-      await monixRadio.writeNfc(encodePayPayload(token))
-      toast.success('Chip grabado. Ya podés pagar acercando la tarjeta.')
+      await setTarjetaFlags(cuentaMostrada.id, { nfc_contacto_activo: true })
+      toast.success('QR de tu tarjeta listo. Mostralo para pagar.')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Acercá una tarjeta NFC virgen al teléfono')
+      toast.error(err instanceof Error ? err.message : 'No se pudo activar el QR de la tarjeta')
     } finally {
       setGrabando(false)
     }
+  }
+
+  async function copiarChip() {
+    if (!chipPayload) return
+    await navigator.clipboard.writeText(chipPayload)
+    toast.success('Código copiado')
+  }
+
+  async function compartirChip() {
+    if (!chipPayload) return
+    try {
+      if (qrDataUrl && navigator.share) {
+        const res = await fetch(qrDataUrl)
+        const blob = await res.blob()
+        const file = new File([blob], 'chip-monix.png', { type: 'image/png' })
+        const shareData: ShareData = { title: 'Chip Monix', text: 'Mostrá este QR para pagar con Monix', files: [file] }
+        if (navigator.canShare?.(shareData)) {
+          await navigator.share(shareData)
+          return
+        }
+        await navigator.share({ title: 'Chip Monix', text: chipPayload })
+        return
+      }
+      await copiarChip()
+    } catch (err) {
+      if (isAbortError(err)) return
+      await copiarChip()
+    }
+  }
+
+  async function grabarChip() {
+    if (!cuentaMostrada?.id || grabando) return
+    writeAbortRef.current?.abort()
+    const controller = new AbortController()
+    writeAbortRef.current = controller
+    const timer = window.setTimeout(() => controller.abort(), 25_000)
+    setGrabando(true)
+    try {
+      const token = randomToken()
+      await registrarTarjetaNfc(cuentaMostrada.id, token)
+      if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+      setNfcOn(true)
+      await monixRadio.writeNfc(encodePayPayload(token), { signal: controller.signal })
+      toast.success('Chip grabado. Ya podés pagar acercando la tarjeta.')
+    } catch (err) {
+      if (isAbortError(err)) {
+        toast.error('Se canceló o se agotó el tiempo. Acercá el sticker NFC al teléfono e intentá de nuevo.')
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Acercá una tarjeta NFC virgen al teléfono')
+      }
+    } finally {
+      window.clearTimeout(timer)
+      if (writeAbortRef.current === controller) writeAbortRef.current = null
+      setGrabando(false)
+    }
+  }
+
+  function cancelarGrabado() {
+    writeAbortRef.current?.abort()
   }
 
   const tipoLabel = cuentaMostrada?.tipo === 'cuenta_corriente' ? 'Cuenta Corriente' : 'Caja de Ahorro'
@@ -168,9 +250,9 @@ export function TarjetaPage() {
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
-              <Nfc size={18} className="text-mint" />
+              {useQrChip ? <QrCode size={18} className="text-mint" /> : <Nfc size={18} className="text-mint" />}
               <h2 className="font-display text-base font-semibold text-navy dark:text-white">
-                Chip contactless
+                {useQrChip ? 'Pagar con QR' : 'Chip contactless'}
               </h2>
             </div>
             <button
@@ -189,18 +271,78 @@ export function TarjetaPage() {
               />
             </button>
           </div>
-          <p className="font-body text-xs text-slate-secondary mb-4">
-            Pegá un sticker NFC en tu tarjeta física y grabalo acá. El comercio acerca la tarjeta al teléfono o al lector del QR y se debita, sin exponer el número.
-          </p>
-          <Button
-            className="w-full"
-            type="button"
-            loading={grabando}
-            disabled={frozen}
-            onClick={() => { void grabarChip() }}
-          >
-            Grabar chip en la tarjeta
-          </Button>
+          {useQrChip ? (
+            <>
+              <p className="font-body text-xs text-slate-secondary mb-4">
+                En iPhone pagás mostrando este QR. El comercio lo escanea y se debita, sin el número de la tarjeta.
+              </p>
+              {chipPayload && (
+                <div className="mb-4">
+                  <QrBox
+                    value={chipPayload}
+                    alt="QR de la tarjeta Monix"
+                    onReady={setQrDataUrl}
+                  />
+                  <p className="font-mono text-[11px] text-slate-secondary break-all text-center mt-3">
+                    {chipPayload}
+                  </p>
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                <Button
+                  className="w-full"
+                  type="button"
+                  loading={grabando}
+                  loadingLabel="Generando QR…"
+                  disabled={frozen}
+                  onClick={() => { void activarChipQr() }}
+                >
+                  {chipPayload ? 'Generar un QR nuevo' : 'Activar QR de la tarjeta'}
+                </Button>
+                {chipPayload && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="secondary" type="button" className="flex items-center justify-center gap-2" onClick={() => { void copiarChip() }}>
+                      Copiar código
+                    </Button>
+                    <Button variant="secondary" type="button" className="flex items-center justify-center gap-2" onClick={() => { void compartirChip() }}>
+                      <Share2 size={16} />
+                      Compartir
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="font-body text-xs text-slate-secondary mb-4">
+                {caps.native
+                  ? 'Pegá un sticker NFC en tu tarjeta física y grabalo acá. El comercio acerca la tarjeta al teléfono o al lector del QR y se debita, sin exponer el número.'
+                  : 'En Chrome Android podés grabar un sticker NFC físico: tocá grabar y acercá el chip al teléfono. Para pagar acercando este celular (sin sticker) hace falta la APK.'}
+              </p>
+              {grabando && (
+                <p className="font-body text-xs text-mint mb-3">
+                  Acercá el sticker NFC a la parte de atrás del teléfono. Si no tenés uno, cancelá.
+                </p>
+              )}
+              <div className={grabando ? 'flex gap-3' : ''}>
+                <Button
+                  className="w-full"
+                  type="button"
+                  loading={grabando}
+                  loadingLabel="Acercá el sticker…"
+                  disabled={frozen}
+                  onClick={() => { void grabarChip() }}
+                >
+                  Grabar chip en la tarjeta
+                </Button>
+                {grabando && (
+                  <Button variant="secondary" className="shrink-0" type="button" onClick={cancelarGrabado}>
+                    Cancelar
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
         </Card>
 
         <Card className="p-6 mb-4">
@@ -271,7 +413,7 @@ export function TarjetaPage() {
               Protección MONIX
             </p>
             <p className="font-body text-xs text-slate-secondary mt-1">
-              Si perdés la tarjeta, congelala al instante. El chip contactless deja de funcionar hasta que la descongeles.
+              Si perdés la tarjeta, congelala al instante. El QR y el chip dejan de servir hasta que la descongeles.
               El dorso tiene tu CBU y alias para recibir transferencias sin compartir el número completo.
             </p>
           </div>
