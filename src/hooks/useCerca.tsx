@@ -158,9 +158,10 @@ function useCercaRuntime() {
     } catch (err) {
       if (isAbortError(err)) return
       setBuscando(false)
+      if (opts?.silent) return
       const msg = err instanceof Error ? err.message : 'No se pudo buscar personas cerca'
       setError(msg)
-      if (!opts?.silent) toast.error(msg)
+      toast.error(msg)
     }
   }, [])
 

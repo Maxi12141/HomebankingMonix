@@ -274,7 +274,9 @@ export function TarjetaPage() {
           {useQrChip ? (
             <>
               <p className="font-body text-xs text-slate-secondary mb-4">
-                En iPhone pagás mostrando este QR. El comercio lo escanea y se debita, sin el número de la tarjeta.
+                {apple
+                  ? 'En iPhone pagás mostrando este QR. El comercio lo escanea y se debita, sin el número de la tarjeta.'
+                  : 'Tu navegador no tiene NFC: pagás mostrando este QR. El comercio lo escanea y se debita, sin el número de la tarjeta.'}
               </p>
               {chipPayload && (
                 <div className="mb-4">
