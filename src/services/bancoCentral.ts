@@ -245,11 +245,11 @@ export async function buscarDestinatarioBC(input: string, esCBU: boolean): Promi
   }
 }
 
-// --- Central de deudores: usada para decidir si una persona puede abrir una
-// caja de ahorro en USD. situacion 1 = Normal, 2 = riesgo bajo/seguimiento
-// especial, 3-5 = con problemas / insolvencia / irrecuperable. Es un dato
-// compartido entre bancos: lo informa cada banco acreedor y cualquiera puede
-// consultarlo por DNI.
+// Central de deudores: situación crediticia real de la persona, usada por
+// Préstamos para tasa, monto máximo y aprobación. situacion 1 = Normal, 2 =
+// riesgo bajo/seguimiento especial, 3-5 = con problemas / insolvencia /
+// irrecuperable. Dato compartido entre bancos: lo informa cada banco
+// acreedor, cualquiera puede consultarlo por DNI.
 
 export interface BCDeuda {
   entidad: string
@@ -274,9 +274,4 @@ export async function consultarSituacion(dni: string): Promise<BCSituacionCredit
     if (esNotFound(err)) return { dni, situacion: 1, deudas: [] }
     throw err
   }
-}
-
-export async function esAptoParaUSD(dni: string): Promise<boolean> {
-  const { situacion } = await consultarSituacion(dni)
-  return situacion === 1 || situacion === 2
 }

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff } from 'lucide-react'
+import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
@@ -46,6 +46,10 @@ export function ProfilePage() {
   const [savingAlias, setSavingAlias] = useState(false)
   const [aliasError, setAliasError] = useState('')
   const [showData, setShowData] = useState(false)
+
+  const [sueldoAcreditado, setSueldoAcreditado] = useState(persona?.sueldo_acreditado ?? false)
+  const [ingresoMensual, setIngresoMensual] = useState(persona?.ingreso_mensual?.toString() ?? '')
+  const [savingCredito, setSavingCredito] = useState(false)
 
   const [currentPass, setCurrentPass] = useState('')
   const [newPass, setNewPass] = useState('')
@@ -115,6 +119,26 @@ export function ProfilePage() {
       toast.error('No se pudo actualizar el alias')
     }
     setSavingAlias(false)
+  }
+
+  async function handleSaveCredito(e: React.FormEvent) {
+    e.preventDefault()
+    if (!persona) return
+    setSavingCredito(true)
+
+    const ingresoNum = ingresoMensual.trim() === '' ? null : parseFloat(ingresoMensual)
+    const { error } = await supabase
+      .from('personas')
+      .update({ sueldo_acreditado: sueldoAcreditado, ingreso_mensual: ingresoNum })
+      .eq('id', persona.id)
+
+    if (!error) {
+      setPersona({ ...persona, sueldo_acreditado: sueldoAcreditado, ingreso_mensual: ingresoNum })
+      toast.success('Datos financieros actualizados')
+    } else {
+      toast.error('No se pudieron guardar los datos financieros')
+    }
+    setSavingCredito(false)
   }
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -293,6 +317,43 @@ export function ProfilePage() {
             {aliasError && <p className="text-sm text-red-500 dark:text-red-400 font-body">{aliasError}</p>}
             <Button type="submit" loading={savingAlias} className="w-full">
               Guardar alias
+            </Button>
+          </form>
+        </Card>
+
+        {/* Datos financieros (ficticios, usados por Préstamos) */}
+        <Card className="p-8 mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Wallet size={18} className="text-slate-secondary" />
+            <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Datos financieros</h2>
+          </div>
+          <p className="font-body text-xs text-slate-secondary mb-6">
+            Ficticios — los usamos para calcular tu oferta en Préstamos.
+          </p>
+          <form onSubmit={handleSaveCredito} className="flex flex-col gap-4">
+            <label className="flex items-center justify-between rounded-xl bg-slate-input dark:bg-white/5 px-4 py-3 cursor-pointer">
+              <span>
+                <span className="block font-body text-sm text-navy dark:text-white">Cobro mi sueldo en Monix</span>
+                <span className="block font-body text-xs text-slate-secondary">Mejora la tasa y el monto máximo en Préstamos</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={sueldoAcreditado}
+                onChange={(e) => setSueldoAcreditado(e.target.checked)}
+                className="h-5 w-5 accent-mint shrink-0"
+              />
+            </label>
+            <Input
+              label="Ingreso mensual declarado"
+              type="number"
+              min="0"
+              step="1000"
+              placeholder="0"
+              value={ingresoMensual}
+              onChange={(e) => setIngresoMensual(e.target.value)}
+            />
+            <Button type="submit" loading={savingCredito} className="w-full">
+              Guardar
             </Button>
           </form>
         </Card>

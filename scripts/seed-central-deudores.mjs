@@ -1,15 +1,16 @@
 // Informa deudas ficticias al Banco Central (POST /central-deudores) para que
-// GET /central-deudores/{dni} devuelva situaciones variadas al testear el
-// gate de apertura de cuenta en USD (Fase 3 del plan de cuentas multi-moneda).
+// GET /central-deudores/{dni} devuelva situaciones variadas al testear
+// Préstamos, que usa la situación crediticia real para tasa, monto máximo y
+// aprobación.
 //
 // Uso: node --env-file=.env scripts/seed-central-deudores.mjs
 //
 // DNIs tomados de la tabla `personas` de Supabase (vía MCP, 19 ago 2026) —
-// sólo las 17 personas que ya tienen una cuenta activa; las 3 sin cuenta
-// (23906742, 23623890, 21438034) no pueden pasar por el flujo de apertura de
-// USD igual, así que no hace falta informarles nada. Corre siempre contra
-// x-environment: test. Volver a correr con otro valor pisa el informe
-// anterior de Monix para ese DNI (un banco tiene un solo informe activo por DNI).
+// sólo las 17 personas que ya tenían una cuenta activa en ese momento; para
+// usuarios registrados después, un DNI sin informe se trata como situación 1
+// (ver `consultarSituacion` en `bancoCentral.ts`). Corre siempre contra
+// x-environment: test; volver a correr pisa el informe anterior de Monix para
+// ese DNI (un banco tiene un solo informe activo por DNI).
 
 const BASE_URL = 'https://centralbank.brocoly.cc/api'
 const API_KEY = process.env.VITE_BC_API_KEY
@@ -25,12 +26,8 @@ const HEADERS = {
   'x-environment': 'test',
 }
 
-// Esquema por fila: { dni, monto, situacion }
-// situacion: 1 Normal · 2 riesgo bajo · 3 riesgo medio · 4 riesgo alto · 5 irrecuperable
-// dni y monto son responsabilidad de cada informe: "monto" es la deuda que
-// ESTE banco (Monix) declara tener con esa persona, no una foto abstracta de
-// su perfil completo. Pisa el informe anterior de Monix para el mismo DNI si
-// se vuelve a correr con otro valor.
+// situacion: 1 Normal · 2 riesgo bajo · 3 riesgo medio · 4 riesgo alto · 5 irrecuperable.
+// "monto" es la deuda que declara este banco (Monix), no un total de todas las deudas de la persona.
 const DEUDAS_FICTICIAS = [
   { dni: '41595650', monto: 0,       situacion: 1 }, // Diego Urenda — aprueba USD
   { dni: '41595666', monto: 0,       situacion: 1 }, // dieguito urendita — aprueba USD

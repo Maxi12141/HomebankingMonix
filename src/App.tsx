@@ -28,6 +28,7 @@ import { MercadoMonixPage } from './pages/MercadoMonixPage'
 import { PromosPage } from './pages/PromosPage'
 import { CashbackPage } from './pages/CashbackPage'
 import { FinanciacionPage } from './pages/FinanciacionPage'
+import { PrestamosPage } from './pages/PrestamosPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -61,6 +62,7 @@ function AppRoutes() {
       <Route path="/promos" element={<RequireAuth><PromosPage /></RequireAuth>} />
       <Route path="/cashback" element={<RequireAuth><CashbackPage /></RequireAuth>} />
       <Route path="/financiacion" element={<RequireAuth><FinanciacionPage /></RequireAuth>} />
+      <Route path="/prestamos" element={<RequireAuth><PrestamosPage /></RequireAuth>} />
       <Route path="/mercado-monix" element={<RequireAuth><MercadoMonixPage /></RequireAuth>} />
       <Route path="/pagar" element={<RequireAuth><PagarPage /></RequireAuth>} />
       <Route path="/perfil" element={<RequireAuth><ProfilePage /></RequireAuth>} />

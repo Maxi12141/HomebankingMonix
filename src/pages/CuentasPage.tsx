@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuenta } from '../hooks/useCuenta'
-import { abrirCuenta, asignarAliasCuenta, esAptoParaUSD } from '../services/bancoCentral'
+import { abrirCuenta, asignarAliasCuenta } from '../services/bancoCentral'
 import { generateNumeroCuenta, generateAlias, formatMonto } from '../utils/cuenta'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
@@ -12,7 +12,7 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import type { Cuenta } from '../types'
 
-type Estado = 'idle' | 'confirmar' | 'evaluando' | 'rechazada'
+type Estado = 'idle' | 'confirmar' | 'abriendo'
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copiado, setCopiado] = useState(false)
@@ -72,16 +72,10 @@ export function CuentasPage() {
 
   async function solicitarUSD() {
     if (!persona) return
-    setEstado('evaluando')
+    setEstado('abriendo')
     setError('')
 
     try {
-      const apto = await esAptoParaUSD(persona.dni)
-      if (!apto) {
-        setEstado('rechazada')
-        return
-      }
-
       const bcCuenta = await abrirCuenta(persona.dni, 'USD')
       const alias = generateAlias()
       // El Banco Central tiene que conocer nuestro alias sí o sí, igual que con
@@ -145,11 +139,6 @@ export function CuentasPage() {
                 Abrí una cuenta en USD con CBU y alias propios. Te mantendremos actualizado sobre tu solicitud.
               </p>
 
-              {estado === 'rechazada' && (
-                <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3 mb-4">
-                  Por ahora no podemos abrirte una cuenta en dólares.
-                </p>
-              )}
               {error && (
                 <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3 mb-4">
                   {error}
@@ -164,7 +153,7 @@ export function CuentasPage() {
         </div>
       </div>
 
-      <Modal open={estado === 'confirmar' || estado === 'evaluando'} onClose={() => estado !== 'evaluando' && setEstado('idle')}>
+      <Modal open={estado === 'confirmar' || estado === 'abriendo'} onClose={() => estado !== 'abriendo' && setEstado('idle')}>
         <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="rounded-xl bg-mint/15 text-mint p-2.5">
@@ -176,14 +165,14 @@ export function CuentasPage() {
           </div>
 
           <p className="font-body text-sm text-slate-secondary mb-6">
-            Evaluaremos tu situación crediticia y te informaremos sobre el estado de tu solicitud.
+            Vamos a abrirte una caja de ahorro en dólares con CBU y alias propios.
           </p>
 
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setEstado('idle')} disabled={estado === 'evaluando'}>
+            <Button variant="secondary" className="flex-1" onClick={() => setEstado('idle')} disabled={estado === 'abriendo'}>
               Cancelar
             </Button>
-            <Button className="flex-1" onClick={solicitarUSD} loading={estado === 'evaluando'}>
+            <Button className="flex-1" onClick={solicitarUSD} loading={estado === 'abriendo'}>
               Continuar
             </Button>
           </div>

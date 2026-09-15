@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, ArrowRightLeft, History, User, LogOut, PiggyBank, BookUser, CreditCard, Vault, Receipt, Landmark, Repeat, Bluetooth } from 'lucide-react'
+import { LayoutDashboard, ArrowRightLeft, History, User, LogOut, PiggyBank, BookUser, CreditCard, Vault, Receipt, Landmark, Repeat, Bluetooth, HandCoins } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 
 const links = [
@@ -11,6 +11,7 @@ const links = [
   { to: '/pagar', icon: Receipt, label: 'Pagar' },
   { to: '/depositar', icon: PiggyBank, label: 'Depositar' },
   { to: '/reservas', icon: Vault, label: 'Reservas' },
+  { to: '/prestamos', icon: HandCoins, label: 'Préstamos' },
   { to: '/tarjeta', icon: CreditCard, label: 'Mis Tarjetas' },
   { to: '/historial', icon: History, label: 'Historial' },
   { to: '/contactos', icon: BookUser, label: 'Contactos' },

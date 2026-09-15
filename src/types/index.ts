@@ -7,6 +7,9 @@ export interface Persona {
   email: string
   telefono: string | null
   fecha_nac: string | null
+  // Ficticios, editables en Perfil — usados por Préstamos para tasa/monto máximo.
+  sueldo_acreditado: boolean
+  ingreso_mensual: number | null
   created_at: string
 }
 
@@ -55,6 +58,21 @@ export interface Movimiento {
   destino_alias: string | null
   bc_transaccion_id: string | null
   banco_codigo_origen: number | null
+  created_at: string
+}
+
+export interface Prestamo {
+  id: string
+  cuenta_id: string
+  monto: number
+  cuotas_totales: number
+  cuotas_pagadas: number
+  cuota_monto: number
+  tna: number
+  situacion_bcra: number
+  sueldo_acreditado: boolean
+  estado: 'activo' | 'pagado'
+  proxima_cuota_at: string
   created_at: string
 }
 
