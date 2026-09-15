@@ -100,7 +100,7 @@ function useCuentaRealtime() {
 }
 
 export function useCuenta() {
-  const { cuenta, setCuenta, cuentas, setCuentas } = useCuentaStore()
+  const { cuenta, setCuenta, cuentas, setCuentas, setCuentasLoaded } = useCuentaStore()
   const { user } = useAuthStore()
   const userId = user?.id
   const [interesHoy, setInteresHoy] = useState(0)
@@ -145,6 +145,7 @@ export function useCuenta() {
       setInteresHoyPorCuenta(Object.fromEntries(accrued.map((a) => [a.cuenta.id, a.interes])))
     } finally {
       fetchingRef.current = false
+      setCuentasLoaded(true)
     }
   }
 
