@@ -14,8 +14,8 @@ export function useMovimientos(limit?: number) {
 
   const fetchMovimientos = useCallback(async () => {
     if (!cuentaIds) {
+      // No confundir con "sin movimientos": useCuenta() todavía no resolvió el/los cuenta_id.
       setMovimientos([])
-      setLoading(false)
       return
     }
     setLoading(true)

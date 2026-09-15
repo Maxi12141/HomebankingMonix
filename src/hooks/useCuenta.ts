@@ -187,7 +187,7 @@ export function useCuenta() {
       tipo: 'deposito',
       monto: interest,
       saldo_resultante: nuevoSaldo,
-      descripcion: 'Rendimiento de Reserva',
+      descripcion: 'Rendimiento de cuenta',
     })
 
     return { cuenta: updated as Cuenta, interes: interest }
