@@ -6,6 +6,7 @@ import { MobileDrawer } from './MobileDrawer'
 import { Navbar } from './Navbar'
 import { MonixLogoNavbar } from '../MonixLogoNavbar'
 import { NotificationBell } from '../NotificationBell'
+import { AsistenteBubble } from '../AsistenteBubble'
 import { useSyncTransferenciasEntrantes } from '../../hooks/useSyncTransferenciasEntrantes'
 import { useThemeStore } from '../../stores/themeStore'
 
@@ -74,6 +75,7 @@ export function PageWrapper({ children }: PageWrapperProps) {
           {children}
         </main>
         <Navbar />
+        <AsistenteBubble hidden={drawerOpen} />
       </div>
     </div>
   )
