@@ -19,6 +19,13 @@ import { estimacionDiaria } from '../hooks/useReserva'
 import { formatMonto as formatMoneda } from '../utils/cuenta'
 import type { TourStep } from '../components/OnboardingTour'
 import type { Movimiento, Cuenta } from '../types'
+import { esCelular } from '../lib/biometria'
+import {
+  completarBienvenida,
+  completarTour,
+  hayBienvenidaPendiente,
+  hayTourPendiente,
+} from '../lib/onboarding'
 
 function formatMonto(monto: number, tipo: string, moneda: 'ARS' | 'USD') {
   const esEntrada = tipo === 'deposito' || tipo === 'transferencia_entrada'
@@ -32,31 +39,61 @@ const tipoLabel: Record<string, string> = {
   transferencia_salida: 'Transferencia enviada',
 }
 
-const TOUR_STEPS: TourStep[] = [
+const TOUR_DESKTOP: TourStep[] = [
   {
     targetId: 'tour-saldo',
-    title: 'Tu saldo disponible',
-    description: 'El saldo de tu cuenta se actualiza automáticamente con cada transferencia recibida o enviada.',
+    title: 'Tu saldo',
+    description: 'Acá ves cuánta plata tenés. Se actualiza solo con cada transferencia, depósito o pago.',
   },
   {
     targetId: 'tour-acciones',
-    title: 'Acciones rápidas',
-    description: 'Enviá dinero, abrí tu QR, revisá el historial o acreditá fondos desde acá.',
+    title: 'Atajos del día a día',
+    description: 'Transferir, QR, historial y depositar. Lo más usado, a un toque.',
   },
   {
     targetId: 'tour-reservas',
     title: 'Reservas',
-    description: 'Separá plata de tu saldo disponible y hacé rendir tu ahorro con interés diario.',
+    description: 'Separá plata de tu saldo y hacela rendir con interés diario.',
   },
   {
     targetId: 'tour-movimientos',
-    title: 'Últimos movimientos',
-    description: 'Tus operaciones más recientes al instante. Tocá cualquiera para ver el comprobante completo.',
+    title: 'Tus movimientos',
+    description: 'Las últimas operaciones. Tocá cualquiera para ver el comprobante.',
   },
   {
-    targetId: 'tour-menu',
-    title: 'Menú de navegación',
-    description: 'Accedé a contactos, perfil, historial y todas las secciones de tu cuenta desde el menú lateral.',
+    targetId: 'tour-drawer-intro',
+    title: 'El menú',
+    description: 'Cuentas, dólares, tarjetas, préstamos y tu perfil. Todo el banco está acá; no hace falta que lo recorras ahora.',
+    openDrawer: true,
+  },
+]
+
+const TOUR_MOBILE: TourStep[] = [
+  {
+    targetId: 'tour-saldo',
+    title: 'Tu saldo',
+    description: 'Acá ves cuánta plata tenés. Se actualiza solo con cada transferencia, depósito o pago.',
+  },
+  {
+    targetId: 'tour-acciones-mobile',
+    title: 'La barra de abajo',
+    description: 'Transferir, pagar, historial y depositar. El botón del centro abre la cámara para pagar con QR.',
+  },
+  {
+    targetId: 'tour-reservas',
+    title: 'Reservas',
+    description: 'Separá plata de tu saldo y hacela rendir con interés diario.',
+  },
+  {
+    targetId: 'tour-movimientos',
+    title: 'Tus movimientos',
+    description: 'Las últimas operaciones. Tocá cualquiera para ver el comprobante.',
+  },
+  {
+    targetId: 'tour-drawer-intro',
+    title: 'El menú',
+    description: 'Desde acá entras a cuentas, dólares, tarjetas, préstamos y tu perfil. Un vistazo alcanza: el resto lo vas a ir usando cuando lo necesites.',
+    openDrawer: true,
   },
 ]
 
@@ -232,18 +269,18 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (!user) return
-    if (localStorage.getItem('monix_new_user') === '1') {
-      localStorage.removeItem('monix_new_user')
-      setShowWelcome(true)
-    }
+    if (hayBienvenidaPendiente(user.id)) setShowWelcome(true)
+    else if (hayTourPendiente(user.id)) setShowTour(true)
   }, [user])
 
   function handleWelcomeClose() {
+    if (user) completarBienvenida(user.id)
     setShowWelcome(false)
     setTimeout(() => setShowTour(true), 450)
   }
 
   function handleTourComplete() {
+    if (user) completarTour(user.id)
     setShowTour(false)
   }
 
@@ -390,7 +427,13 @@ export function DashboardPage() {
 
       <AnimatePresence>
         {showWelcome && <WelcomeBonusModal key="welcome" onClose={handleWelcomeClose} />}
-        {showTour && <OnboardingTour key="tour" steps={TOUR_STEPS} onComplete={handleTourComplete} />}
+        {showTour && (
+          <OnboardingTour
+            key="tour"
+            steps={esCelular() ? TOUR_MOBILE : TOUR_DESKTOP}
+            onComplete={handleTourComplete}
+          />
+        )}
       </AnimatePresence>
 
       <TransactionDetailModal

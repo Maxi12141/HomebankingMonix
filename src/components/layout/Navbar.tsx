@@ -17,6 +17,7 @@ export function Navbar() {
   return (
     <nav
       id="tour-acciones-mobile"
+      data-tour-fixed
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-navy-card/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10"
     >
       <div className="relative flex items-end justify-around px-1 pt-2 pb-[max(0.4rem,env(safe-area-inset-bottom))]">

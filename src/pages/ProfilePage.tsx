@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
-import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet, Fingerprint, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
@@ -11,8 +12,17 @@ import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import {
+  activarHuella,
+  desactivarHuella,
+  esCelular,
+  huellaActiva,
+  soportaHuella,
+} from '../lib/biometria'
+import { pedirTourDeNuevo } from '../lib/onboarding'
 
 export function ProfilePage() {
+  const navigate = useNavigate()
   const { persona, user, setPersona } = useAuthStore()
   const { cuenta } = useCuenta()
   const { setCuenta } = useCuentaStore()
@@ -55,6 +65,15 @@ export function ProfilePage() {
   const [newPass, setNewPass] = useState('')
   const [savingPass, setSavingPass] = useState(false)
   const [passError, setPassError] = useState('')
+  const [huellaOn, setHuellaOn] = useState(false)
+  const [huellaDisponible, setHuellaDisponible] = useState(false)
+  const [savingHuella, setSavingHuella] = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    setHuellaOn(huellaActiva(user.id))
+    void soportaHuella().then(setHuellaDisponible)
+  }, [user])
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault()
@@ -173,6 +192,26 @@ export function ProfilePage() {
     setSavingPass(false)
   }
 
+  async function toggleHuella() {
+    if (!user || !persona) return
+    setSavingHuella(true)
+    try {
+      if (huellaOn) {
+        desactivarHuella(user.id)
+        setHuellaOn(false)
+        toast.success('Huella desactivada')
+      } else {
+        await activarHuella(user.id, `${persona.nombre} ${persona.apellido}`)
+        setHuellaOn(true)
+        toast.success('Huella activada. La próxima vez que entres te la va a pedir.')
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo configurar la huella')
+    } finally {
+      setSavingHuella(false)
+    }
+  }
+
   if (!persona) return null
 
   return (
@@ -236,6 +275,62 @@ export function ProfilePage() {
           <div>
             <p className="font-body font-medium text-navy dark:text-white text-sm">Cuenta verificada</p>
             <p className="font-body text-xs text-slate-secondary">Tu identidad fue verificada correctamente</p>
+          </div>
+        </Card>
+
+        {esCelular() && (
+          <Card className="p-5 mb-6">
+            <div className="flex items-start gap-3">
+              <Fingerprint size={22} className="text-mint shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con huella</p>
+                <p className="font-body text-xs text-slate-secondary mt-0.5">
+                  {huellaDisponible
+                    ? 'Si la activás, cada vez que abras Monix con la sesión iniciada te va a pedir la huella, como en Mercado Libre.'
+                    : 'Este teléfono no tiene huella o Face ID disponible para el navegador.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={huellaOn}
+                disabled={!huellaDisponible || savingHuella}
+                onClick={() => { void toggleHuella() }}
+                className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
+                  huellaOn ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    huellaOn ? 'translate-x-5' : ''
+                  }`}
+                />
+              </button>
+            </div>
+          </Card>
+        )}
+
+        <Card className="p-5 mb-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <Sparkles size={18} className="text-mint shrink-0" />
+              <div>
+                <p className="font-body font-medium text-navy dark:text-white text-sm">Tutorial</p>
+                <p className="font-body text-xs text-slate-secondary">Volvé a ver cómo funciona Monix</p>
+              </div>
+            </div>
+            <Button
+              variant="secondary"
+              type="button"
+              className="shrink-0 !py-2 !px-3 text-sm"
+              onClick={() => {
+                if (!user) return
+                pedirTourDeNuevo(user.id)
+                navigate('/dashboard')
+              }}
+            >
+              Ver de nuevo
+            </Button>
           </div>
         </Card>
 

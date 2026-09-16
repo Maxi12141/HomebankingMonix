@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion'
+import CountUp from 'react-countup'
 import { Gift } from 'lucide-react'
+import { BONO_BIENVENIDA } from '../lib/onboarding'
 
 interface Props {
   onClose: () => void
@@ -29,25 +31,33 @@ export function WelcomeBonusModal({ onClose }: Props) {
           ¡Bienvenido/a a Monix!
         </h2>
         <p className="font-body text-sm text-slate-secondary mb-6">
-          Por abrir tu cuenta te acreditamos un bono de bienvenida
+          Por abrir tu cuenta te acreditamos un cupo de bienvenida
         </p>
 
         <div className="bg-mint/10 border border-mint/20 rounded-2xl py-5 px-6 mb-6">
-          <p className="font-display text-4xl font-bold text-mint mb-1">$150.000</p>
+          <p className="font-display text-4xl font-bold text-mint mb-1">
+            <CountUp
+              end={BONO_BIENVENIDA}
+              duration={1.6}
+              separator="."
+              prefix="$ "
+              useEasing
+            />
+          </p>
           <p className="font-body text-xs text-mint/70 uppercase tracking-wider">
-            Bono de apertura de cuenta
+            Ya está en tu cuenta
           </p>
         </div>
 
         <p className="font-body text-xs text-slate-secondary mb-6 leading-relaxed">
-          Este saldo ya está disponible en tu cuenta Monix. Podés transferirlo, depositarlo o usarlo como quieras.
+          Podés transferirlo, pagarlo o dejarlo rendir. En el próximo paso te mostramos lo esencial de la app.
         </p>
 
         <button
           onClick={onClose}
           className="w-full py-3 rounded-xl bg-mint text-navy font-body font-semibold text-sm hover:bg-mint/90 transition-colors"
         >
-          ¡Empezar a usar Monix!
+          Ver cómo funciona
         </button>
       </motion.div>
     </motion.div>

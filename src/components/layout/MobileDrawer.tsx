@@ -30,7 +30,7 @@ export function MobileDrawer({ onClose }: Props) {
 
   return (
     <div className="flex flex-col h-full py-6 px-4">
-      <div className="flex items-center justify-between mb-8 px-2">
+      <div className="flex items-center justify-between mb-8 px-2" id="tour-drawer-intro">
         <Link to="/dashboard" onClick={onClose}>
           <MonixLogoNavbar
             variant={theme === 'dark' ? 'white' : 'default'}

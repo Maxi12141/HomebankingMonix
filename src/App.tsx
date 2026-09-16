@@ -29,6 +29,8 @@ import { PromosPage } from './pages/PromosPage'
 import { CashbackPage } from './pages/CashbackPage'
 import { FinanciacionPage } from './pages/FinanciacionPage'
 import { PrestamosPage } from './pages/PrestamosPage'
+import { useBiometriaLock } from './hooks/useBiometriaLock'
+import { HuellaLockScreen } from './components/HuellaLockScreen'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -43,7 +45,12 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  useAuth()
+  const { user, loading } = useAuth()
+  const { locked, unlock } = useBiometriaLock(loading ? null : user)
+
+  if (!loading && user && locked) {
+    return <HuellaLockScreen onUnlock={unlock} />
+  }
 
   return (
     <Routes>

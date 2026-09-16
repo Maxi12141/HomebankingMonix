@@ -7,6 +7,8 @@ import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
 import { registrarPersona, asignarAlias } from '../services/bancoCentral'
 import { generateNumeroCuenta, generateAlias } from '../utils/cuenta'
+import { marcarIngresoConClave } from '../lib/biometria'
+import { BONO_BIENVENIDA, marcarUsuarioNuevo } from '../lib/onboarding'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { DatePicker } from '../components/ui/DatePicker'
@@ -72,19 +74,30 @@ export function RegisterPage() {
 
       if (personaError) throw personaError
 
-      const { error: cuentaError } = await supabase.from('cuentas').insert({
+      const { data: cuentaNueva, error: cuentaError } = await supabase.from('cuentas').insert({
         persona_id: userId,
         numero_cuenta: generateNumeroCuenta(),
         tipo: 'caja_ahorro',
-        saldo: 150000,
+        saldo: BONO_BIENVENIDA,
         activa: true,
         cbu,
         alias,
-      })
+      }).select('id').single()
 
       if (cuentaError) throw cuentaError
 
-      localStorage.setItem('monix_new_user', '1')
+      if (cuentaNueva?.id) {
+        await supabase.from('movimientos').insert({
+          cuenta_id: cuentaNueva.id,
+          tipo: 'deposito',
+          monto: BONO_BIENVENIDA,
+          saldo_resultante: BONO_BIENVENIDA,
+          descripcion: 'Bono de bienvenida',
+        })
+      }
+
+      marcarUsuarioNuevo(userId)
+      marcarIngresoConClave()
       navigate('/dashboard')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al registrarse'

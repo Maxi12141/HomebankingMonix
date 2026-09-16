@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Menu, Sun, Moon } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -19,6 +19,15 @@ export function PageWrapper({ children }: PageWrapperProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const { theme, toggleTheme } = useThemeStore()
 
+  useEffect(() => {
+    function onTourDrawer(e: Event) {
+      const open = Boolean((e as CustomEvent<{ open?: boolean }>).detail?.open)
+      setDrawerOpen(open)
+    }
+    window.addEventListener('monix-tour-drawer', onTourDrawer)
+    return () => window.removeEventListener('monix-tour-drawer', onTourDrawer)
+  }, [])
+
   return (
     <div className="flex min-h-screen bg-[#F0F2F5] dark:bg-navy font-body transition-colors duration-300">
       {/* Backdrop */}
@@ -31,6 +40,8 @@ export function PageWrapper({ children }: PageWrapperProps) {
 
       {/* Drawer */}
       <div
+        id="tour-drawer"
+        data-tour-fixed
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-navy-card border-r border-slate-200 dark:border-white/10 transform transition-transform duration-300 ease-in-out ${
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}

@@ -6,6 +6,7 @@ import { useThemeStore } from '../stores/themeStore'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { getRememberedCredentials, saveRememberedCredentials, clearRememberedCredentials } from '../utils/rememberMe'
+import { marcarIngresoConClave } from '../lib/biometria'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
 
@@ -34,6 +35,7 @@ export function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
+      marcarIngresoConClave()
       if (rememberMe) {
         saveRememberedCredentials(email, password)
       } else {
