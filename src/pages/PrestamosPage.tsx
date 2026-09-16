@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  HandCoins, ShieldCheck, ShieldAlert, CalendarClock, CircleCheck, TrendingUp, Info, ListOrdered, X,
+  HandCoins, ShieldAlert, CalendarClock, CircleCheck, TrendingUp, Info, ListOrdered, X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
@@ -10,8 +10,8 @@ import { useCuenta } from '../hooks/useCuenta'
 import { usePrestamos } from '../hooks/usePrestamos'
 import { consultarSituacion } from '../services/bancoCentral'
 import {
-  addMonths, BONUS_SUELDO_PUNTOS, calcularCuota, calcularOferta, calcularTablaAmortizacion,
-  nivelPorSituacion, type ColorNivel, type FilaAmortizacion, type NivelCrediticio,
+  addMonths, calcularCuota, calcularOferta, calcularTablaAmortizacion,
+  nivelPorSituacion, type FilaAmortizacion,
 } from '../utils/prestamos'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
@@ -24,26 +24,7 @@ function formatARS(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 }
 
-const COLOR_CLASSES: Record<ColorNivel, string> = {
-  mint: 'bg-mint/15 text-mint',
-  amber: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-  red: 'bg-red-500/15 text-red-500 dark:text-red-400',
-}
-
 const PLAZOS_CANDIDATOS = [3, 6, 12, 18, 24]
-
-// Loggea el motivo por consola para poder inspeccionarlo desde devtools (no reemplaza el mensaje en pantalla).
-function logPrestamoImposible(nivel: NivelCrediticio, motivo: string) {
-  console.log(JSON.stringify({
-    prestamoDisponible: false,
-    situacionCrediticia: {
-      situacion: nivel.situacion,
-      label: nivel.label,
-      descripcion: nivel.descripcion,
-    },
-    motivo,
-  }, null, 2))
-}
 
 export function PrestamosPage() {
   const { persona } = useAuthStore()
@@ -51,7 +32,6 @@ export function PrestamosPage() {
   const { prestamos, loading: loadingPrestamos, refreshPrestamos } = usePrestamos(cuenta ?? null)
 
   const [situacion, setSituacion] = useState<number | null>(null)
-  const [loadingSituacion, setLoadingSituacion] = useState(true)
 
   const [monto, setMonto] = useState('')
   const [cuotasSel, setCuotasSel] = useState(6)
@@ -61,17 +41,9 @@ export function PrestamosPage() {
 
   useEffect(() => {
     if (!persona) return
-    setLoadingSituacion(true)
     consultarSituacion(persona.dni)
-      .then((r) => {
-        setSituacion(r.situacion)
-        const n = nivelPorSituacion(r.situacion)
-        if (!n.disponible) {
-          logPrestamoImposible(n, 'El préstamo es imposible de otorgar: la situación crediticia del usuario no lo permite.')
-        }
-      })
-      .catch(() => setSituacion(1)) // sin dato del BC, se trata como situación 1 (ver bancoCentral.ts)
-      .finally(() => setLoadingSituacion(false))
+      .then((r) => setSituacion(r.situacion))
+      .catch(() => setSituacion(1))
   }, [persona])
 
   const nivel = nivelPorSituacion(situacion ?? 1)
@@ -105,13 +77,11 @@ export function PrestamosPage() {
     setError('')
 
     if (!nivel.disponible) {
-      const msg = 'Tu situación crediticia no permite acceder a un préstamo por ahora.'
-      logPrestamoImposible(nivel, msg)
-      setError(msg)
+      setError('Por ahora no podemos ofrecerte un préstamo.')
       return
     }
     if (!okMonto) {
-      setError(`Este nivel admite hasta ${formatARS(oferta.montoMax)}`)
+      setError(`Esta oferta admite hasta ${formatARS(oferta.montoMax)}`)
       return
     }
     if (ingresoDeclarado == null) {
@@ -173,53 +143,19 @@ export function PrestamosPage() {
         <div className="mb-6">
           <h1 className="font-display text-2xl font-semibold text-mint">Préstamos</h1>
           <p className="font-body text-sm text-slate-secondary mt-1">
-            Simulá y pedí un préstamo personal en pesos, con tasa según tu situación crediticia.
+            Simulá y pedí un préstamo personal en pesos.
           </p>
         </div>
 
-        {/* Situación crediticia */}
-        <Card className="p-6 mb-6">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-3">
-              <div className={`rounded-xl p-2.5 shrink-0 ${COLOR_CLASSES[nivel.color]}`}>
-                {nivel.disponible ? <ShieldCheck size={20} /> : <ShieldAlert size={20} />}
-              </div>
-              <div>
-                <p className="font-body text-xs text-slate-secondary uppercase tracking-wider">Tu situación crediticia</p>
-                <p className="font-display text-lg font-semibold text-navy dark:text-white">
-                  {loadingSituacion ? 'Consultando…' : `${nivel.situacion} · ${nivel.label}`}
-                </p>
-              </div>
-            </div>
-          </div>
-          {!loadingSituacion && (
-            <p className="font-body text-sm text-slate-secondary mb-4">{nivel.descripcion}</p>
-          )}
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-slate-input dark:bg-white/5 px-3 py-2.5">
-              <p className="font-body text-[10px] uppercase tracking-wider text-slate-secondary">Sueldo en Monix</p>
-              <p className="font-display text-sm font-semibold text-navy dark:text-white mt-0.5">
-                {persona?.sueldo_acreditado ? `Sí · -${BONUS_SUELDO_PUNTOS}pts de tasa` : 'No'}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-input dark:bg-white/5 px-3 py-2.5">
-              <p className="font-body text-[10px] uppercase tracking-wider text-slate-secondary">Ingreso declarado</p>
-              <p className="font-display text-sm font-semibold text-navy dark:text-white mt-0.5">
-                {ingresoDeclarado != null ? formatARS(ingresoDeclarado) : '—'}
-              </p>
-            </div>
-          </div>
-          {(ingresoDeclarado == null || !persona?.sueldo_acreditado) && (
-            <p className="font-body text-xs text-slate-secondary mt-3 flex items-center gap-1.5">
-              <Info size={13} className="shrink-0" />
-              <Link to="/perfil" className="text-mint hover:text-mint-hover transition-colors">
-                Completá estos datos en tu Perfil
-              </Link>
-              &nbsp;para acceder a mejores condiciones.
-            </p>
-          )}
-        </Card>
+        {ingresoDeclarado == null && nivel.disponible && (
+          <p className="font-body text-xs text-slate-secondary mb-4 flex items-center gap-1.5">
+            <Info size={13} className="shrink-0" />
+            <Link to="/perfil" className="text-mint hover:text-mint-hover transition-colors">
+              Declará tu ingreso mensual en Perfil
+            </Link>
+            &nbsp;para poder solicitar el préstamo.
+          </p>
+        )}
 
         {!nivel.disponible ? (
           <Card className="p-6 mb-6">
@@ -230,8 +166,7 @@ export function PrestamosPage() {
               </p>
             </div>
             <p className="font-body text-sm text-slate-secondary">
-              Tu situación crediticia actual ({nivel.label.toLowerCase()}) no permite otorgar préstamos nuevos.
-              Regularizá tus deudas informadas en el sistema financiero para volver a acceder.
+              Por ahora no podemos ofrecerte un préstamo. Volvé a intentar más adelante.
             </p>
           </Card>
         ) : (
@@ -306,7 +241,7 @@ export function PrestamosPage() {
 
             {!okMonto && montoNum > 0 && (
               <p className="font-body text-xs text-red-500 dark:text-red-400 mt-3">
-                El monto supera el máximo disponible para tu situación ({formatARS(oferta.montoMax)}).
+                El monto supera el máximo disponible para esta oferta ({formatARS(oferta.montoMax)}).
               </p>
             )}
             {superaRatio && okMonto && (

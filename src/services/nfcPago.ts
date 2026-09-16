@@ -74,6 +74,42 @@ export async function pagarCobroNfc(cobroId: string, secreto: string) {
   if (error) throw new Error(rpcMessage(error, 'No se pudo completar el pago'))
 }
 
+export async function pagarCobroQr(cobroId: string) {
+  const { error } = await supabase.rpc('pagar_cobro_qr', { p_cobro_id: cobroId })
+  if (error) throw new Error(rpcMessage(error, 'No se pudo completar el pago'))
+}
+
+export interface DestinoQr {
+  cuenta_id: string
+  nombre: string
+  apellido: string
+  alias: string | null
+  moneda: 'ARS' | 'USD'
+}
+
+export async function resolverQrCuenta(cuentaId: string): Promise<DestinoQr> {
+  const { data, error } = await supabase.rpc('resolver_qr_cuenta', { p_cuenta_id: cuentaId })
+  if (error) throw new Error(rpcMessage(error, 'No se pudo leer ese QR'))
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row?.cuenta_id) throw new Error('No encontramos esa cuenta')
+  return {
+    cuenta_id: String(row.cuenta_id),
+    nombre: String(row.nombre ?? ''),
+    apellido: String(row.apellido ?? ''),
+    alias: (row.alias as string | null) ?? null,
+    moneda: row.moneda === 'USD' ? 'USD' : 'ARS',
+  }
+}
+
+export async function pagarQrCuenta(cuentaDestinoId: string, monto: number, descripcion = '') {
+  const { error } = await supabase.rpc('pagar_qr_cuenta', {
+    p_cuenta_destino: cuentaDestinoId,
+    p_monto: monto,
+    p_descripcion: descripcion,
+  })
+  if (error) throw new Error(rpcMessage(error, 'No se pudo completar el pago'))
+}
+
 export async function setTarjetaFlags(
   cuentaId: string,
   flags: { tarjeta_congelada?: boolean; nfc_contacto_activo?: boolean },

@@ -151,8 +151,8 @@ const INTENTS: Intent[] = [
     keywords: ['qr', 'cobrar', 'cobro', 'escanear'],
     phrases: ['pagar con qr', 'cobrar con qr', 'codigo qr'],
     answer: () => ({
-      text: 'El botón QR del centro sirve para cobrar. Mostrá tu código o compartilo. Para pagar acercando el celu, usá la pestaña NFC.',
-      href: '/pagar?tab=cobrar',
+      text: 'El botón QR del centro abre la cámara para pagar. En Pagar tenés tu código para cobrar: podés dejarlo abierto o ponerle un monto. El NFC de la tarjeta está en Mis Tarjetas.',
+      href: '/pagar',
       hrefLabel: 'Abrir QR',
     }),
   },
@@ -161,9 +161,9 @@ const INTENTS: Intent[] = [
     keywords: ['nfc', 'contactless', 'acercar', 'tap'],
     phrases: ['pago nfc', 'pagar acercando', 'sin contacto'],
     answer: () => ({
-      text: 'En Pagar > NFC podés pagar acercando el celular. En Mis Tarjetas activás el contacto NFC o el chip QR si estás en iPhone.',
-      href: '/pagar?tab=nfc',
-      hrefLabel: 'Pagar con NFC',
+      text: 'El pago acercando el celular o el sticker NFC está en Mis Tarjetas. El QR para cobrar y pagar quedó en Pagar, separado.',
+      href: '/tarjeta',
+      hrefLabel: 'Mis Tarjetas',
     }),
   },
   {

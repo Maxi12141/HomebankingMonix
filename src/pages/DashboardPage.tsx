@@ -41,7 +41,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     targetId: 'tour-acciones',
     title: 'Acciones rápidas',
-    description: 'Enviá dinero, pagá suscripciones, revisá el historial o acreditá fondos desde acá.',
+    description: 'Enviá dinero, abrí tu QR, revisá el historial o acreditá fondos desde acá.',
   },
   {
     targetId: 'tour-reservas',
