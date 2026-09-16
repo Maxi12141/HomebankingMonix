@@ -15,7 +15,6 @@ import { Button } from '../components/ui/Button'
 import {
   activarHuella,
   desactivarHuella,
-  esCelular,
   huellaActiva,
   soportaHuella,
 } from '../lib/biometria'
@@ -278,37 +277,35 @@ export function ProfilePage() {
           </div>
         </Card>
 
-        {esCelular() && (
-          <Card className="p-5 mb-6">
-            <div className="flex items-start gap-3">
-              <Fingerprint size={22} className="text-mint shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con huella</p>
-                <p className="font-body text-xs text-slate-secondary mt-0.5">
-                  {huellaDisponible
-                    ? 'Si la activás, cada vez que abras Monix con la sesión iniciada te va a pedir la huella, como en Mercado Libre.'
-                    : 'Este teléfono no tiene huella o Face ID disponible para el navegador.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={huellaOn}
-                disabled={!huellaDisponible || savingHuella}
-                onClick={() => { void toggleHuella() }}
-                className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
-                  huellaOn ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                    huellaOn ? 'translate-x-5' : ''
-                  }`}
-                />
-              </button>
+        <Card className="p-5 mb-6">
+          <div className="flex items-start gap-3">
+            <Fingerprint size={22} className="text-mint shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con huella</p>
+              <p className="font-body text-xs text-slate-secondary mt-0.5">
+                {huellaDisponible
+                  ? 'Si la activás, cada vez que abras Monix en el celular con la sesión iniciada te va a pedir la huella.'
+                  : 'En esta pantalla no hay huella o Face ID. Abrí Perfil desde el celular para activarlo.'}
+              </p>
             </div>
-          </Card>
-        )}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={huellaOn}
+              disabled={!huellaDisponible || savingHuella}
+              onClick={() => { void toggleHuella() }}
+              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
+                huellaOn ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  huellaOn ? 'translate-x-5' : ''
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
 
         <Card className="p-5 mb-6">
           <div className="flex items-center justify-between gap-3">

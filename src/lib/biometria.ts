@@ -21,18 +21,18 @@ function saveAll(data: Record<string, BioRecord>) {
 }
 
 function bufferToB64(buf: ArrayBuffer) {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
+  const bytes = new Uint8Array(buf)
+  let bin = ''
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-function b64ToBuffer(b64: string) {
+function b64ToBytes(b64: string) {
   const pad = '='.repeat((4 - (b64.length % 4)) % 4)
   const raw = atob(b64.replace(/-/g, '+').replace(/_/g, '/') + pad)
   const out = new Uint8Array(raw.length)
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i)
-  return out.buffer
+  return out
 }
 
 function rpId() {
@@ -122,8 +122,7 @@ export async function verificarHuella(userId: string) {
       rpId: rpId(),
       allowCredentials: [{
         type: 'public-key',
-        id: b64ToBuffer(record.credId),
-        transports: ['internal'],
+        id: b64ToBytes(record.credId),
       }],
       userVerification: 'required',
       timeout: 60_000,
