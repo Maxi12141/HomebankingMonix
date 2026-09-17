@@ -11,6 +11,7 @@ import { formatMonto } from '../utils/cuenta'
 import { encodeCobroQr, encodeCuentaQr, parseRadioPayload } from '../lib/tokens'
 import { detectQrUntil, engancharCamara, leerQrDeArchivo, mensajeErrorCamara, pedirStreamCamara, stopMediaStream } from '../lib/scanQr'
 import { isAbortError, pedirPermisoCamara, radioCapabilities, sacarFotoNativa } from '../native/monixRadio'
+import { esCelular } from '../lib/biometria'
 import {
   cancelarCobroNfc,
   crearCobroNfc,
@@ -200,6 +201,7 @@ export function EscanearYPagar({
   const [abriendoCamara, setAbriendoCamara] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fotoRef = useRef<HTMLInputElement>(null)
+  const camaraWebRef = useRef<HTMLInputElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanAbortRef = useRef<AbortController | null>(null)
 
@@ -254,6 +256,12 @@ export function EscanearYPagar({
       return
     }
 
+    if (esCelular()) {
+      setError('')
+      camaraWebRef.current?.click()
+      return
+    }
+
     scanAbortRef.current?.abort()
     const controller = new AbortController()
     scanAbortRef.current = controller
@@ -262,13 +270,7 @@ export function EscanearYPagar({
     stopMediaStream(streamRef.current)
     streamRef.current = null
     try {
-      await pedirPermisoCamara()
-      const stream = await Promise.race([
-        pedirStreamCamara(),
-        new Promise<MediaStream>((_, reject) => {
-          window.setTimeout(() => reject(new Error('La cámara tardó demasiado. Tocá “Sacar foto del QR”.')), 8_000)
-        }),
-      ])
+      const stream = await pedirStreamCamara()
       if (controller.signal.aborted) {
         stopMediaStream(stream)
         return
@@ -477,6 +479,20 @@ export function EscanearYPagar({
           <p className="font-body text-xs text-slate-secondary mb-3">
             Abrir cámara usa la cámara del teléfono. La opción de abajo es para elegir una foto que ya tengas.
           </p>
+          <input
+            ref={camaraWebRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            aria-hidden
+            tabIndex={-1}
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (file) void escanearFoto(file)
+            }}
+          />
           <input
             ref={fotoRef}
             type="file"
