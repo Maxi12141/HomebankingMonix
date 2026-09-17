@@ -10,7 +10,7 @@ import { QrBox } from './QrBox'
 import { formatMonto } from '../utils/cuenta'
 import { encodeCobroQr, encodeCuentaQr, parseRadioPayload } from '../lib/tokens'
 import { detectQrUntil, engancharCamara, leerQrDeArchivo, mensajeErrorCamara, pedirStreamCamara, stopMediaStream } from '../lib/scanQr'
-import { isAbortError, pedirPermisoCamara } from '../native/monixRadio'
+import { isAbortError, pedirPermisoCamara, radioCapabilities } from '../native/monixRadio'
 import {
   cancelarCobroNfc,
   crearCobroNfc,
@@ -197,6 +197,7 @@ export function EscanearYPagar({
   const [error, setError] = useState('')
   const [pagado, setPagado] = useState<{ nombre: string; monto: number; moneda: 'ARS' | 'USD' } | null>(null)
   const [scanning, setScanning] = useState(false)
+  const [abriendoCamara, setAbriendoCamara] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fotoRef = useRef<HTMLInputElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -241,15 +242,26 @@ export function EscanearYPagar({
   }
 
   async function escanearQr() {
+    if (radioCapabilities().native) {
+      fotoRef.current?.click()
+      return
+    }
+
     scanAbortRef.current?.abort()
     const controller = new AbortController()
     scanAbortRef.current = controller
     setError('')
+    setAbriendoCamara(true)
     stopMediaStream(streamRef.current)
     streamRef.current = null
     try {
       await pedirPermisoCamara()
-      const stream = await pedirStreamCamara()
+      const stream = await Promise.race([
+        pedirStreamCamara(),
+        new Promise<MediaStream>((_, reject) => {
+          window.setTimeout(() => reject(new Error('La cámara tardó demasiado. Tocá “Sacar foto del QR”.')), 8_000)
+        }),
+      ])
       if (controller.signal.aborted) {
         stopMediaStream(stream)
         return
@@ -276,6 +288,7 @@ export function EscanearYPagar({
       if (videoRef.current) videoRef.current.srcObject = null
       if (scanAbortRef.current === controller) scanAbortRef.current = null
       setScanning(false)
+      setAbriendoCamara(false)
     }
   }
 
@@ -471,7 +484,7 @@ export function EscanearYPagar({
               if (file) void escanearFoto(file)
             }}
           />
-          <Button className="w-full" type="button" loading={loading} onClick={() => { void escanearQr() }}>
+          <Button className="w-full" type="button" loading={loading || abriendoCamara} onClick={() => { void escanearQr() }}>
             Abrir cámara
           </Button>
           <Button
