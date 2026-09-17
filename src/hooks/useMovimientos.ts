@@ -4,7 +4,7 @@ import { useCuentaStore } from '../store/cuentaStore'
 import type { Movimiento } from '../types'
 
 export function useMovimientos(limit?: number) {
-  const { cuentas, refreshTick } = useCuentaStore()
+  const { cuentas, cuentasLoaded, refreshTick } = useCuentaStore()
   const [movimientos, setMovimientos] = useState<Movimiento[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -14,8 +14,9 @@ export function useMovimientos(limit?: number) {
 
   const fetchMovimientos = useCallback(async () => {
     if (!cuentaIds) {
-      // No confundir con "sin movimientos": useCuenta() todavía no resolvió el/los cuenta_id.
       setMovimientos([])
+      // Solo salimos de loading si useCuenta() ya respondió (con éxito, vacío o error).
+      if (cuentasLoaded) setLoading(false)
       return
     }
     setLoading(true)
@@ -39,7 +40,7 @@ export function useMovimientos(limit?: number) {
     })) as Movimiento[]
     setMovimientos(conMoneda)
     setLoading(false)
-  }, [cuentaIds, limit, refreshTick])
+  }, [cuentaIds, cuentasLoaded, limit, refreshTick])
 
   useEffect(() => {
     fetchMovimientos()
