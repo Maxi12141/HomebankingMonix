@@ -323,7 +323,7 @@ export function ProfilePage() {
               <p className="font-body text-xs text-slate-secondary mt-0.5">
                 {huellaDisponible
                   ? 'Al abrir Monix te pedimos la huella. Siempre podés entrar con la contraseña.'
-                  : 'En esta pantalla no hay huella. Abrí Perfil desde el celular para activarla.'}
+                  : 'En la APK se activa con el sensor del teléfono. Si el interruptor no prende, instalá la APK nueva de Monix.'}
               </p>
             </div>
             <button
@@ -353,7 +353,7 @@ export function ProfilePage() {
               <p className="font-body text-xs text-slate-secondary mt-0.5">
                 {huellaDisponible
                   ? 'Reconocimiento facial del teléfono (Face ID o desbloqueo facial). Si no está enrolado, el sistema te ofrece la huella.'
-                  : 'En esta pantalla no hay Face ID. Abrí Perfil desde el celular para activarlo.'}
+                  : 'En la APK se activa con la cara del teléfono. Si el interruptor no prende, instalá la APK nueva de Monix.'}
               </p>
             </div>
             <button

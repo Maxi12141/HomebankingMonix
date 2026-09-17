@@ -1,3 +1,8 @@
+import {
+  soportaBiometriaNativa,
+  verificarBiometriaNativa,
+} from '../native/monixRadio'
+
 const STORAGE_KEY = 'monix_bio_v1'
 const JUST_AUTH_KEY = 'monix_just_authed'
 
@@ -65,6 +70,7 @@ export function esCelular() {
 }
 
 export async function soportaHuella() {
+  if (await soportaBiometriaNativa()) return true
   if (!window.PublicKeyCredential) return false
   if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== 'function') {
     return false
@@ -98,6 +104,10 @@ export function consumoIngresoConClave() {
 async function asegurarCredencial(userId: string, nombre: string) {
   const existing = loadAll()[userId]
   if (existing?.credId) return existing
+  if (await soportaBiometriaNativa()) {
+    await verificarBiometriaNativa()
+    return { credId: 'native', huella: false, face: false } satisfies BioRecord
+  }
   if (!(await soportaHuella())) {
     throw new Error('Este teléfono no tiene huella ni reconocimiento facial disponible')
   }
@@ -165,6 +175,10 @@ export function desactivarHuella(userId: string) {
 export async function verificarHuella(userId: string) {
   const record = loadAll()[userId]
   if (!record) throw new Error('El desbloqueo biométrico no está activado')
+  if (record.credId === 'native') {
+    await verificarBiometriaNativa()
+    return
+  }
   const cred = await navigator.credentials.get({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),

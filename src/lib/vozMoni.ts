@@ -1,3 +1,10 @@
+import {
+  onVozNativa,
+  radioCapabilities,
+  startVozNativa,
+  stopVozNativa,
+} from '../native/monixRadio'
+
 interface RecogResult {
   isFinal: boolean
   0: { transcript: string }
@@ -26,7 +33,7 @@ function ctorVoz(): RecogCtor | null {
 }
 
 export function soportaVozMoni() {
-  return typeof window !== 'undefined' && Boolean(ctorVoz())
+  return typeof window !== 'undefined' && (radioCapabilities().native || Boolean(ctorVoz()))
 }
 
 function normalize(value: string) {
@@ -78,6 +85,8 @@ export class VozMoni {
   private vivo = false
   private modo: 'wake' | 'dictado' = 'wake'
   private timer: number | null = null
+  private nativo = false
+  private unsub: { remove: () => Promise<void> } | null = null
 
   constructor(
     private readonly onWake: (resto: string) => void,
@@ -105,6 +114,12 @@ export class VozMoni {
       window.clearTimeout(this.timer)
       this.timer = null
     }
+    if (this.nativo) {
+      this.nativo = false
+      void this.unsub?.remove()
+      this.unsub = null
+      void stopVozNativa()
+    }
     try {
       this.rec?.abort()
     } catch {
@@ -113,7 +128,45 @@ export class VozMoni {
     this.rec = null
   }
 
+  private manejarTexto(texto: string, isFinal: boolean) {
+    const limpio = texto.trim()
+    if (!limpio) return
+    if (this.modo === 'wake') {
+      const { woke, resto } = extraerDespertar(limpio)
+      if (woke && isFinal) this.onWake(resto)
+      return
+    }
+    this.onDictado(limpio, isFinal)
+  }
+
   private arrancar() {
+    if (radioCapabilities().native) {
+      void this.arrancarNativo()
+      return
+    }
+    this.arrancarWeb()
+  }
+
+  private async arrancarNativo() {
+    this.vivo = true
+    if (this.nativo) return
+    this.nativo = true
+    try {
+      this.unsub = await onVozNativa((texto, isFinal) => {
+        if (!this.vivo) return
+        this.manejarTexto(texto, isFinal)
+      })
+      await startVozNativa()
+    } catch {
+      this.nativo = false
+      this.vivo = false
+      void this.unsub?.remove()
+      this.unsub = null
+      this.onBloqueado?.()
+    }
+  }
+
+  private arrancarWeb() {
     const Ctor = ctorVoz()
     if (!Ctor) return
     this.vivo = true

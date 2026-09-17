@@ -31,3 +31,34 @@ if (!xml.includes('android.hardware.camera.any')) {
 }
 
 writeFileSync(file, xml)
+
+const main = resolve('android/app/src/main/java/ar/monix/banco/MainActivity.java')
+if (existsSync(main)) {
+  writeFileSync(
+    main,
+    `package ar.monix.banco;
+
+import android.os.Bundle;
+import android.webkit.WebSettings;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {
+  @Override
+  public void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+    WindowInsetsControllerCompat insets =
+        WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+    insets.setAppearanceLightStatusBars(true);
+    if (getBridge() != null && getBridge().getWebView() != null) {
+      WebSettings settings = getBridge().getWebView().getSettings();
+      settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+      settings.setMediaPlaybackRequiresUserGesture(false);
+    }
+  }
+}
+`,
+  )
+}

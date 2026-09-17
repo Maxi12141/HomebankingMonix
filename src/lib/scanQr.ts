@@ -66,7 +66,7 @@ export function mensajeErrorCamara(err: unknown): string {
     || name === 'PermissionDeniedError'
     || /permission|denied|notallowed|not allowed/i.test(raw)
   ) {
-    return 'En Android la app tiene que tener permiso de cámara. Andá a Ajustes → Apps → Monix → Permisos → Cámara → Permitir. Si estás en Chrome, tocá el candado → Cámara → Permitir. También sirve “Sacar foto del QR”.'
+    return 'La cámara está bloqueada. En Perfil tocá “Permitir cámara, micrófono y NFC”. Si Android no pregunta, andá a Ajustes → Apps → Monix → Permisos → Cámara → Permitir. También sirve “Sacar foto del QR”.'
   }
   if (name === 'NotFoundError' || name === 'OverconstrainedError') {
     return 'No encontramos una cámara. Usá “Sacar foto del QR”.'

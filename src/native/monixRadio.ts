@@ -36,6 +36,11 @@ async function getPlugin(): Promise<{
   pedirMic?: () => Promise<void>
   pedirTodosLosPermisos?: () => Promise<void>
   requestPermissions?: () => Promise<void>
+  abrirAjustes?: () => Promise<void>
+  soportaBiometria?: () => Promise<{ ok?: boolean }>
+  verificarBiometria?: () => Promise<void>
+  startVoz?: () => Promise<void>
+  stopVoz?: () => Promise<void>
   addListener: (event: string, cb: (data: Record<string, unknown>) => void) => Promise<{ remove: () => Promise<void> }>
 } | null> {
   if (!isNative()) return null
@@ -122,6 +127,56 @@ async function pedirMediosWeb() {
 export async function pedirTodosLosPermisos() {
   await pedirPermisosNativos()
   await pedirMediosWeb()
+}
+
+export async function abrirAjustesPermisos() {
+  try {
+    const plugin = await getPlugin()
+    await plugin?.abrirAjustes?.()
+  } catch {
+    /* APK vieja */
+  }
+}
+
+export async function soportaBiometriaNativa() {
+  try {
+    const plugin = await getPlugin()
+    const res = await plugin?.soportaBiometria?.()
+    return Boolean(res?.ok)
+  } catch {
+    return false
+  }
+}
+
+export async function verificarBiometriaNativa() {
+  const plugin = await getPlugin()
+  const fn = plugin?.verificarBiometria
+  if (!fn) throw new Error('Actualizá la APK de Monix para usar huella o Face ID')
+  await fn()
+}
+
+export async function startVozNativa() {
+  const plugin = await getPlugin()
+  const fn = plugin?.startVoz
+  if (!fn) throw new Error('Actualizá la APK de Monix para hablarle a Moni')
+  await fn()
+}
+
+export async function stopVozNativa() {
+  try {
+    const plugin = await getPlugin()
+    await plugin?.stopVoz?.()
+  } catch {
+    /* ya estaba parado */
+  }
+}
+
+export async function onVozNativa(handler: (text: string, isFinal: boolean) => void) {
+  const plugin = await getPlugin()
+  if (!plugin?.addListener) return null
+  return plugin.addListener('voz', (data) => {
+    handler(String(data.text ?? ''), Boolean(data.final))
+  })
 }
 
 function mensajeNfc(err: unknown): Error {
