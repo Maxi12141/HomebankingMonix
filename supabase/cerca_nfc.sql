@@ -924,6 +924,342 @@ as $$
   select private.pagar_cobro_nfc(p_cobro_id, p_secreto);
 $$;
 
+create or replace function private.resolver_qr_cuenta(p_cuenta_id uuid)
+returns table(
+  cuenta_id uuid,
+  nombre text,
+  apellido text,
+  alias text,
+  moneda text
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_cuenta public.cuentas;
+  v_persona public.personas;
+begin
+  if v_uid is null then
+    raise exception 'No autenticado';
+  end if;
+
+  if p_cuenta_id is null then
+    raise exception 'QR inválido';
+  end if;
+
+  perform private.enforce_rate('resolver_qr_cuenta', 30, interval '5 minutes');
+
+  select * into v_cuenta from public.cuentas where id = p_cuenta_id and activa = true;
+  if not found then
+    raise exception 'No encontramos esa cuenta';
+  end if;
+
+  if v_cuenta.persona_id = v_uid then
+    raise exception 'Ese QR es el tuyo';
+  end if;
+
+  select * into v_persona from public.personas where id = v_cuenta.persona_id;
+
+  cuenta_id := v_cuenta.id;
+  nombre := v_persona.nombre;
+  apellido := v_persona.apellido;
+  alias := v_cuenta.alias;
+  moneda := v_cuenta.moneda;
+  return next;
+end;
+$$;
+
+create or replace function public.resolver_qr_cuenta(p_cuenta_id uuid)
+returns table(
+  cuenta_id uuid,
+  nombre text,
+  apellido text,
+  alias text,
+  moneda text
+)
+language sql
+security definer
+set search_path = ''
+as $$
+  select * from private.resolver_qr_cuenta(p_cuenta_id);
+$$;
+
+create or replace function private.pagar_qr_cuenta(
+  p_cuenta_destino uuid,
+  p_monto numeric,
+  p_descripcion text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_destino public.cuentas;
+  v_pagador public.cuentas;
+  v_pagador_persona public.personas;
+  v_destino_persona public.personas;
+  v_id_a uuid;
+  v_id_b uuid;
+  v_desc text;
+begin
+  if v_uid is null then
+    raise exception 'No autenticado';
+  end if;
+
+  if p_monto is null or p_monto <= 0 or p_monto > 10000000 then
+    raise exception 'Monto inválido';
+  end if;
+
+  perform private.enforce_rate('pagar_qr_cuenta', 20, interval '5 minutes');
+
+  select * into v_destino from public.cuentas where id = p_cuenta_destino and activa = true;
+  if not found then
+    raise exception 'La cuenta destino no está disponible';
+  end if;
+
+  if v_destino.persona_id = v_uid then
+    raise exception 'No podés pagarte a vos mismo';
+  end if;
+
+  select * into v_pagador
+  from public.cuentas
+  where persona_id = v_uid
+    and moneda = v_destino.moneda
+    and activa = true
+  order by created_at
+  limit 1;
+
+  if not found then
+    raise exception 'No tenés una cuenta activa en esa moneda';
+  end if;
+
+  v_id_a := least(v_pagador.id, v_destino.id);
+  v_id_b := greatest(v_pagador.id, v_destino.id);
+
+  perform 1
+  from public.cuentas
+  where id in (v_id_a, v_id_b)
+  order by id
+  for update;
+
+  select * into v_pagador from public.cuentas where id = v_pagador.id;
+  select * into v_destino from public.cuentas where id = v_destino.id;
+
+  if v_pagador.saldo < p_monto then
+    raise exception 'Saldo insuficiente';
+  end if;
+
+  select * into v_pagador_persona from public.personas where id = v_pagador.persona_id;
+  select * into v_destino_persona from public.personas where id = v_destino.persona_id;
+
+  v_desc := concat('Pago QR|', coalesce(nullif(trim(p_descripcion), ''), 'QR Monix'));
+
+  update public.cuentas set saldo = round(saldo - p_monto, 2) where id = v_pagador.id;
+  update public.cuentas set saldo = round(saldo + p_monto, 2) where id = v_destino.id;
+
+  insert into public.movimientos (
+    cuenta_id, tipo, monto, saldo_resultante, descripcion,
+    cuenta_destino_id, destinatario_nombre, destinatario_apellido,
+    destinatario_dni, destino_cbu, destino_alias
+  ) values (
+    v_pagador.id,
+    'transferencia_salida',
+    round(p_monto, 2),
+    round(v_pagador.saldo - p_monto, 2),
+    v_desc,
+    v_destino.id,
+    v_destino_persona.nombre,
+    v_destino_persona.apellido,
+    v_destino_persona.dni,
+    v_destino.cbu,
+    v_destino.alias
+  );
+
+  insert into public.movimientos (
+    cuenta_id, tipo, monto, saldo_resultante, descripcion,
+    cuenta_destino_id, destinatario_nombre, destinatario_apellido,
+    destinatario_dni, destino_cbu, destino_alias
+  ) values (
+    v_destino.id,
+    'transferencia_entrada',
+    round(p_monto, 2),
+    round(v_destino.saldo + p_monto, 2),
+    v_desc,
+    v_pagador.id,
+    v_pagador_persona.nombre,
+    v_pagador_persona.apellido,
+    v_pagador_persona.dni,
+    v_pagador.cbu,
+    v_pagador.alias
+  );
+end;
+$$;
+
+create or replace function public.pagar_qr_cuenta(
+  p_cuenta_destino uuid,
+  p_monto numeric,
+  p_descripcion text
+)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  select private.pagar_qr_cuenta(p_cuenta_destino, p_monto, p_descripcion);
+$$;
+
+create or replace function private.pagar_cobro_qr(p_cobro_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_cobro public.cobros_nfc;
+  v_pagador public.cuentas;
+  v_comercio public.cuentas;
+  v_pagador_persona public.personas;
+  v_comercio_persona public.personas;
+  v_id_a uuid;
+  v_id_b uuid;
+begin
+  if v_uid is null then
+    raise exception 'No autenticado';
+  end if;
+
+  perform private.enforce_rate('pagar_cobro_qr', 20, interval '5 minutes');
+
+  if p_cobro_id is null then
+    raise exception 'Cobro inválido';
+  end if;
+
+  select * into v_cobro from public.cobros_nfc where id = p_cobro_id;
+  if not found then
+    raise exception 'No encontramos ese cobro';
+  end if;
+
+  if v_cobro.estado <> 'pendiente' then
+    raise exception 'Ese cobro ya no está disponible';
+  end if;
+
+  if v_cobro.expires_at <= now() then
+    update public.cobros_nfc
+    set estado = 'expirado'
+    where id = v_cobro.id and estado = 'pendiente';
+    raise exception 'El cobro expiró';
+  end if;
+
+  select * into v_comercio from public.cuentas where id = v_cobro.comercio_cuenta_id and activa = true;
+  if not found then
+    raise exception 'La cuenta del comercio no está disponible';
+  end if;
+
+  select * into v_pagador
+  from public.cuentas
+  where persona_id = v_uid
+    and moneda = v_comercio.moneda
+    and activa = true
+  order by created_at
+  limit 1;
+
+  if not found then
+    raise exception 'No tenés una cuenta activa en esa moneda';
+  end if;
+
+  if v_pagador.id = v_comercio.id or v_pagador.persona_id = v_comercio.persona_id then
+    raise exception 'No podés pagarte a vos mismo';
+  end if;
+
+  v_id_a := least(v_pagador.id, v_comercio.id);
+  v_id_b := greatest(v_pagador.id, v_comercio.id);
+
+  perform 1
+  from public.cuentas
+  where id in (v_id_a, v_id_b)
+  order by id
+  for update;
+
+  select * into v_pagador from public.cuentas where id = v_pagador.id;
+  select * into v_comercio from public.cuentas where id = v_comercio.id;
+
+  if v_pagador.saldo < v_cobro.monto then
+    raise exception 'Saldo insuficiente';
+  end if;
+
+  select * into v_pagador_persona from public.personas where id = v_pagador.persona_id;
+  select * into v_comercio_persona from public.personas where id = v_comercio.persona_id;
+
+  update public.cuentas
+  set saldo = round(saldo - v_cobro.monto, 2)
+  where id = v_pagador.id;
+
+  update public.cuentas
+  set saldo = round(saldo + v_cobro.monto, 2)
+  where id = v_comercio.id;
+
+  insert into public.movimientos (
+    cuenta_id, tipo, monto, saldo_resultante, descripcion,
+    cuenta_destino_id, destinatario_nombre, destinatario_apellido,
+    destinatario_dni, destino_cbu, destino_alias
+  ) values (
+    v_pagador.id,
+    'transferencia_salida',
+    v_cobro.monto,
+    round(v_pagador.saldo - v_cobro.monto, 2),
+    concat('Pago QR|', coalesce(v_cobro.descripcion, 'QR Monix')),
+    v_comercio.id,
+    v_comercio_persona.nombre,
+    v_comercio_persona.apellido,
+    v_comercio_persona.dni,
+    v_comercio.cbu,
+    v_comercio.alias
+  );
+
+  insert into public.movimientos (
+    cuenta_id, tipo, monto, saldo_resultante, descripcion,
+    cuenta_destino_id, destinatario_nombre, destinatario_apellido,
+    destinatario_dni, destino_cbu, destino_alias
+  ) values (
+    v_comercio.id,
+    'transferencia_entrada',
+    v_cobro.monto,
+    round(v_comercio.saldo + v_cobro.monto, 2),
+    concat('Pago QR|', coalesce(v_cobro.descripcion, 'QR Monix')),
+    v_pagador.id,
+    v_pagador_persona.nombre,
+    v_pagador_persona.apellido,
+    v_pagador_persona.dni,
+    v_pagador.cbu,
+    v_pagador.alias
+  );
+
+  update public.cobros_nfc
+  set estado = 'pagado',
+      pagador_cuenta_id = v_pagador.id,
+      pagado_at = now()
+  where id = v_cobro.id
+    and estado = 'pendiente';
+
+  if not found then
+    raise exception 'Ese cobro ya no está disponible';
+  end if;
+end;
+$$;
+
+create or replace function public.pagar_cobro_qr(p_cobro_id uuid)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  select private.pagar_cobro_qr(p_cobro_id);
+$$;
+
 -- ─── Privilegios de funciones ───────────────────────────────────────────────
 do $$
 declare
@@ -938,7 +1274,8 @@ begin
         'hash_token','assert_token','enforce_rate','cuenta_propia',
         'activar_presencia','desactivar_presencia','resolver_presencia','abrir_destino_cerca',
         'registrar_tarjeta_nfc','generar_criptograma_nfc','crear_cobro_nfc',
-        'obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_nfc'
+        'obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_nfc','pagar_cobro_qr',
+        'resolver_qr_cuenta','pagar_qr_cuenta'
       )
   loop
     execute format('revoke all on function %I.%I(%s) from public, anon, authenticated', r.nspname, r.proname, r.args);
@@ -952,7 +1289,8 @@ begin
       and p.proname in (
         'activar_presencia','desactivar_presencia','resolver_presencia','abrir_destino_cerca',
         'registrar_tarjeta_nfc','generar_criptograma_nfc','crear_cobro_nfc',
-        'obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_nfc'
+        'obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_nfc','pagar_cobro_qr',
+        'resolver_qr_cuenta','pagar_qr_cuenta'
       )
   loop
     execute format('revoke all on function public.%I(%s) from public, anon', r.proname, r.args);

@@ -171,12 +171,12 @@ function useCercaRuntime() {
   }, [])
 
   useEffect(() => {
-    if (!user) return
+    if (!user || !caps.native) return
     startBusqueda({ silent: true }).catch(() => undefined)
     return () => {
       stopBusqueda().catch(() => undefined)
     }
-  }, [user, startBusqueda, stopBusqueda])
+  }, [user, caps.native, startBusqueda, stopBusqueda])
 
   async function setVisibleSafe(next: boolean) {
     setVisible(next)

@@ -29,6 +29,11 @@ import { PromosPage } from './pages/PromosPage'
 import { CashbackPage } from './pages/CashbackPage'
 import { FinanciacionPage } from './pages/FinanciacionPage'
 import { PrestamosPage } from './pages/PrestamosPage'
+import { useBiometriaLock } from './hooks/useBiometriaLock'
+import { HuellaLockScreen } from './components/HuellaLockScreen'
+import { PermisosPrimeraVez } from './components/PermisosPrimeraVez'
+import { aplicarBarraDeEstado } from './native/statusBar'
+import { pedirPermisosNativos } from './native/monixRadio'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -43,32 +48,45 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  useAuth()
+  const { user, loading } = useAuth()
+  const { locked, unlock } = useBiometriaLock(loading ? null : user)
+
+  useEffect(() => {
+    if (!user || locked) return
+    void pedirPermisosNativos()
+  }, [user, locked])
+
+  if (!loading && user && locked) {
+    return <HuellaLockScreen onUnlock={unlock} />
+  }
 
   return (
-    <Routes>
-      <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />
-      <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
-      <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
-      <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
-      <Route path="/cuentas" element={<RequireAuth><CuentasPage /></RequireAuth>} />
-      <Route path="/dolares" element={<RequireAuth><CompraVentaDolaresPage /></RequireAuth>} />
-      <Route path="/transferir" element={<RequireAuth><TransferPage /></RequireAuth>} />
-      <Route path="/cerca" element={<RequireAuth><CercaPage /></RequireAuth>} />
-      <Route path="/historial" element={<RequireAuth><HistorialPage /></RequireAuth>} />
-      <Route path="/depositar" element={<RequireAuth><DepositPage /></RequireAuth>} />
-      <Route path="/tarjeta" element={<RequireAuth><TarjetaPage /></RequireAuth>} />
-      <Route path="/reservas" element={<RequireAuth><ReservasPage /></RequireAuth>} />
-      <Route path="/promos" element={<RequireAuth><PromosPage /></RequireAuth>} />
-      <Route path="/cashback" element={<RequireAuth><CashbackPage /></RequireAuth>} />
-      <Route path="/financiacion" element={<RequireAuth><FinanciacionPage /></RequireAuth>} />
-      <Route path="/prestamos" element={<RequireAuth><PrestamosPage /></RequireAuth>} />
-      <Route path="/mercado-monix" element={<RequireAuth><MercadoMonixPage /></RequireAuth>} />
-      <Route path="/pagar" element={<RequireAuth><PagarPage /></RequireAuth>} />
-      <Route path="/perfil" element={<RequireAuth><ProfilePage /></RequireAuth>} />
-      <Route path="/contactos" element={<RequireAuth><ContactosPage /></RequireAuth>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />
+        <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
+        <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
+        <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
+        <Route path="/cuentas" element={<RequireAuth><CuentasPage /></RequireAuth>} />
+        <Route path="/dolares" element={<RequireAuth><CompraVentaDolaresPage /></RequireAuth>} />
+        <Route path="/transferir" element={<RequireAuth><TransferPage /></RequireAuth>} />
+        <Route path="/cerca" element={<RequireAuth><CercaPage /></RequireAuth>} />
+        <Route path="/historial" element={<RequireAuth><HistorialPage /></RequireAuth>} />
+        <Route path="/depositar" element={<RequireAuth><DepositPage /></RequireAuth>} />
+        <Route path="/tarjeta" element={<RequireAuth><TarjetaPage /></RequireAuth>} />
+        <Route path="/reservas" element={<RequireAuth><ReservasPage /></RequireAuth>} />
+        <Route path="/promos" element={<RequireAuth><PromosPage /></RequireAuth>} />
+        <Route path="/cashback" element={<RequireAuth><CashbackPage /></RequireAuth>} />
+        <Route path="/financiacion" element={<RequireAuth><FinanciacionPage /></RequireAuth>} />
+        <Route path="/prestamos" element={<RequireAuth><PrestamosPage /></RequireAuth>} />
+        <Route path="/mercado-monix" element={<RequireAuth><MercadoMonixPage /></RequireAuth>} />
+        <Route path="/pagar" element={<RequireAuth><PagarPage /></RequireAuth>} />
+        <Route path="/perfil" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+        <Route path="/contactos" element={<RequireAuth><ContactosPage /></RequireAuth>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      {user && <PermisosPrimeraVez />}
+    </>
   )
 }
 
@@ -80,6 +98,7 @@ function AppShell() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
+    void aplicarBarraDeEstado(theme)
   }, [theme])
 
   useEffect(() => {

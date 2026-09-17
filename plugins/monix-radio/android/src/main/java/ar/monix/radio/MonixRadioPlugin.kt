@@ -2,23 +2,37 @@ package ar.monix.radio
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
 import android.nfc.NdefMessage
 import android.nfc.NdefRecord
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.os.Build
+import android.os.Bundle
+import android.provider.Settings
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.getcapacitor.JSObject
+import com.getcapacitor.PermissionState
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 
 @CapacitorPlugin(
   name = "MonixRadio",
   permissions = [
-    Permission(strings = [Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NFC, Manifest.permission.POST_NOTIFICATIONS], alias = "radio")
+    Permission(strings = [Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NFC, Manifest.permission.POST_NOTIFICATIONS], alias = "radio"),
+    Permission(strings = [Manifest.permission.CAMERA], alias = "camera"),
+    Permission(strings = [Manifest.permission.RECORD_AUDIO], alias = "mic")
   ]
 )
 class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
@@ -36,6 +50,220 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
   override fun load() {
     instance = this
+  }
+
+  @PluginMethod
+  fun pedirCamara(call: PluginCall) {
+    if (getPermissionState("camera") == PermissionState.GRANTED) {
+      call.resolve()
+      return
+    }
+    requestPermissionForAlias("camera", call, "onCamara")
+  }
+
+  @PermissionCallback
+  fun onCamara(call: PluginCall) {
+    if (getPermissionState("camera") == PermissionState.GRANTED) {
+      call.resolve()
+    } else {
+      call.reject("permission denied")
+    }
+  }
+
+  @PluginMethod
+  fun pedirMic(call: PluginCall) {
+    if (getPermissionState("mic") == PermissionState.GRANTED) {
+      call.resolve()
+      return
+    }
+    requestPermissionForAlias("mic", call, "onMic")
+  }
+
+  @PermissionCallback
+  fun onMic(call: PluginCall) {
+    if (getPermissionState("mic") == PermissionState.GRANTED) {
+      call.resolve()
+    } else {
+      call.reject("permission denied")
+    }
+  }
+
+  @PluginMethod
+  fun pedirTodosLosPermisos(call: PluginCall) {
+    val listos = getPermissionState("camera") == PermissionState.GRANTED
+      && getPermissionState("mic") == PermissionState.GRANTED
+      && getPermissionState("radio") == PermissionState.GRANTED
+    if (listos) {
+      call.resolve()
+      return
+    }
+    requestAllPermissions(call, "onTodosLosPermisos")
+  }
+
+  @PermissionCallback
+  fun onTodosLosPermisos(call: PluginCall) {
+    call.resolve()
+  }
+
+  @PluginMethod
+  fun abrirAjustes(call: PluginCall) {
+    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+    intent.data = Uri.fromParts("package", context.packageName, null)
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    context.startActivity(intent)
+    call.resolve()
+  }
+
+  @PluginMethod
+  fun soportaBiometria(call: PluginCall) {
+    val mgr = BiometricManager.from(context)
+    val can = mgr.canAuthenticate(
+      BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK
+    )
+    val data = JSObject()
+    data.put("ok", can == BiometricManager.BIOMETRIC_SUCCESS)
+    call.resolve(data)
+  }
+
+  @PluginMethod
+  fun verificarBiometria(call: PluginCall) {
+    val act = activity as? FragmentActivity
+    if (act == null) {
+      call.reject("no activity")
+      return
+    }
+    val executor = ContextCompat.getMainExecutor(context)
+    act.runOnUiThread {
+      val prompt = BiometricPrompt(
+        act,
+        executor,
+        object : BiometricPrompt.AuthenticationCallback() {
+          override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+            call.resolve()
+          }
+
+          override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+            call.reject(errString.toString())
+          }
+        }
+      )
+      val info = BiometricPrompt.PromptInfo.Builder()
+        .setTitle("Monix")
+        .setSubtitle("Confirmá con huella o el rostro")
+        .setNegativeButtonText("Cancelar")
+        .setAllowedAuthenticators(
+          BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK
+        )
+        .build()
+      prompt.authenticate(info)
+    }
+  }
+
+  private var speech: SpeechRecognizer? = null
+  private var listening = false
+
+  @PluginMethod
+  fun startVoz(call: PluginCall) {
+    if (getPermissionState("mic") != PermissionState.GRANTED) {
+      requestPermissionForAlias("mic", call, "onMicParaVoz")
+      return
+    }
+    arrancarVoz(call)
+  }
+
+  @PermissionCallback
+  fun onMicParaVoz(call: PluginCall) {
+    if (getPermissionState("mic") == PermissionState.GRANTED) {
+      arrancarVoz(call)
+    } else {
+      call.reject("permission denied")
+    }
+  }
+
+  private fun arrancarVoz(call: PluginCall) {
+    val act = activity
+    if (act == null) {
+      call.reject("no activity")
+      return
+    }
+    act.runOnUiThread {
+      if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+        call.reject("El teléfono no tiene reconocimiento de voz")
+        return@runOnUiThread
+      }
+      listening = true
+      speech?.destroy()
+      speech = SpeechRecognizer.createSpeechRecognizer(context).apply {
+        setRecognitionListener(object : RecognitionListener {
+          override fun onReadyForSpeech(params: Bundle?) {}
+          override fun onBeginningOfSpeech() {}
+          override fun onRmsChanged(rmsdB: Float) {}
+          override fun onBufferReceived(buffer: ByteArray?) {}
+          override fun onEndOfSpeech() {}
+          override fun onEvent(eventType: Int, params: Bundle?) {}
+
+          override fun onError(error: Int) {
+            if (!listening) return
+            if (
+              error == SpeechRecognizer.ERROR_NO_MATCH
+              || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+              || error == SpeechRecognizer.ERROR_CLIENT
+            ) {
+              listenAgain()
+            }
+          }
+
+          override fun onResults(results: Bundle) {
+            val text = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+            emitVoz(text, true)
+            if (listening) listenAgain()
+          }
+
+          override fun onPartialResults(partialResults: Bundle) {
+            val text = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+            emitVoz(text, false)
+          }
+        })
+      }
+      listenAgain()
+      call.resolve()
+    }
+  }
+
+  private fun listenAgain() {
+    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+      putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+      putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-AR")
+      putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "es-AR")
+      putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+      putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+    }
+    try {
+      speech?.startListening(intent)
+    } catch (_: Exception) {
+    }
+  }
+
+  private fun emitVoz(text: String, final: Boolean) {
+    if (text.isBlank()) return
+    val data = JSObject()
+    data.put("text", text)
+    data.put("final", final)
+    notifyListeners("voz", data)
+  }
+
+  @PluginMethod
+  fun stopVoz(call: PluginCall) {
+    listening = false
+    activity?.runOnUiThread {
+      try {
+        speech?.stopListening()
+      } catch (_: Exception) {
+      }
+      speech?.destroy()
+      speech = null
+    }
+    call.resolve()
   }
 
   @PluginMethod
