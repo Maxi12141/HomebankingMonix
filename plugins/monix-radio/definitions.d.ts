@@ -16,5 +16,6 @@ export interface MonixRadioPlugin {
   verificarBiometria(): Promise<void>
   startVoz(): Promise<void>
   stopVoz(): Promise<void>
+  sacarFoto(): Promise<{ dataUrl: string }>
   addListener(event: string, cb: (data: Record<string, unknown>) => void): Promise<{ remove: () => Promise<void> }>
 }

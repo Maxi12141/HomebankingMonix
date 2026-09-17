@@ -10,7 +10,7 @@ import { QrBox } from './QrBox'
 import { formatMonto } from '../utils/cuenta'
 import { encodeCobroQr, encodeCuentaQr, parseRadioPayload } from '../lib/tokens'
 import { detectQrUntil, engancharCamara, leerQrDeArchivo, mensajeErrorCamara, pedirStreamCamara, stopMediaStream } from '../lib/scanQr'
-import { isAbortError, pedirPermisoCamara, radioCapabilities } from '../native/monixRadio'
+import { isAbortError, pedirPermisoCamara, radioCapabilities, sacarFotoNativa } from '../native/monixRadio'
 import {
   cancelarCobroNfc,
   crearCobroNfc,
@@ -243,7 +243,16 @@ export function EscanearYPagar({
 
   async function escanearQr() {
     if (radioCapabilities().native) {
-      fotoRef.current?.click()
+      setError('')
+      setAbriendoCamara(true)
+      try {
+        const blob = await sacarFotoNativa()
+        if (blob) await escanearFoto(blob)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'No se pudo abrir la cámara')
+      } finally {
+        setAbriendoCamara(false)
+      }
       return
     }
 
@@ -468,13 +477,12 @@ export function EscanearYPagar({
         <>
           {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
           <p className="font-body text-xs text-slate-secondary mb-3">
-            Si la cámara en vivo no abre, usá sacar foto: el teléfono abre la cámara nativa y leemos el QR.
+            Abrir cámara usa la cámara del teléfono. La opción de abajo es para elegir una foto que ya tengas.
           </p>
           <input
             ref={fotoRef}
             type="file"
             accept="image/*"
-            capture="environment"
             className="sr-only"
             aria-hidden
             tabIndex={-1}

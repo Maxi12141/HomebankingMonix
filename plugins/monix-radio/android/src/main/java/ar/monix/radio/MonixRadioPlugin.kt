@@ -1,7 +1,12 @@
 package ar.monix.radio
 
 import android.Manifest
+import android.app.Activity
+import android.content.ClipData
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.nfc.NdefMessage
 import android.nfc.NdefRecord
@@ -10,22 +15,29 @@ import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Base64
+import androidx.activity.result.ActivityResult
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.FragmentActivity
 import com.getcapacitor.JSObject
 import com.getcapacitor.PermissionState
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
+import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
 import com.getcapacitor.annotation.PermissionCallback
+import java.io.ByteArrayOutputStream
+import java.io.File
 
 @CapacitorPlugin(
   name = "MonixRadio",
@@ -67,6 +79,81 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
       call.resolve()
     } else {
       call.reject("permission denied")
+    }
+  }
+
+  private var fotoFile: File? = null
+
+  @PluginMethod
+  fun sacarFoto(call: PluginCall) {
+    call.setKeepAlive(true)
+    if (getPermissionState("camera") != PermissionState.GRANTED) {
+      requestPermissionForAlias("camera", call, "onCamaraParaFoto")
+      return
+    }
+    lanzarCamara(call)
+  }
+
+  @PermissionCallback
+  fun onCamaraParaFoto(call: PluginCall) {
+    if (getPermissionState("camera") == PermissionState.GRANTED) {
+      lanzarCamara(call)
+    } else {
+      call.reject("permission denied")
+    }
+  }
+
+  private fun lanzarCamara(call: PluginCall) {
+    try {
+      val file = File.createTempFile("monix-qr-", ".jpg", context.cacheDir)
+      fotoFile = file
+      val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", file)
+      val flags = Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
+      val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+        putExtra(MediaStore.EXTRA_OUTPUT, uri)
+        clipData = ClipData.newRawUri("photo", uri)
+        addFlags(flags)
+      }
+      for (info in context.packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)) {
+        context.grantUriPermission(info.activityInfo.packageName, uri, flags)
+      }
+      startActivityForResult(call, intent, "onFotoTomada")
+    } catch (e: Exception) {
+      call.reject(e.message ?: "No se pudo abrir la cámara")
+    }
+  }
+
+  @ActivityCallback
+  fun onFotoTomada(call: PluginCall, result: ActivityResult) {
+    if (result.resultCode != Activity.RESULT_OK) {
+      call.reject("cancelada")
+      return
+    }
+    val file = fotoFile
+    try {
+      val bitmap = when {
+        file != null && file.length() > 0 -> BitmapFactory.decodeFile(file.absolutePath)
+        else -> result.data?.extras?.get("data") as? Bitmap
+      }
+      if (bitmap == null) {
+        call.reject("No se guardó la foto")
+        return
+      }
+      val max = 1600
+      val scaled = if (bitmap.width <= max && bitmap.height <= max) bitmap else {
+        val ratio = max.toFloat() / maxOf(bitmap.width, bitmap.height)
+        Bitmap.createScaledBitmap(bitmap, (bitmap.width * ratio).toInt(), (bitmap.height * ratio).toInt(), true)
+      }
+      val out = ByteArrayOutputStream()
+      scaled.compress(Bitmap.CompressFormat.JPEG, 82, out)
+      val data = JSObject()
+      data.put("dataUrl", "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP))
+      call.resolve(data)
+    } catch (e: Exception) {
+      call.reject(e.message ?: "No se pudo leer la foto")
+    } finally {
+      file?.delete()
+      fotoFile = null
     }
   }
 

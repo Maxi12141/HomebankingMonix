@@ -41,6 +41,7 @@ async function getPlugin(): Promise<{
   verificarBiometria?: () => Promise<void>
   startVoz?: () => Promise<void>
   stopVoz?: () => Promise<void>
+  sacarFoto?: () => Promise<{ dataUrl?: string }>
   addListener: (event: string, cb: (data: Record<string, unknown>) => void) => Promise<{ remove: () => Promise<void> }>
 } | null> {
   if (!isNative()) return null
@@ -151,6 +152,23 @@ export async function soportaBiometriaNativa() {
     return Boolean(res?.ok)
   } catch {
     return false
+  }
+}
+
+export async function sacarFotoNativa(): Promise<Blob | null> {
+  const plugin = await getPlugin()
+  const fn = plugin?.sacarFoto
+  if (!fn) throw new Error('Actualizá la APK de Monix para abrir la cámara')
+  try {
+    const res = await fn()
+    const dataUrl = res?.dataUrl
+    if (!dataUrl) return null
+    const respuesta = await fetch(dataUrl)
+    return respuesta.blob()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (/cancel/i.test(msg)) return null
+    throw err
   }
 }
 
