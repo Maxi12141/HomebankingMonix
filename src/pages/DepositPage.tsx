@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { CheckCircle } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -10,7 +10,6 @@ import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
-import type { Cuenta } from '../types'
 
 type Step = 'form' | 'success'
 
@@ -20,29 +19,48 @@ const stepVariants = {
   exit: { opacity: 0, y: -16, transition: { duration: 0.2 } },
 }
 
+function parseMonto(raw: string) {
+  const n = parseFloat(raw.replace(/\s/g, '').replace(',', '.'))
+  return n
+}
+
 export function DepositPage() {
   const { cuenta, cuentas, refreshCuenta } = useCuenta()
   const { updateSaldoCuenta } = useCuentaStore()
 
   const [step, setStep] = useState<Step>('form')
-  const [cuentaDestino, setCuentaDestino] = useState<Cuenta | null>(null)
+  const [cuentaId, setCuentaId] = useState<string | null>(null)
   const [monto, setMonto] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [depositado, setDepositado] = useState<{ monto: number; saldo: number; moneda: 'ARS' | 'USD' } | null>(null)
 
-  const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
+  const cuentaARS = useMemo(
+    () => cuentas.find((c) => c.moneda === 'ARS') ?? cuenta,
+    [cuentas, cuenta],
+  )
+  const cuentaUSD = useMemo(
+    () => cuentas.find((c) => c.moneda === 'USD') ?? null,
+    [cuentas],
+  )
+  const cuentaDestino = useMemo(
+    () => cuentas.find((c) => c.id === cuentaId) ?? cuentaARS ?? null,
+    [cuentas, cuentaId, cuentaARS],
+  )
 
-  useEffect(() => {
-    if (!cuentaDestino && cuenta) setCuentaDestino(cuenta)
-  }, [cuenta, cuentaDestino])
-
-  const montoNum = parseFloat(monto)
+  const montoNum = parseMonto(monto)
+  const moneda = cuentaDestino?.moneda ?? 'ARS'
+  const saldoFormateado = formatMonto(cuentaDestino?.saldo ?? depositado?.saldo ?? 0, moneda)
+  const montoFormateado = formatMonto(Number.isFinite(montoNum) ? montoNum : depositado?.monto ?? 0, moneda)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!cuentaDestino) return
-    if (isNaN(montoNum) || montoNum <= 0) {
+    if (!cuentaDestino) {
+      setError('No encontramos tu cuenta. Probá recargar.')
+      return
+    }
+    if (!Number.isFinite(montoNum) || montoNum <= 0) {
       setError('Ingresá un monto válido')
       return
     }
@@ -51,27 +69,21 @@ export function DepositPage() {
     setError('')
 
     try {
-      const nuevoSaldo = cuentaDestino.saldo + montoNum
-
-      const { error: errSaldo } = await supabase
-        .from('cuentas')
-        .update({ saldo: nuevoSaldo })
-        .eq('id', cuentaDestino.id)
-      if (errSaldo) throw new Error('No se pudo actualizar el saldo')
-
-      const { error: errMov } = await supabase.from('movimientos').insert({
-        cuenta_id: cuentaDestino.id,
-        tipo: 'deposito',
-        monto: montoNum,
-        saldo_resultante: nuevoSaldo,
-        descripcion: descripcion || null,
+      const { data, error: errDep } = await supabase.rpc('depositar_en_cuenta', {
+        p_cuenta_id: cuentaDestino.id,
+        p_monto: montoNum,
+        p_descripcion: descripcion.trim() || null,
       })
-      if (errMov) throw new Error('No se pudo registrar el movimiento')
+      if (errDep) throw new Error(errDep.message || 'No se pudo depositar')
+
+      const nuevoSaldo = Number(data)
+      if (!Number.isFinite(nuevoSaldo)) throw new Error('No se pudo depositar')
 
       updateSaldoCuenta(cuentaDestino.id, nuevoSaldo)
-      await refreshCuenta()
+      setDepositado({ monto: montoNum, saldo: nuevoSaldo, moneda: cuentaDestino.moneda })
       setStep('success')
       toast.success('¡Depósito realizado con éxito!')
+      void refreshCuenta()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Ocurrió un error al procesar el depósito'
       setError(msg)
@@ -86,11 +98,8 @@ export function DepositPage() {
     setMonto('')
     setDescripcion('')
     setError('')
+    setDepositado(null)
   }
-
-  const moneda = cuentaDestino?.moneda ?? 'ARS'
-  const saldoFormateado = formatMonto(cuentaDestino?.saldo ?? 0, moneda)
-  const montoFormateado = formatMonto(montoNum || 0, moneda)
 
   return (
     <PageWrapper>
@@ -101,11 +110,11 @@ export function DepositPage() {
           {step === 'form' && (
             <motion.div key="form" variants={stepVariants} initial="initial" animate="animate" exit="exit">
               <Card className="p-8">
-                {cuentaUSD && (
+                {cuentaUSD && cuentaARS && (
                   <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
                     <button
                       type="button"
-                      onClick={() => setCuentaDestino(cuenta)}
+                      onClick={() => setCuentaId(cuentaARS.id)}
                       className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
                         moneda === 'ARS'
                           ? 'bg-mint text-navy'
@@ -116,7 +125,7 @@ export function DepositPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setCuentaDestino(cuentaUSD)}
+                      onClick={() => setCuentaId(cuentaUSD.id)}
                       className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
                         moneda === 'USD'
                           ? 'bg-mint text-navy'
@@ -134,9 +143,8 @@ export function DepositPage() {
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                   <Input
                     label="Monto a depositar"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="0.00"
                     value={monto}
                     onChange={(e) => setMonto(e.target.value)}
@@ -153,15 +161,15 @@ export function DepositPage() {
                     <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3">{error}</p>
                   )}
 
-                  <Button type="submit" className="w-full mt-2" loading={loading}>
-                    {!loading && montoNum > 0 ? `Depositar ${montoFormateado}` : 'Depositar'}
+                  <Button type="submit" className="w-full mt-2" loading={loading} disabled={!cuentaDestino}>
+                    {!loading && Number.isFinite(montoNum) && montoNum > 0 ? `Depositar ${montoFormateado}` : 'Depositar'}
                   </Button>
                 </form>
               </Card>
             </motion.div>
           )}
 
-          {step === 'success' && (
+          {step === 'success' && depositado && (
             <motion.div key="success" variants={stepVariants} initial="initial" animate="animate" exit="exit">
               <Card className="p-8 text-center">
                 <motion.div
@@ -173,10 +181,10 @@ export function DepositPage() {
                 </motion.div>
                 <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-2">¡Depósito exitoso!</h2>
                 <p className="font-body text-slate-secondary mb-2">
-                  Depositaste {montoFormateado}
+                  Depositaste {formatMonto(depositado.monto, depositado.moneda)}
                 </p>
                 <p className="font-body text-sm text-slate-secondary mb-8">
-                  Nuevo saldo: <span className="text-mint font-medium">{saldoFormateado}</span>
+                  Nuevo saldo: <span className="text-mint font-medium">{formatMonto(depositado.saldo, depositado.moneda)}</span>
                 </p>
                 <Button className="w-full" onClick={handleReset}>Nuevo depósito</Button>
               </Card>
