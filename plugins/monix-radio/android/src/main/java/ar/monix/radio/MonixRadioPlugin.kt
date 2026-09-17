@@ -9,16 +9,20 @@ import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.os.Build
 import com.getcapacitor.JSObject
+import com.getcapacitor.PermissionState
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 
 @CapacitorPlugin(
   name = "MonixRadio",
   permissions = [
-    Permission(strings = [Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NFC, Manifest.permission.POST_NOTIFICATIONS], alias = "radio")
+    Permission(strings = [Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NFC, Manifest.permission.POST_NOTIFICATIONS], alias = "radio"),
+    Permission(strings = [Manifest.permission.CAMERA], alias = "camera"),
+    Permission(strings = [Manifest.permission.RECORD_AUDIO], alias = "mic")
   ]
 )
 class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
@@ -36,6 +40,24 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
   override fun load() {
     instance = this
+  }
+
+  @PluginMethod
+  fun pedirCamara(call: PluginCall) {
+    if (getPermissionState("camera") == PermissionState.GRANTED) {
+      call.resolve()
+      return
+    }
+    requestPermissionForAlias("camera", call, "onCamara")
+  }
+
+  @PermissionCallback
+  fun onCamara(call: PluginCall) {
+    if (getPermissionState("camera") == PermissionState.GRANTED) {
+      call.resolve()
+    } else {
+      call.reject("permission denied")
+    }
   }
 
   @PluginMethod

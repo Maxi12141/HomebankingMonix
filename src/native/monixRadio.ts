@@ -32,6 +32,7 @@ async function getPlugin(): Promise<{
   writeNfc: (opts: { payload: string }) => Promise<void>
   startHce: (opts: { payload: string }) => Promise<void>
   stopHce: () => Promise<void>
+  pedirCamara?: () => Promise<void>
   addListener: (event: string, cb: (data: Record<string, unknown>) => void) => Promise<{ remove: () => Promise<void> }>
 } | null> {
   if (!isNative()) return null
@@ -48,6 +49,17 @@ export function radioCapabilities(): RadioCapabilities {
     native: isNative(),
     nfc: hasNdef() || isNative(),
     ble: isNative(),
+  }
+}
+
+export async function pedirPermisoCamara() {
+  try {
+    const plugin = await getPlugin()
+    const pedir = plugin?.pedirCamara
+    if (!pedir) return
+    await pedir()
+  } catch {
+    /* APK vieja o permiso ya negado: getUserMedia igual dispara el diálogo del WebView */
   }
 }
 

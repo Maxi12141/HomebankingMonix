@@ -30,7 +30,6 @@ export function PagarPage() {
 
         {escanear ? (
           <EscanearYPagar
-            autoStart={params.get('scan') === '1'}
             cobroIdInicial={cobroInicial}
             onCerrarScan={volverAMiQr}
           />

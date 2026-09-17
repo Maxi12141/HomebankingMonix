@@ -9,8 +9,8 @@ import { Input } from './ui/Input'
 import { QrBox } from './QrBox'
 import { formatMonto } from '../utils/cuenta'
 import { encodeCobroQr, encodeCuentaQr, parseRadioPayload } from '../lib/tokens'
-import { detectQrUntil, startQrCamera, stopMediaStream, waitForVideo } from '../lib/scanQr'
-import { isAbortError } from '../native/monixRadio'
+import { detectQrUntil, engancharCamara, leerQrDeArchivo, mensajeErrorCamara, pedirStreamCamara, stopMediaStream } from '../lib/scanQr'
+import { isAbortError, pedirPermisoCamara } from '../native/monixRadio'
 import {
   cancelarCobroNfc,
   crearCobroNfc,
@@ -22,14 +22,20 @@ import {
   type DestinoQr,
 } from '../services/nfcPago'
 
-async function leerQrDeCamara(video: HTMLVideoElement, signal: AbortSignal) {
-  const stream = await startQrCamera(video)
-  try {
-    return await detectQrUntil(video, signal)
-  } finally {
-    stopMediaStream(stream)
-    video.srcObject = null
+async function aplicarQr(raw: string, cargarCobro: (id: string) => Promise<void>, cargarCuenta: (id: string) => Promise<void>) {
+  const parsed = parseRadioPayload(raw)
+  if (parsed?.kind === 'cobro') {
+    await cargarCobro(parsed.value)
+    return
   }
+  if (parsed?.kind === 'cuenta') {
+    await cargarCuenta(parsed.value)
+    return
+  }
+  if (parsed?.kind === 'pay' || parsed?.kind === 'id') {
+    throw new Error('Ese código es de la tarjeta. Para pagar con QR usá el código de esta pantalla.')
+  }
+  await cargarCobro(raw.replace(/^MONIXPAY:/i, ''))
 }
 
 export function MiCodigoQr() {
@@ -177,11 +183,9 @@ export function MiCodigoQr() {
 }
 
 export function EscanearYPagar({
-  autoStart = false,
   cobroIdInicial,
   onCerrarScan,
 }: {
-  autoStart?: boolean
   cobroIdInicial?: string
   onCerrarScan?: () => void
 }) {
@@ -194,18 +198,20 @@ export function EscanearYPagar({
   const [pagado, setPagado] = useState<{ nombre: string; monto: number; moneda: 'ARS' | 'USD' } | null>(null)
   const [scanning, setScanning] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const fotoRef = useRef<HTMLInputElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const scanAbortRef = useRef<AbortController | null>(null)
-  const startedRef = useRef(false)
 
+  useEffect(() => {
+    return () => {
+      scanAbortRef.current?.abort()
+      stopMediaStream(streamRef.current)
+      streamRef.current = null
+    }
+  }, [])
   useEffect(() => {
     if (cobroIdInicial) void cargarCobro(cobroIdInicial)
   }, [cobroIdInicial])
-
-  useEffect(() => {
-    if (!autoStart || cobroIdInicial || startedRef.current) return
-    startedRef.current = true
-    void escanearQr()
-  }, [autoStart, cobroIdInicial])
 
   async function cargarCobro(id: string) {
     setLoading(true)
@@ -238,26 +244,51 @@ export function EscanearYPagar({
     scanAbortRef.current?.abort()
     const controller = new AbortController()
     scanAbortRef.current = controller
-    setScanning(true)
     setError('')
+    stopMediaStream(streamRef.current)
+    streamRef.current = null
     try {
-      const video = await waitForVideo(() => videoRef.current, controller.signal)
-      const raw = await leerQrDeCamara(video, controller.signal)
-      const parsed = parseRadioPayload(raw)
-      if (parsed?.kind === 'cobro') await cargarCobro(parsed.value)
-      else if (parsed?.kind === 'cuenta') await cargarCuenta(parsed.value)
-      else if (parsed?.kind === 'pay' || parsed?.kind === 'id') {
-        throw new Error('Ese código es de la tarjeta. Para pagar con QR usá el código de esta pantalla.')
-      } else {
-        await cargarCobro(raw.replace(/^MONIXPAY:/i, ''))
+      await pedirPermisoCamara()
+      const stream = await pedirStreamCamara()
+      if (controller.signal.aborted) {
+        stopMediaStream(stream)
+        return
       }
+      streamRef.current = stream
+      setScanning(true)
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+      if (controller.signal.aborted) {
+        stopMediaStream(stream)
+        return
+      }
+      const video = videoRef.current
+      if (!video) throw new Error('No se pudo mostrar la cámara')
+      await engancharCamara(video, stream)
+      const raw = await detectQrUntil(video, controller.signal)
+      await aplicarQr(raw, cargarCobro, cargarCuenta)
     } catch (err) {
       if (!isAbortError(err)) {
-        setError(err instanceof Error ? err.message : 'No se pudo abrir la cámara')
+        setError(mensajeErrorCamara(err))
       }
     } finally {
+      stopMediaStream(streamRef.current)
+      streamRef.current = null
+      if (videoRef.current) videoRef.current.srcObject = null
       if (scanAbortRef.current === controller) scanAbortRef.current = null
       setScanning(false)
+    }
+  }
+
+  async function escanearFoto(file: Blob) {
+    setError('')
+    setLoading(true)
+    try {
+      const raw = await leerQrDeArchivo(file)
+      await aplicarQr(raw, cargarCobro, cargarCuenta)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo leer la foto')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -400,12 +431,21 @@ export function EscanearYPagar({
         <ScanLine size={18} className="text-mint" />
         <h2 className="font-display font-semibold text-navy dark:text-white">Escanear para pagar</h2>
       </div>
+      <video
+        ref={videoRef}
+        className={`w-full rounded-xl bg-black aspect-[4/3] object-cover ${scanning ? '' : 'hidden'}`}
+        muted
+        playsInline
+        autoPlay
+      />
       {scanning ? (
         <>
-          <video ref={videoRef} className="w-full rounded-xl bg-black aspect-[4/3] object-cover" muted playsInline />
           <p className="font-body text-xs text-slate-secondary text-center mt-3">Apuntá al QR de Monix</p>
           <Button variant="secondary" className="w-full mt-3" type="button" onClick={() => {
             scanAbortRef.current?.abort()
+            stopMediaStream(streamRef.current)
+            streamRef.current = null
+            setScanning(false)
             onCerrarScan?.()
           }}>
             Cancelar
@@ -414,8 +454,34 @@ export function EscanearYPagar({
       ) : (
         <>
           {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
+          <p className="font-body text-xs text-slate-secondary mb-3">
+            Si la cámara en vivo no abre, usá sacar foto: el teléfono abre la cámara nativa y leemos el QR.
+          </p>
+          <input
+            ref={fotoRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            aria-hidden
+            tabIndex={-1}
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (file) void escanearFoto(file)
+            }}
+          />
           <Button className="w-full" type="button" loading={loading} onClick={() => { void escanearQr() }}>
             Abrir cámara
+          </Button>
+          <Button
+            variant="secondary"
+            className="w-full mt-2"
+            type="button"
+            loading={loading}
+            onClick={() => fotoRef.current?.click()}
+          >
+            Sacar foto del QR
           </Button>
           {onCerrarScan && (
             <Button variant="secondary" className="w-full mt-2" type="button" onClick={onCerrarScan}>
