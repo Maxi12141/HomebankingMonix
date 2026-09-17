@@ -15,13 +15,13 @@ export function recargarSiHayBuildNuevo() {
     try {
       const id = await leerBuild()
       if (!id) return
-      const prev = sessionStorage.getItem(CLAVE)
+      const prev = localStorage.getItem(CLAVE)
       if (prev && prev !== id) {
-        sessionStorage.setItem(CLAVE, id)
+        localStorage.setItem(CLAVE, id)
         window.location.reload()
         return
       }
-      sessionStorage.setItem(CLAVE, id)
+      localStorage.setItem(CLAVE, id)
     } catch {
       // Sin red no recargamos; la app sigue con lo último que cargó.
     }
@@ -30,5 +30,10 @@ export function recargarSiHayBuildNuevo() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') void chequear()
   })
+  window.addEventListener('focus', () => { void chequear() })
+  window.addEventListener('pageshow', () => { void chequear() })
+  window.setInterval(() => {
+    if (document.visibilityState === 'visible') void chequear()
+  }, 20_000)
   void chequear()
 }
