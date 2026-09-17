@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ar.monix.banco",
+      "sha256_cert_fingerprints": [
+        "D2:E6:C9:0C:6C:DF:B2:37:25:16:32:51:0F:14:D2:71:B6:F6:90:18:4B:EC:F8:C1:F7:E0:99:0C:79:33:95:C6"
+      ]
+    }
+  }
+]

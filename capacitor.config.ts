@@ -20,8 +20,12 @@ const config: CapacitorConfig = {
 }
 
 if (serverUrl) {
+  const host = new URL(serverUrl).hostname
   config.server = {
     url: serverUrl,
+    hostname: host,
+    androidScheme: 'https',
+    allowNavigation: [host],
     cleartext: serverUrl.startsWith('http://'),
   }
 }
