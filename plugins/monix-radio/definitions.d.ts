@@ -8,5 +8,8 @@ export interface MonixRadioPlugin {
   writeNfc(options: { payload: string }): Promise<void>
   startHce(options: { payload: string }): Promise<void>
   stopHce(): Promise<void>
+  pedirCamara(): Promise<void>
+  pedirMic(): Promise<void>
+  pedirTodosLosPermisos(): Promise<void>
   addListener(event: string, cb: (data: Record<string, unknown>) => void): Promise<{ remove: () => Promise<void> }>
 }

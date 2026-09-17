@@ -1,8 +1,17 @@
 const STORAGE_KEY = 'monix_bio_v1'
 const JUST_AUTH_KEY = 'monix_just_authed'
 
+export type MetodoBio = 'huella' | 'face'
+
 interface BioRecord {
   credId: string
+  huella?: boolean
+  face?: boolean
+}
+
+export interface MetodosBio {
+  huella: boolean
+  face: boolean
 }
 
 function loadAll(): Record<string, BioRecord> {
@@ -18,6 +27,14 @@ function loadAll(): Record<string, BioRecord> {
 
 function saveAll(data: Record<string, BioRecord>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+}
+
+function flagsFrom(rec: BioRecord | undefined): MetodosBio {
+  if (!rec?.credId) return { huella: false, face: false }
+  if (rec.huella === undefined && rec.face === undefined) {
+    return { huella: true, face: false }
+  }
+  return { huella: Boolean(rec.huella), face: Boolean(rec.face) }
 }
 
 function bufferToB64(buf: ArrayBuffer) {
@@ -59,8 +76,13 @@ export async function soportaHuella() {
   }
 }
 
+export function metodosBio(userId: string): MetodosBio {
+  return flagsFrom(loadAll()[userId])
+}
+
 export function huellaActiva(userId: string) {
-  return Boolean(loadAll()[userId]?.credId)
+  const m = metodosBio(userId)
+  return m.huella || m.face
 }
 
 export function marcarIngresoConClave() {
@@ -73,9 +95,11 @@ export function consumoIngresoConClave() {
   return v
 }
 
-export async function activarHuella(userId: string, nombre: string) {
+async function asegurarCredencial(userId: string, nombre: string) {
+  const existing = loadAll()[userId]
+  if (existing?.credId) return existing
   if (!(await soportaHuella())) {
-    throw new Error('Este teléfono no tiene huella o Face ID disponible')
+    throw new Error('Este teléfono no tiene huella ni reconocimiento facial disponible')
   }
   const cred = await navigator.credentials.create({
     publicKey: {
@@ -100,11 +124,36 @@ export async function activarHuella(userId: string, nombre: string) {
     },
   })
   if (!(cred instanceof PublicKeyCredential)) {
-    throw new Error('No se pudo registrar la huella')
+    throw new Error('No se pudo registrar el desbloqueo biométrico')
   }
+  return { credId: bufferToB64(cred.rawId), huella: false, face: false } satisfies BioRecord
+}
+
+export async function activarMetodo(userId: string, nombre: string, metodo: MetodoBio) {
+  const rec = await asegurarCredencial(userId, nombre)
+  const flags = flagsFrom(rec)
+  flags[metodo] = true
   const all = loadAll()
-  all[userId] = { credId: bufferToB64(cred.rawId) }
+  all[userId] = { credId: rec.credId, ...flags }
   saveAll(all)
+}
+
+export function desactivarMetodo(userId: string, metodo: MetodoBio) {
+  const all = loadAll()
+  const rec = all[userId]
+  if (!rec?.credId) return
+  const flags = flagsFrom(rec)
+  flags[metodo] = false
+  if (!flags.huella && !flags.face) {
+    delete all[userId]
+  } else {
+    all[userId] = { credId: rec.credId, ...flags }
+  }
+  saveAll(all)
+}
+
+export async function activarHuella(userId: string, nombre: string) {
+  await activarMetodo(userId, nombre, 'huella')
 }
 
 export function desactivarHuella(userId: string) {
@@ -115,7 +164,7 @@ export function desactivarHuella(userId: string) {
 
 export async function verificarHuella(userId: string) {
   const record = loadAll()[userId]
-  if (!record) throw new Error('La huella no está activada')
+  if (!record) throw new Error('El desbloqueo biométrico no está activado')
   const cred = await navigator.credentials.get({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
@@ -128,7 +177,7 @@ export async function verificarHuella(userId: string) {
       timeout: 60_000,
     },
   })
-  if (!cred) throw new Error('No se reconoció la huella')
+  if (!cred) throw new Error('No se reconoció la huella o el Face ID')
 }
 
 export function esCancelacionBiometrica(err: unknown) {

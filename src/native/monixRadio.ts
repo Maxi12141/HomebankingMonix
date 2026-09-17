@@ -33,6 +33,9 @@ async function getPlugin(): Promise<{
   startHce: (opts: { payload: string }) => Promise<void>
   stopHce: () => Promise<void>
   pedirCamara?: () => Promise<void>
+  pedirMic?: () => Promise<void>
+  pedirTodosLosPermisos?: () => Promise<void>
+  requestPermissions?: () => Promise<void>
   addListener: (event: string, cb: (data: Record<string, unknown>) => void) => Promise<{ remove: () => Promise<void> }>
 } | null> {
   if (!isNative()) return null
@@ -61,6 +64,75 @@ export async function pedirPermisoCamara() {
   } catch {
     /* APK vieja o permiso ya negado: getUserMedia igual dispara el diálogo del WebView */
   }
+}
+
+export async function pedirPermisosNativos() {
+  try {
+    const plugin = await getPlugin()
+    if (plugin?.pedirTodosLosPermisos) {
+      await plugin.pedirTodosLosPermisos()
+      return
+    }
+    await plugin?.pedirCamara?.()
+    await plugin?.pedirMic?.()
+    await plugin?.requestPermissions?.()
+  } catch {
+    /* diálogo cancelado o APK vieja */
+  }
+}
+
+async function pedirMediosWeb() {
+  if (navigator.mediaDevices?.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      stream.getTracks().forEach((t) => t.stop())
+    } catch {
+      try {
+        const cam = await navigator.mediaDevices.getUserMedia({ video: true })
+        cam.getTracks().forEach((t) => t.stop())
+      } catch {
+        /* cámara denegada */
+      }
+      try {
+        const mic = await navigator.mediaDevices.getUserMedia({ audio: true })
+        mic.getTracks().forEach((t) => t.stop())
+      } catch {
+        /* mic denegado */
+      }
+    }
+  }
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      await Notification.requestPermission()
+    }
+  } catch {
+    /* notificaciones no disponibles */
+  }
+  if (isNative() || !hasNdef()) return
+  const ac = new AbortController()
+  try {
+    await new NDEFReader().scan({ signal: ac.signal })
+  } catch {
+    /* NFC denegado o no disponible en Chrome */
+  } finally {
+    ac.abort()
+  }
+}
+
+export async function pedirTodosLosPermisos() {
+  await pedirPermisosNativos()
+  await pedirMediosWeb()
+}
+
+function mensajeNfc(err: unknown): Error {
+  const name = err && typeof err === 'object' && 'name' in err ? String(err.name) : ''
+  const raw = err instanceof Error ? err.message : ''
+  if (name === 'NotAllowedError' || /permission|denied|not allowed/i.test(raw)) {
+    return new Error(
+      'Chrome bloqueó el NFC. Tocá el candado de la barra → Permisos → NFC → Permitir. Con la APK de Monix no hace falta este permiso.',
+    )
+  }
+  return err instanceof Error ? err : new Error('No se pudo activar el NFC')
 }
 
 export function isAbortError(err: unknown): boolean {
@@ -185,7 +257,7 @@ export class MonixRadio {
       this.webNfcActive = false
       this.ndef = null
       if (isAbortError(err)) return
-      throw err
+      throw mensajeNfc(err)
     }
     if (!this.ndef) return
     this.ndef.onreading = (event) => {

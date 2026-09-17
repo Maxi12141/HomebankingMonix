@@ -1,10 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Fingerprint } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { Fingerprint, ScanFace } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
-import { desactivarHuella, esCancelacionBiometrica, verificarHuella } from '../lib/biometria'
+import { esCancelacionBiometrica, metodosBio, verificarHuella } from '../lib/biometria'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import monixLogo from '../assets/logos/logo-blanco.svg'
@@ -17,29 +16,35 @@ export function HuellaLockScreen({ onUnlock }: Props) {
   const { user, persona } = useAuthStore()
   const [error, setError] = useState('')
   const [password, setPassword] = useState('')
-  const [loadingHuella, setLoadingHuella] = useState(false)
+  const [loadingBio, setLoadingBio] = useState(false)
   const [loadingClave, setLoadingClave] = useState(false)
+  const metodos = user ? metodosBio(user.id) : { huella: false, face: false }
 
   const email = persona?.email || user?.email || ''
   const nombre = persona?.nombre ?? ''
 
-  async function pedirHuella() {
+  async function pedirBiometria() {
     if (!user) return
     setError('')
-    setLoadingHuella(true)
+    setLoadingBio(true)
     try {
       await verificarHuella(user.id)
       onUnlock()
     } catch (err) {
       if (esCancelacionBiometrica(err)) {
-        setError('No se pudo leer la huella. Entrá con tu contraseña.')
+        setError('No se pudo leer. Entrá con tu contraseña.')
       } else {
-        setError(err instanceof Error ? err.message : 'No se pudo validar la huella. Entrá con tu contraseña.')
+        setError(err instanceof Error ? err.message : 'No se pudo validar. Entrá con tu contraseña.')
       }
     } finally {
-      setLoadingHuella(false)
+      setLoadingBio(false)
     }
   }
+
+  useEffect(() => {
+    const t = window.setTimeout(() => { void pedirBiometria() }, 350)
+    return () => window.clearTimeout(t)
+  }, [])
 
   async function entrarConClave(e: React.FormEvent) {
     e.preventDefault()
@@ -58,8 +63,6 @@ export function HuellaLockScreen({ onUnlock }: Props) {
         setError('Contraseña incorrecta')
         return
       }
-      if (user) desactivarHuella(user.id)
-      toast.success('Entraste. La huella se desactivó para que no te quedes afuera; podés reactivarla en Perfil.')
       onUnlock()
     } catch {
       setError('No se pudo validar la contraseña')
@@ -71,6 +74,12 @@ export function HuellaLockScreen({ onUnlock }: Props) {
   async function cerrarSesion() {
     await supabase.auth.signOut()
   }
+
+  const subtitulo = metodos.huella && metodos.face
+    ? 'Entrá con huella, Face ID o tu contraseña.'
+    : metodos.face
+      ? 'Entrá con Face ID o tu contraseña.'
+      : 'Entrá con tu huella o tu contraseña.'
 
   return (
     <motion.div
@@ -85,29 +94,51 @@ export function HuellaLockScreen({ onUnlock }: Props) {
         Hola{nombre ? `, ${nombre}` : ''}
       </p>
       <p className="font-body text-sm text-white/55 mb-8 text-center max-w-xs">
-        Si la huella no responde, usá tu contraseña. No te vamos a dejar afuera.
+        {subtitulo}
       </p>
 
-      <button
-        type="button"
-        onClick={() => { void pedirHuella() }}
-        className="relative flex h-32 w-32 items-center justify-center mb-6"
-        aria-label="Ingresar con huella"
-      >
-        <span className="huella-ring absolute inset-0 rounded-full border border-mint/25" />
-        <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-mint/40" />
-        <span className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
-          <Fingerprint size={34} className="text-mint" strokeWidth={1.6} />
-        </span>
-      </button>
+      <div className="flex items-center justify-center gap-6 mb-6">
+        {metodos.huella && (
+          <button
+            type="button"
+            onClick={() => { void pedirBiometria() }}
+            className="relative flex h-28 w-28 items-center justify-center"
+            aria-label="Ingresar con huella"
+          >
+            <span className="huella-ring absolute inset-0 rounded-full border border-mint/25" />
+            <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-mint/40" />
+            <span className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
+              <Fingerprint size={34} className="text-mint" strokeWidth={1.6} />
+            </span>
+          </button>
+        )}
+        {metodos.face && (
+          <button
+            type="button"
+            onClick={() => { void pedirBiometria() }}
+            className="relative flex h-28 w-28 items-center justify-center"
+            aria-label="Ingresar con Face ID"
+          >
+            <span className="huella-ring absolute inset-0 rounded-full border border-mint/25" />
+            <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-mint/40" />
+            <span className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
+              <ScanFace size={34} className="text-mint" strokeWidth={1.6} />
+            </span>
+          </button>
+        )}
+      </div>
 
       <Button
         type="button"
-        loading={loadingHuella}
-        onClick={() => { void pedirHuella() }}
+        loading={loadingBio}
+        onClick={() => { void pedirBiometria() }}
         className="w-full max-w-xs mb-6"
       >
-        Usar huella
+        {metodos.huella && metodos.face
+          ? 'Usar huella o Face ID'
+          : metodos.face
+            ? 'Usar Face ID'
+            : 'Usar huella'}
       </Button>
 
       {error && (

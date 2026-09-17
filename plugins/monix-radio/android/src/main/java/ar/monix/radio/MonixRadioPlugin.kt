@@ -61,6 +61,41 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
   }
 
   @PluginMethod
+  fun pedirMic(call: PluginCall) {
+    if (getPermissionState("mic") == PermissionState.GRANTED) {
+      call.resolve()
+      return
+    }
+    requestPermissionForAlias("mic", call, "onMic")
+  }
+
+  @PermissionCallback
+  fun onMic(call: PluginCall) {
+    if (getPermissionState("mic") == PermissionState.GRANTED) {
+      call.resolve()
+    } else {
+      call.reject("permission denied")
+    }
+  }
+
+  @PluginMethod
+  fun pedirTodosLosPermisos(call: PluginCall) {
+    val listos = getPermissionState("camera") == PermissionState.GRANTED
+      && getPermissionState("mic") == PermissionState.GRANTED
+      && getPermissionState("radio") == PermissionState.GRANTED
+    if (listos) {
+      call.resolve()
+      return
+    }
+    requestAllPermissions(call, "onTodosLosPermisos")
+  }
+
+  @PermissionCallback
+  fun onTodosLosPermisos(call: PluginCall) {
+    call.resolve()
+  }
+
+  @PluginMethod
   fun startCerca(call: PluginCall) {
     val token = call.getString("token") ?: ""
     val intent = Intent(context, CercaService::class.java).putExtra(CercaService.EXTRA_TOKEN, token)

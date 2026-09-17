@@ -32,7 +32,7 @@ export function CercaPage() {
             <p className="font-body text-xs text-slate-secondary mt-1 max-w-sm">
               {cerca.caps.native
                 ? 'Con la APK, el otro no necesita tener Monix abierto: queda visible en segundo plano.'
-                : 'En el navegador funciona al tocar con NFC (Chrome Android) o con la APK para Bluetooth de fondo.'}
+                : 'En Chrome tocá “Buscar ahora” para permitir NFC, o usá la APK de Monix para Bluetooth de fondo.'}
             </p>
           </div>
         </Card>

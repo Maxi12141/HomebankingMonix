@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet, Fingerprint } from 'lucide-react'
+import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet, Fingerprint, ScanFace, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
@@ -12,11 +12,13 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import {
-  activarHuella,
-  desactivarHuella,
-  huellaActiva,
+  activarMetodo,
+  desactivarMetodo,
+  metodosBio,
   soportaHuella,
+  type MetodoBio,
 } from '../lib/biometria'
+import { pedirTodosLosPermisos } from '../native/monixRadio'
 
 export function ProfilePage() {
   const { persona, user, setPersona } = useAuthStore()
@@ -61,13 +63,14 @@ export function ProfilePage() {
   const [newPass, setNewPass] = useState('')
   const [savingPass, setSavingPass] = useState(false)
   const [passError, setPassError] = useState('')
-  const [huellaOn, setHuellaOn] = useState(false)
+  const [metodos, setMetodos] = useState({ huella: false, face: false })
   const [huellaDisponible, setHuellaDisponible] = useState(false)
-  const [savingHuella, setSavingHuella] = useState(false)
+  const [savingBio, setSavingBio] = useState(false)
+  const [savingPermisos, setSavingPermisos] = useState(false)
 
   useEffect(() => {
     if (!user) return
-    setHuellaOn(huellaActiva(user.id))
+    setMetodos(metodosBio(user.id))
     void soportaHuella().then(setHuellaDisponible)
   }, [user])
 
@@ -188,23 +191,40 @@ export function ProfilePage() {
     setSavingPass(false)
   }
 
-  async function toggleHuella() {
+  async function toggleMetodo(metodo: MetodoBio) {
     if (!user || !persona) return
-    setSavingHuella(true)
+    setSavingBio(true)
     try {
-      if (huellaOn) {
-        desactivarHuella(user.id)
-        setHuellaOn(false)
-        toast.success('Huella desactivada')
+      if (metodos[metodo]) {
+        desactivarMetodo(user.id, metodo)
+        setMetodos(metodosBio(user.id))
+        toast.success(metodo === 'huella' ? 'Huella desactivada' : 'Face ID desactivado')
       } else {
-        await activarHuella(user.id, `${persona.nombre} ${persona.apellido}`)
-        setHuellaOn(true)
-        toast.success('Huella activada. La próxima vez que entres te la va a pedir.')
+        await activarMetodo(user.id, `${persona.nombre} ${persona.apellido}`, metodo)
+        setMetodos(metodosBio(user.id))
+        toast.success(
+          metodo === 'huella'
+            ? 'Huella activada. Al entrar te la pedimos, o podés usar la contraseña.'
+            : 'Face ID activado. Al entrar te lo pedimos, o podés usar la contraseña.',
+        )
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo configurar la huella')
+      toast.error(err instanceof Error ? err.message : 'No se pudo configurar el desbloqueo')
     } finally {
-      setSavingHuella(false)
+      setSavingBio(false)
+    }
+  }
+
+  async function permitirDispositivos() {
+    setSavingPermisos(true)
+    try {
+      await pedirTodosLosPermisos()
+      localStorage.setItem('monix_permisos_ok', '1')
+      toast.success('Listo. Si algún permiso sigue bloqueado, abrilo en Ajustes → Apps → Monix.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudieron pedir los permisos')
+    } finally {
+      setSavingPermisos(false)
     }
   }
 
@@ -274,30 +294,81 @@ export function ProfilePage() {
           </div>
         </Card>
 
-        <Card className="p-5 mb-6">
+        <Card className="p-5 mb-4">
+          <div className="flex items-start gap-3 mb-4">
+            <ShieldCheck size={22} className="text-mint shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-body font-medium text-navy dark:text-white text-sm">Permisos del teléfono</p>
+              <p className="font-body text-xs text-slate-secondary mt-0.5">
+                Cámara, micrófono, NFC y Bluetooth. Sin esto no abre el QR ni Cerca.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            loading={savingPermisos}
+            onClick={() => { void permitirDispositivos() }}
+            className="w-full"
+          >
+            Permitir cámara, micrófono y NFC
+          </Button>
+        </Card>
+
+        <Card className="p-5 mb-4">
           <div className="flex items-start gap-3">
             <Fingerprint size={22} className="text-mint shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con huella</p>
               <p className="font-body text-xs text-slate-secondary mt-0.5">
                 {huellaDisponible
-                  ? 'Si la activás, cada vez que abras Monix en el celular con la sesión iniciada te va a pedir la huella.'
-                  : 'En esta pantalla no hay huella o Face ID. Abrí Perfil desde el celular para activarlo.'}
+                  ? 'Al abrir Monix te pedimos la huella. Siempre podés entrar con la contraseña.'
+                  : 'En esta pantalla no hay huella. Abrí Perfil desde el celular para activarla.'}
               </p>
             </div>
             <button
               type="button"
               role="switch"
-              aria-checked={huellaOn}
-              disabled={!huellaDisponible || savingHuella}
-              onClick={() => { void toggleHuella() }}
+              aria-checked={metodos.huella}
+              disabled={!huellaDisponible || savingBio}
+              onClick={() => { void toggleMetodo('huella') }}
               className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
-                huellaOn ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
+                metodos.huella ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
               }`}
             >
               <span
                 className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  huellaOn ? 'translate-x-5' : ''
+                  metodos.huella ? 'translate-x-5' : ''
+                }`}
+              />
+            </button>
+          </div>
+        </Card>
+
+        <Card className="p-5 mb-6">
+          <div className="flex items-start gap-3">
+            <ScanFace size={22} className="text-mint shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-body font-medium text-navy dark:text-white text-sm">Face ID</p>
+              <p className="font-body text-xs text-slate-secondary mt-0.5">
+                {huellaDisponible
+                  ? 'Reconocimiento facial del teléfono (Face ID o desbloqueo facial). Si no está enrolado, el sistema te ofrece la huella.'
+                  : 'En esta pantalla no hay Face ID. Abrí Perfil desde el celular para activarlo.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={metodos.face}
+              disabled={!huellaDisponible || savingBio}
+              onClick={() => { void toggleMetodo('face') }}
+              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
+                metodos.face ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  metodos.face ? 'translate-x-5' : ''
                 }`}
               />
             </button>
