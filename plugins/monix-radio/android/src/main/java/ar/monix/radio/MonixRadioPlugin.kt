@@ -84,10 +84,13 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
   private var fotoFile: File? = null
 
+  private fun tieneCamara(): Boolean {
+    return ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+  }
+
   @PluginMethod
   fun sacarFoto(call: PluginCall) {
-    call.setKeepAlive(true)
-    if (getPermissionState("camera") != PermissionState.GRANTED) {
+    if (!tieneCamara()) {
       requestPermissionForAlias("camera", call, "onCamaraParaFoto")
       return
     }
@@ -96,7 +99,7 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
   @PermissionCallback
   fun onCamaraParaFoto(call: PluginCall) {
-    if (getPermissionState("camera") == PermissionState.GRANTED) {
+    if (tieneCamara()) {
       lanzarCamara(call)
     } else {
       call.reject("permission denied")
@@ -104,22 +107,29 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
   }
 
   private fun lanzarCamara(call: PluginCall) {
-    try {
-      val file = File.createTempFile("monix-qr-", ".jpg", context.cacheDir)
-      fotoFile = file
-      val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", file)
-      val flags = Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
-      val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-        putExtra(MediaStore.EXTRA_OUTPUT, uri)
-        clipData = ClipData.newRawUri("photo", uri)
-        addFlags(flags)
+    val act = activity
+    if (act == null) {
+      call.reject("No se pudo abrir la cámara")
+      return
+    }
+    act.runOnUiThread {
+      try {
+        val file = File(context.cacheDir, "monix-qr.jpg")
+        file.parentFile?.mkdirs()
+        if (file.exists()) file.delete()
+        file.createNewFile()
+        fotoFile = file
+        val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", file)
+        val flags = Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+          putExtra(MediaStore.EXTRA_OUTPUT, uri)
+          clipData = ClipData.newRawUri("photo", uri)
+          addFlags(flags)
+        }
+        startActivityForResult(call, intent, "onFotoTomada")
+      } catch (e: Exception) {
+        call.reject(e.message ?: "No se pudo abrir la cámara")
       }
-      for (info in context.packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)) {
-        context.grantUriPermission(info.activityInfo.packageName, uri, flags)
-      }
-      startActivityForResult(call, intent, "onFotoTomada")
-    } catch (e: Exception) {
-      call.reject(e.message ?: "No se pudo abrir la cámara")
     }
   }
 

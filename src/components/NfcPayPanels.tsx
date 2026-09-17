@@ -204,6 +204,7 @@ export function EscanearYPagar({
   const scanAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
+    if (radioCapabilities().native) void pedirPermisoCamara()
     return () => {
       scanAbortRef.current?.abort()
       stopMediaStream(streamRef.current)
@@ -244,14 +245,11 @@ export function EscanearYPagar({
   async function escanearQr() {
     if (radioCapabilities().native) {
       setError('')
-      setAbriendoCamara(true)
       try {
         const blob = await sacarFotoNativa()
         if (blob) await escanearFoto(blob)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'No se pudo abrir la cámara')
-      } finally {
-        setAbriendoCamara(false)
       }
       return
     }

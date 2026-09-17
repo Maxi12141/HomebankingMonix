@@ -22,7 +22,7 @@ function isNative(): boolean {
   return Boolean(cap?.isNativePlatform?.())
 }
 
-async function getPlugin(): Promise<{
+type MonixPlugin = {
   startCerca: (opts: Record<string, string>) => Promise<void>
   stopCerca: () => Promise<void>
   startScan: () => Promise<void>
@@ -43,14 +43,18 @@ async function getPlugin(): Promise<{
   stopVoz?: () => Promise<void>
   sacarFoto?: () => Promise<{ dataUrl?: string }>
   addListener: (event: string, cb: (data: Record<string, unknown>) => void) => Promise<{ remove: () => Promise<void> }>
-} | null> {
+}
+
+let pluginMemo: Promise<MonixPlugin | null> | null = null
+
+async function getPlugin(): Promise<MonixPlugin | null> {
   if (!isNative()) return null
-  try {
-    const core = await import('@capacitor/core')
-    return core.registerPlugin('MonixRadio')
-  } catch {
-    return null
+  if (!pluginMemo) {
+    pluginMemo = import('@capacitor/core')
+      .then((core) => core.registerPlugin('MonixRadio') as MonixPlugin)
+      .catch(() => null)
   }
+  return pluginMemo
 }
 
 export function radioCapabilities(): RadioCapabilities {
