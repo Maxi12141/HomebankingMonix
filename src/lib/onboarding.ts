@@ -1,31 +1,57 @@
 export const BONO_BIENVENIDA = 150_000
 
-const NUEVO_KEY = 'monix_nuevo'
-const TOUR_KEY = 'monix_nuevo_tour'
+const SESION_KEY = 'monix_registro_sesion'
+const LEGACY_KEYS = ['monix_nuevo', 'monix_nuevo_tour', 'monix_new_user']
 
-export function marcarUsuarioNuevo(userId: string) {
-  localStorage.setItem(NUEVO_KEY, userId)
-}
+type Etapa = 'bienvenida' | 'tour'
 
-export function hayBienvenidaPendiente(userId: string) {
-  return localStorage.getItem(NUEVO_KEY) === userId
-}
-
-export function completarBienvenida(userId: string) {
-  localStorage.removeItem(NUEVO_KEY)
-  localStorage.setItem(TOUR_KEY, userId)
-}
-
-export function hayTourPendiente(userId: string) {
-  return localStorage.getItem(TOUR_KEY) === userId
-}
-
-export function completarTour(userId: string) {
-  if (localStorage.getItem(TOUR_KEY) === userId) {
-    localStorage.removeItem(TOUR_KEY)
+function leerSesion(): { userId: string; etapa: Etapa } | null {
+  try {
+    const raw = sessionStorage.getItem(SESION_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { userId?: string; etapa?: Etapa }
+    if (!parsed.userId || (parsed.etapa !== 'bienvenida' && parsed.etapa !== 'tour')) return null
+    return { userId: parsed.userId, etapa: parsed.etapa }
+  } catch {
+    return null
   }
 }
 
-export function pedirTourDeNuevo(userId: string) {
-  localStorage.setItem(TOUR_KEY, userId)
+function guardarSesion(userId: string, etapa: Etapa) {
+  sessionStorage.setItem(SESION_KEY, JSON.stringify({ userId, etapa }))
+}
+
+export function marcarUsuarioNuevo(userId: string) {
+  guardarSesion(userId, 'bienvenida')
+}
+
+export function hayBienvenidaPendiente(userId: string) {
+  const s = leerSesion()
+  return s?.userId === userId && s.etapa === 'bienvenida'
+}
+
+export function completarBienvenida(userId: string) {
+  const s = leerSesion()
+  if (s?.userId !== userId) return
+  guardarSesion(userId, 'tour')
+}
+
+export function hayTourPendiente(userId: string) {
+  const s = leerSesion()
+  return s?.userId === userId && s.etapa === 'tour'
+}
+
+export function completarTour(userId: string) {
+  const s = leerSesion()
+  if (s?.userId !== userId) return
+  sessionStorage.removeItem(SESION_KEY)
+}
+
+export function descartarOnboarding() {
+  sessionStorage.removeItem(SESION_KEY)
+  limpiarClavesViejas()
+}
+
+export function limpiarClavesViejas() {
+  for (const key of LEGACY_KEYS) localStorage.removeItem(key)
 }

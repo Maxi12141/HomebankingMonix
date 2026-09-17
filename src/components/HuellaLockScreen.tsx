@@ -74,7 +74,7 @@ export function HuellaLockScreen({ onUnlock }: Props) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-[10000] bg-navy flex flex-col items-center justify-center px-6 overflow-y-auto py-10"
+      className="fixed inset-0 z-[10000] bg-navy flex flex-col items-center justify-center px-6 overflow-y-auto py-10 pt-[max(2.5rem,env(safe-area-inset-top))]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { getRememberedCredentials, saveRememberedCredentials, clearRememberedCredentials } from '../utils/rememberMe'
 import { marcarIngresoConClave } from '../lib/biometria'
+import { descartarOnboarding } from '../lib/onboarding'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
 
@@ -35,6 +36,7 @@ export function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
+      descartarOnboarding()
       marcarIngresoConClave()
       if (rememberMe) {
         saveRememberedCredentials(email, password)

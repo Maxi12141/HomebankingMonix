@@ -25,6 +25,7 @@ import {
   completarTour,
   hayBienvenidaPendiente,
   hayTourPendiente,
+  limpiarClavesViejas,
 } from '../lib/onboarding'
 
 function formatMonto(monto: number, tipo: string, moneda: 'ARS' | 'USD') {
@@ -269,6 +270,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (!user) return
+    limpiarClavesViejas()
     if (hayBienvenidaPendiente(user.id)) setShowWelcome(true)
     else if (hayTourPendiente(user.id)) setShowTour(true)
   }, [user])

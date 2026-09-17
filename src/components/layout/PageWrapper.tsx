@@ -42,7 +42,7 @@ export function PageWrapper({ children }: PageWrapperProps) {
       <div
         id="tour-drawer"
         data-tour-fixed
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-navy-card border-r border-slate-200 dark:border-white/10 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-navy-card border-r border-slate-200 dark:border-white/10 transform transition-transform duration-300 ease-in-out pt-[env(safe-area-inset-top)] ${
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -52,33 +52,35 @@ export function PageWrapper({ children }: PageWrapperProps) {
       {/* Content area */}
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/80 dark:bg-navy-card/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-4 h-14 shrink-0">
-          <div className="flex items-center gap-3">
-            <button
-              id="tour-menu"
-              onClick={() => setDrawerOpen(true)}
-              className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
-              aria-label="Abrir menú"
-            >
-              <Menu size={24} />
-            </button>
-            <Link to="/dashboard">
-              <MonixLogoNavbar
-                variant={theme === 'dark' ? 'white' : 'default'}
-                className="h-7 w-auto"
-              />
-            </Link>
-          </div>
+        <header className="sticky top-0 z-30 bg-white/80 dark:bg-navy-card/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 shrink-0 pt-[env(safe-area-inset-top)]">
+          <div className="flex items-center justify-between px-4 h-14">
+            <div className="flex items-center gap-3">
+              <button
+                id="tour-menu"
+                onClick={() => setDrawerOpen(true)}
+                className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
+                aria-label="Abrir menú"
+              >
+                <Menu size={24} />
+              </button>
+              <Link to="/dashboard">
+                <MonixLogoNavbar
+                  variant={theme === 'dark' ? 'white' : 'default'}
+                  className="h-7 w-auto"
+                />
+              </Link>
+            </div>
 
-          <div className="flex items-center gap-1">
-            <NotificationBell />
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-colors"
-              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-            >
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-xl text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-colors"
+                aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              >
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+            </div>
           </div>
         </header>
 

@@ -1,34 +1,29 @@
-import { formatMonto } from '../utils/cuenta'
+import {
+  SUGERENCIAS,
+  TOPICS,
+  type AsistenteCtx,
+  type AsistenteReply,
+  type Topic,
+} from './asistenteConocimiento'
 
-export interface AsistenteCtx {
-  nombre?: string
-  saldoARS?: number
-  saldoUSD?: number | null
-  alias?: string | null
-  cbu?: string | null
+export { SUGERENCIAS }
+export type { AsistenteCtx, AsistenteReply }
+
+export interface AsistenteOpts {
+  lastTopicId?: string
+  turn?: number
 }
 
-export interface AsistenteReply {
-  text: string
-  href?: string
-  hrefLabel?: string
-}
+const STOP = new Set([
+  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'en', 'y', 'o', 'u', 'a',
+  'que', 'me', 'te', 'se', 'mi', 'mis', 'tu', 'tus', 'su', 'al', 'lo', 'le', 'les', 'por', 'para', 'con',
+  'como', 'mas', 'muy', 'ya', 'si', 'quiero', 'queria', 'necesito', 'saber', 'sobre',
+  'puedo', 'podes', 'puede', 'podria', 'hacer', 'hago', 'hacemos', 'esta', 'este', 'esto',
+  'esa', 'ese', 'eso', 'hay', 'tiene', 'tengo', 'vos', 'soy', 'ser', 'the', 'and', 'for', 'are',
+])
 
-export const SUGERENCIAS = [
-  '¿Cómo transfiero?',
-  'Mi saldo',
-  'Pagar con QR',
-  'Dólares',
-  'Reservas',
-  'Monix Cerca',
-] as const
-
-interface Intent {
-  id: string
-  keywords: string[]
-  phrases?: string[]
-  answer: (ctx: AsistenteCtx) => AsistenteReply
-}
+const SEGUIMIENTO =
+  /^(y |ok |dale |entonces |bueno |claro |si |sip |bien )?(eso|eso como|como hago|como era|como es|y eso|mas info|mas detalles|explicame|contame|contame mas|y ahora|en serio|cuanto|cuanto es|cuanto sale|cuanto cuesta|es gratis|sirve|funciona|donde|en donde|y el|y la|y los|dale)$/
 
 function stripAccents(value: string) {
   return value.normalize('NFD').replace(/\p{M}/gu, '')
@@ -37,7 +32,7 @@ function stripAccents(value: string) {
 function normalize(value: string) {
   return stripAccents(value)
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s.?]/gu, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -53,286 +48,164 @@ function containsTerm(haystack: string, term: string) {
   return new RegExp(`(?:^|\\s)${escapeRegExp(t)}(?:$|\\s)`).test(` ${haystack} `)
 }
 
-function maskCbu(cbu: string) {
-  const digits = cbu.replace(/\D/g, '')
-  if (digits.length < 4) return 'disponible en Inicio'
-  return `termina en ${digits.slice(-4)}`
+function tokenize(q: string) {
+  return q.split(' ').filter((t) => t.length > 1 && !STOP.has(t))
 }
 
-function saludo(ctx: AsistenteCtx) {
-  return ctx.nombre ? `Hola ${ctx.nombre}` : 'Hola'
+function similar(a: string, b: string) {
+  if (a === b) return true
+  if (a.length < 4 || b.length < 4) return false
+  if (a.includes(b) || b.includes(a)) return true
+  return a.slice(0, 5) === b.slice(0, 5) && Math.min(a.length, b.length) >= 5
 }
 
-const INTENTS: Intent[] = [
-  {
-    id: 'saludo',
-    keywords: ['hola', 'buenas', 'buen dia', 'buenos dias', 'hey', 'hi', 'holis', 'que tal'],
-    phrases: ['como estas', 'que podes hacer', 'quien sos'],
-    answer: (ctx) => ({
-      text: `${saludo(ctx)}, soy Moni, el asistente de Monix. Preguntame por transferencias, QR, dólares, reservas o lo que necesites. Te respondo al toque.`,
-    }),
-  },
-  {
-    id: 'gracias',
-    keywords: ['gracias', 'thanks', 'genial', 'perfecto', 'ok', 'dale'],
-    answer: () => ({
-      text: 'De nada. Si necesitás otra cosa, escribime o tocá una sugerencia.',
-    }),
-  },
-  {
-    id: 'saldo',
-    keywords: ['saldo', 'plata', 'dinero', 'disponible', 'tengo'],
-    phrases: ['cuanto tengo', 'mi saldo', 'ver saldo', 'cuanta plata'],
-    answer: (ctx) => {
-      if (ctx.saldoARS == null) {
-        return {
-          text: 'Tu saldo está en Inicio. Abrí el ojo para ver CBU y alias.',
-          href: '/dashboard',
-          hrefLabel: 'Ir a Inicio',
-        }
-      }
-      const usd =
-        ctx.saldoUSD != null
-          ? ` En dólares tenés ${formatMonto(ctx.saldoUSD, 'USD')}.`
-          : ''
-      return {
-        text: `${ctx.nombre ? `${ctx.nombre}, t` : 'T'}enés ${formatMonto(ctx.saldoARS, 'ARS')} disponibles en pesos.${usd}`,
-        href: '/dashboard',
-        hrefLabel: 'Ver en Inicio',
-      }
-    },
-  },
-  {
-    id: 'cbu_alias',
-    keywords: ['cbu', 'cvu', 'alias', 'datos', 'cuenta'],
-    phrases: ['mi cbu', 'mi alias', 'copiar cbu', 'numero de cuenta'],
-    answer: (ctx) => {
-      const alias = ctx.alias ? `Tu alias es ${ctx.alias}.` : 'El alias se ve y se cambia en Perfil.'
-      const cbu = ctx.cbu ? ` Tu CBU ${maskCbu(ctx.cbu)}.` : ''
-      return {
-        text: `${alias}${cbu} En Inicio tocá el ojo para copiarlos.`,
-        href: '/dashboard',
-        hrefLabel: 'Ver datos',
-      }
-    },
-  },
-  {
-    id: 'transferir',
-    keywords: ['transferir', 'transferencia', 'enviar', 'mandar', 'giro'],
-    phrases: ['enviar dinero', 'mandar plata', 'como transfiero', 'hacer una transferencia'],
-    answer: () => ({
-      text: 'En Transferir buscá por CBU o alias, elegí el monto y confirmá. También podés usar contactos recientes. Las 24 hs, al instante.',
-      href: '/transferir',
-      hrefLabel: 'Ir a Transferir',
-    }),
-  },
-  {
-    id: 'depositar',
-    keywords: ['depositar', 'deposito', 'cargar', 'acreditar', 'ingresar'],
-    phrases: ['cargar plata', 'ingresar dinero', 'hacer un deposito'],
-    answer: () => ({
-      text: 'En Depositar elegís la cuenta (pesos o dólares) y el monto. Se acredita al toque en tu saldo.',
-      href: '/depositar',
-      hrefLabel: 'Ir a Depositar',
-    }),
-  },
-  {
-    id: 'historial',
-    keywords: ['historial', 'movimientos', 'comprobante', 'pdf', 'extracto'],
-    phrases: ['ultimo movimiento', 'ver movimientos', 'bajar comprobante'],
-    answer: () => ({
-      text: 'En Historial están todas las operaciones. Tocá una para ver el detalle y descargar el comprobante en PDF.',
-      href: '/historial',
-      hrefLabel: 'Ir a Historial',
-    }),
-  },
-  {
-    id: 'pagar_qr',
-    keywords: ['qr', 'cobrar', 'cobro', 'escanear'],
-    phrases: ['pagar con qr', 'cobrar con qr', 'codigo qr'],
-    answer: () => ({
-      text: 'El botón QR del centro abre la cámara para pagar. En Pagar tenés tu código para cobrar: podés dejarlo abierto o ponerle un monto. El NFC de la tarjeta está en Mis Tarjetas.',
-      href: '/pagar',
-      hrefLabel: 'Abrir QR',
-    }),
-  },
-  {
-    id: 'nfc',
-    keywords: ['nfc', 'contactless', 'acercar', 'tap'],
-    phrases: ['pago nfc', 'pagar acercando', 'sin contacto'],
-    answer: () => ({
-      text: 'El pago acercando el celular o el sticker NFC está en Mis Tarjetas. El QR para cobrar y pagar quedó en Pagar, separado.',
-      href: '/tarjeta',
-      hrefLabel: 'Mis Tarjetas',
-    }),
-  },
-  {
-    id: 'cerca',
-    keywords: ['cerca', 'bluetooth', 'radio', 'personas'],
-    phrases: ['monix cerca', 'transferir cerca', 'alguien cerca'],
-    answer: () => ({
-      text: 'Monix Cerca detecta otro celular con la app cerca tuyo (Bluetooth o NFC). Ves el nombre y el alias, y transferís al toque. Nunca se transmite tu CBU.',
-      href: '/cerca',
-      hrefLabel: 'Abrir Monix Cerca',
-    }),
-  },
-  {
-    id: 'dolares',
-    keywords: ['dolar', 'dolares', 'usd', 'divisa', 'cotizacion', 'blue'],
-    phrases: ['comprar dolares', 'vender dolares', 'cambio de dolares'],
-    answer: () => ({
-      text: 'En Compra y Venta USD operás con la cotización oficial. Elegís comprar o vender, ves el total en pesos y confirmás.',
-      href: '/dolares',
-      hrefLabel: 'Ir a Dólares',
-    }),
-  },
-  {
-    id: 'reservas',
-    keywords: ['reserva', 'reservas', 'ahorro', 'interes', 'rendimiento'],
-    phrases: ['separar plata', 'hacer rendir', 'plazo fijo'],
-    answer: () => ({
-      text: 'En Reservas apartás plata de tu saldo y genera interés diario. Podés ingresar o retirar cuando quieras.',
-      href: '/reservas',
-      hrefLabel: 'Ir a Reservas',
-    }),
-  },
-  {
-    id: 'tarjeta',
-    keywords: ['tarjeta', 'debit', 'cvv', 'congelar', 'freeze', 'limites'],
-    phrases: ['congelar tarjeta', 'pausar tarjeta', 'datos de la tarjeta'],
-    answer: () => ({
-      text: 'En Mis Tarjetas ves débito en pesos y dólares, podés congelarla, activar NFC y consultar límites. Los datos sensibles se muestran solo si los pedís.',
-      href: '/tarjeta',
-      hrefLabel: 'Ver tarjetas',
-    }),
-  },
-  {
-    id: 'contactos',
-    keywords: ['contacto', 'contactos', 'agenda', 'favorito', 'favoritos'],
-    phrases: ['agregar contacto', 'guardar destinatario'],
-    answer: () => ({
-      text: 'En Contactos guardás destinatarios frecuentes. Después aparecen al transferir para no volver a buscar el alias.',
-      href: '/contactos',
-      hrefLabel: 'Ir a Contactos',
-    }),
-  },
-  {
-    id: 'promos',
-    keywords: ['promo', 'promos', 'descuento', 'oferta', 'ofertas', '2x1'],
-    answer: () => ({
-      text: 'Hay descuentos vigentes: supermercados, cine 2x1, viajes e indumentaria. Las condiciones están en cada promo.',
-      href: '/promos',
-      hrefLabel: 'Ver promociones',
-    }),
-  },
-  {
-    id: 'cashback',
-    keywords: ['cashback', 'devolucion', 'devolver'],
-    phrases: ['me devuelven', 'porcentaje de devolucion'],
-    answer: () => ({
-      text: 'El cashback te devuelve un porcentaje en comercios adheridos: hasta 8% en mercadoMONIX, 5% en combustible los fines de semana y 3% en gastronomía.',
-      href: '/cashback',
-      hrefLabel: 'Ver cashback',
-    }),
-  },
-  {
-    id: 'financiacion',
-    keywords: ['cuota', 'cuotas', 'financiar', 'financiacion', 'plan'],
-    phrases: ['pagar en cuotas', 'sin interes'],
-    answer: () => ({
-      text: 'Hay planes de 3 cuotas sin interés (hasta $50.000), 6 y 12 cuotas a tasa fija. Podés simular el valor de cada cuota.',
-      href: '/financiacion',
-      hrefLabel: 'Simular cuotas',
-    }),
-  },
-  {
-    id: 'mercado',
-    keywords: ['mercado', 'mercadomonix', 'tienda', 'shopping', 'producto', 'comprar'],
-    phrases: ['comprar online', 'envio full'],
-    answer: () => ({
-      text: 'mercadoMONIX es la tienda de la app: envío full, cuotas y cashback en productos seleccionados. Pagás con tu saldo Monix.',
-      href: '/mercado-monix',
-      hrefLabel: 'Entrar a mercadoMONIX',
-    }),
-  },
-  {
-    id: 'cuentas',
-    keywords: ['cuentas', 'pesos', 'ars'],
-    phrases: ['cuenta en dolares', 'cuenta en pesos', 'mis cuentas'],
-    answer: () => ({
-      text: 'Tenés cuenta en pesos y, si está creada, en dólares. En Cuentas ves saldos, CBU y alias de cada una.',
-      href: '/cuentas',
-      hrefLabel: 'Ver cuentas',
-    }),
-  },
-  {
-    id: 'perfil',
-    keywords: ['perfil', 'email', 'telefono', 'contrasena', 'password', 'clave', 'foto'],
-    phrases: ['cambiar alias', 'cambiar contrasena', 'editar perfil'],
-    answer: () => ({
-      text: 'En Perfil editás email, teléfono, foto, alias y contraseña. El alias se valida para que no esté repetido.',
-      href: '/perfil',
-      hrefLabel: 'Ir a Perfil',
-    }),
-  },
-  {
-    id: 'seguridad',
-    keywords: ['seguro', 'seguridad', 'privacidad', 'datos', 'proteger'],
-    answer: () => ({
-      text: 'Tu sesión está protegida. No compartas CBU completo ni la clave. Podés congelar la tarjeta al instante si la perdés.',
-      href: '/tarjeta',
-      hrefLabel: 'Congelar tarjeta',
-    }),
-  },
-  {
-    id: 'tema',
-    keywords: ['oscuro', 'claro', 'tema', 'dark', 'modo'],
-    phrases: ['modo oscuro', 'cambiar tema'],
-    answer: () => ({
-      text: 'El interruptor de sol/luna está arriba a la derecha, junto a las notificaciones. Cambia entre claro y oscuro.',
-    }),
-  },
-  {
-    id: 'ayuda',
-    keywords: ['ayuda', 'help', 'opciones', 'podes', 'hacer'],
-    phrases: ['que podes hacer', 'como funciona', 'necesito ayuda'],
-    answer: () => ({
-      text: 'Puedo ayudarte con transferir, depositar, QR, NFC, dólares, reservas, tarjetas, promos, cashback y mercadoMONIX. Preguntame en criollo.',
-    }),
-  },
+function hashPick(seed: string, salt: number, size: number) {
+  let h = (salt + 1) * 2654435761
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 1597334677)
+  return Math.abs(h) % size
+}
+
+function pick(texts: string[], seed: string, salt = 0) {
+  return texts[hashPick(seed, salt, texts.length)] ?? texts[0]
+}
+
+function esSeguimiento(q: string) {
+  if (SEGUIMIENTO.test(q)) return true
+  const words = q.split(' ').filter(Boolean)
+  return words.length <= 4 && /^(y|ok|dale|entonces|bueno|claro|si|sip|eso|como|donde|cuanto|mas|y eso)/.test(q)
+}
+
+function scoreTopic(q: string, tokens: string[], topic: Topic) {
+  let score = 0
+  for (const phrase of topic.phrases) {
+    const p = normalize(phrase)
+    if (p && containsTerm(q, p)) score += 8 + Math.min(p.length, 24)
+  }
+  let exactKeyword = false
+  for (const keyword of topic.keywords) {
+    const k = normalize(keyword)
+    if (containsTerm(q, k)) {
+      score += k.length >= 5 ? 5 : 3
+      exactKeyword = true
+    }
+  }
+  if (!exactKeyword) {
+    for (const keyword of topic.keywords) {
+      const k = normalize(keyword)
+      if (tokens.some((t) => similar(t, k))) score += k.length >= 5 ? 4 : 2
+    }
+  }
+  for (const extra of topic.extra) {
+    const e = normalize(extra)
+    if (containsTerm(q, e) || tokens.some((t) => similar(t, e))) score += 2
+  }
+  for (const weak of topic.weak ?? []) {
+    if (containsTerm(q, weak)) score += 1
+  }
+  return score
+}
+
+function elegirTexto(texts: string[], q: string, turn: number) {
+  if (/^(como|donde|quiero|necesito|puedo|podes|comprar|vender|abrir|pedir|activar|congelar|pagar|transferir|olvide)/.test(q)) return texts[0]
+  return pick(texts, q, turn)
+}
+
+function replyFrom(topic: Topic, ctx: AsistenteCtx, seed: string, turn: number): AsistenteReply {
+  const texts = topic.answers(ctx)
+  return {
+    text: elegirTexto(texts, seed, turn),
+    href: topic.href,
+    hrefLabel: topic.hrefLabel,
+    topicId: topic.id,
+  }
+}
+
+const FALLBACKS_BANCO = [
+  'Puedo ayudarte con cualquier cosa de Monix: saldo, transferencias, QR, dólares, reservas, préstamos, débito, promos, cashback o mercadoMONIX. Preguntame más puntual.',
+  'No te seguí del todo. Probá con el producto: “préstamo”, “alias”, “congelar tarjeta”, “TNA de reservas”, “comprar dólares”…',
+  'Decime qué querés hacer en el banco (enviar plata, pedir crédito, pagar con QR, hacer rendir el saldo) y te armo el paso a paso.',
 ]
 
-const FALLBACK: AsistenteReply = {
-  text: 'No encontré eso todavía. Probá con: transferir, saldo, QR, dólares, reservas o Monix Cerca.',
+const FALLBACKS_AFUERA = [
+  'Soy el asistente de Monix, así que voy mejor con lo del banco. Preguntame por tu cuenta, un producto o cómo hacer una operación.',
+  'Eso queda afuera de Monix. Si es de tu caja, tarjetas, préstamos o pagos, tirame la consulta y te la resuelvo.',
+  'Me centro en el homebanking. ¿Hace falta transferir, ver un límite, un CBU, un préstamo o una promo?',
+]
+
+const BANCO_HINT =
+  /saldo|plata|peso|dolar|cuenta|transfer|cbu|cvu|alias|tarjeta|qr|nfc|prestam|reserva|ahorro|depos|pago|pagar|promos|cashback|cuota|financi|mercado|cerca|huella|clave|sesion|comision|horario|bono|cajero|debito|credito|monix|banco|cotiz|tna|interes/
+
+function vacia(): AsistenteReply {
+  return { text: pick(['Escribí tu consulta o tocá una sugerencia.', 'Tirame la duda, aunque sea en criollo.', '¿Saldo, transferir, préstamo, QR? Lo que necesites.'], 'vacia', Date.now() % 9) }
 }
 
-export function responder(pregunta: string, ctx: AsistenteCtx = {}): AsistenteReply {
+export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: AsistenteOpts = {}): AsistenteReply {
   const q = normalize(pregunta)
-  if (!q) {
-    return { text: 'Escribí tu consulta o tocá una sugerencia.' }
+  if (!q) return vacia()
+
+  const tokens = tokenize(q)
+  const turn = opts.turn ?? 0
+  const ranked = TOPICS.map((topic, index) => ({
+    topic,
+    index,
+    score: scoreTopic(q, tokens, topic),
+  }))
+
+  if (opts.lastTopicId && esSeguimiento(q)) {
+    const prev = ranked.find((r) => r.topic.id === opts.lastTopicId)
+    if (prev) prev.score += 8
   }
 
-  let best: { score: number; intent: Intent } | null = null
+  ranked.sort((a, b) => b.score - a.score || a.index - b.index)
 
-  for (const intent of INTENTS) {
-    let score = 0
-    for (const phrase of intent.phrases ?? []) {
-      if (containsTerm(q, phrase)) score += 8
+  const best = ranked[0]
+  const second = ranked[1]
+  const compuesta = / y | o |ademas|tambien/.test(q)
+
+  if (best && best.score >= 4) {
+    if (
+      compuesta &&
+      second &&
+      second.score >= 8 &&
+      second.score >= best.score - 3 &&
+      second.topic.id !== best.topic.id
+    ) {
+      const a = replyFrom(best.topic, ctx, q, turn)
+      const bTexts = second.topic.answers(ctx)
+      return {
+        ...a,
+        text: `${a.text}\n\n${pick(bTexts, q, turn + 1)}`,
+      }
     }
-    for (const keyword of intent.keywords) {
-      if (containsTerm(q, keyword)) score += keyword.length >= 5 ? 3 : 2
-    }
-    if (score > 0 && (!best || score > best.score)) {
-      best = { score, intent }
+    return replyFrom(best.topic, ctx, q, turn)
+  }
+
+  if (best && best.score >= 2) {
+    return replyFrom(best.topic, ctx, q, turn)
+  }
+
+  if (BANCO_HINT.test(q) && best && best.score > 0) {
+    const near = ranked.filter((r) => r.score > 0).slice(0, 2)
+    const hint = near.map((r) => r.topic.hrefLabel ?? r.topic.id).join(' o ')
+    return {
+      ...replyFrom(best.topic, ctx, q, turn),
+      text: `${pick(best.topic.answers(ctx), q, turn)} Si no era eso, capaz buscabas ${hint}.`,
     }
   }
 
-  if (!best || best.score < 2) return FALLBACK
-  return best.intent.answer(ctx)
+  return {
+    text: pick(BANCO_HINT.test(q) ? FALLBACKS_BANCO : FALLBACKS_AFUERA, q, turn),
+  }
 }
 
 export function mensajeBienvenida(ctx: AsistenteCtx): AsistenteReply {
-  return {
-    text: `${saludo(ctx)}, soy Moni. Consultas rápidas sobre tu cuenta, sin vueltas. ¿En qué te ayudo?`,
-  }
+  const h = new Date().getHours()
+  const momento = h < 12 ? 'Buen día' : h < 19 ? 'Buenas tardes' : 'Buenas noches'
+  const nombre = ctx.nombre ? ` ${ctx.nombre}` : ''
+  const texts = [
+    `${momento}${nombre}, soy Moni. Preguntame lo que sea de tu cuenta Monix: te respondo al toque.`,
+    `Hola${nombre}. Soy Moni, el asistente del banco. Transferencias, préstamos, dólares, QR, lo que se te ocurra.`,
+    `${ctx.nombre ? `Hola ${ctx.nombre}` : 'Hola'}, soy Moni. No hace falta un menú: escribí la duda como la dirías a un amigo.`,
+  ]
+  return { text: pick(texts, `${momento}${nombre}`, h) }
 }

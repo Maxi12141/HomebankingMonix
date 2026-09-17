@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet, Fingerprint, Sparkles } from 'lucide-react'
+import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet, Fingerprint } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
@@ -18,10 +17,8 @@ import {
   huellaActiva,
   soportaHuella,
 } from '../lib/biometria'
-import { pedirTourDeNuevo } from '../lib/onboarding'
 
 export function ProfilePage() {
-  const navigate = useNavigate()
   const { persona, user, setPersona } = useAuthStore()
   const { cuenta } = useCuenta()
   const { setCuenta } = useCuentaStore()
@@ -304,30 +301,6 @@ export function ProfilePage() {
                 }`}
               />
             </button>
-          </div>
-        </Card>
-
-        <Card className="p-5 mb-6">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <Sparkles size={18} className="text-mint shrink-0" />
-              <div>
-                <p className="font-body font-medium text-navy dark:text-white text-sm">Tutorial</p>
-                <p className="font-body text-xs text-slate-secondary">Volvé a ver cómo funciona Monix</p>
-              </div>
-            </div>
-            <Button
-              variant="secondary"
-              type="button"
-              className="shrink-0 !py-2 !px-3 text-sm"
-              onClick={() => {
-                if (!user) return
-                pedirTourDeNuevo(user.id)
-                navigate('/dashboard')
-              }}
-            >
-              Ver de nuevo
-            </Button>
           </div>
         </Card>
 

@@ -10,9 +10,25 @@ const bcProxy = {
   },
 }
 
+function monixBuildId() {
+  return {
+    name: 'monix-build-id',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'monix-build.txt',
+        source: `${Date.now()}\n`,
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [svgr(), react()],
+  plugins: [svgr(), react(), monixBuildId()],
   server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
     proxy: bcProxy,
   },
   preview: {

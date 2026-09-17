@@ -17,6 +17,7 @@ interface ChatMsg {
   text: string
   href?: string
   hrefLabel?: string
+  topicId?: string
 }
 
 const STORAGE_KEY = 'monix-asistente-msgs'
@@ -32,6 +33,7 @@ function fromReply(reply: AsistenteReply): ChatMsg {
     text: reply.text,
     href: reply.href,
     hrefLabel: reply.hrefLabel,
+    topicId: reply.topicId,
   }
 }
 
@@ -91,8 +93,9 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   function ask(text: string) {
     const trimmed = text.trim()
     if (!trimmed) return
+    const lastTopicId = [...messages].reverse().find((m) => m.role === 'bot')?.topicId
     const userMsg: ChatMsg = { id: uid(), role: 'user', text: trimmed }
-    const botMsg = fromReply(responder(trimmed, ctx))
+    const botMsg = fromReply(responder(trimmed, ctx, { lastTopicId, turn: messages.length }))
     setMessages((prev) => [...prev, userMsg, botMsg])
     setDraft('')
   }
@@ -160,7 +163,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
 
               <div
                 ref={listRef}
-                className="max-h-[min(16rem,42dvh)] overflow-y-auto overscroll-contain no-scrollbar px-3 py-2.5 space-y-2"
+                className="max-h-[min(18rem,46dvh)] overflow-y-auto overscroll-contain no-scrollbar px-3 py-2.5 space-y-2"
               >
                 {messages.map((msg) => (
                   <div
@@ -174,7 +177,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
                           : 'bg-slate-input dark:bg-white/10 text-navy dark:text-white rounded-bl-md'
                       }`}
                     >
-                      <p className="font-body text-[13px] leading-snug">{msg.text}</p>
+                      <p className="font-body text-[13px] leading-snug whitespace-pre-line">{msg.text}</p>
                       {msg.role === 'bot' && msg.href && (
                         <button
                           type="button"
@@ -213,8 +216,8 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
                   ref={inputRef}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Escribí tu consulta…"
-                  maxLength={240}
+                  placeholder="Preguntame lo que sea de Monix…"
+                  maxLength={400}
                   className="flex-1 min-w-0 rounded-xl px-3 py-2 font-body text-sm text-navy dark:text-white bg-slate-input dark:bg-white/5 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-mint placeholder:text-slate-secondary/60"
                 />
                 <button
