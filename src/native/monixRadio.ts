@@ -60,12 +60,22 @@ export function radioCapabilities(): RadioCapabilities {
   }
 }
 
+function conTiempo<T>(promesa: Promise<T>, ms: number) {
+  return new Promise<T>((resolve, reject) => {
+    const t = window.setTimeout(() => reject(new Error('timeout')), ms)
+    promesa.then(
+      (v) => { window.clearTimeout(t); resolve(v) },
+      (e) => { window.clearTimeout(t); reject(e) },
+    )
+  })
+}
+
 export async function pedirPermisoCamara() {
   try {
     const plugin = await getPlugin()
     const pedir = plugin?.pedirCamara
     if (!pedir) return
-    await pedir()
+    await conTiempo(pedir(), 20_000)
   } catch {
     /* APK vieja o permiso ya negado: getUserMedia igual dispara el diálogo del WebView */
   }
@@ -74,13 +84,8 @@ export async function pedirPermisoCamara() {
 export async function pedirPermisosNativos() {
   try {
     const plugin = await getPlugin()
-    if (plugin?.pedirTodosLosPermisos) {
-      await plugin.pedirTodosLosPermisos()
-      return
-    }
-    await plugin?.pedirCamara?.()
-    await plugin?.pedirMic?.()
-    await plugin?.requestPermissions?.()
+    if (plugin?.pedirCamara) await conTiempo(plugin.pedirCamara(), 20_000).catch(() => undefined)
+    if (plugin?.pedirMic) await conTiempo(plugin.pedirMic(), 20_000).catch(() => undefined)
   } catch {
     /* diálogo cancelado o APK vieja */
   }
@@ -126,7 +131,8 @@ async function pedirMediosWeb() {
 
 export async function pedirTodosLosPermisos() {
   await pedirPermisosNativos()
-  await pedirMediosWeb()
+  if (isNative()) return
+  await conTiempo(pedirMediosWeb(), 8_000).catch(() => undefined)
 }
 
 export async function abrirAjustesPermisos() {
@@ -152,7 +158,7 @@ export async function verificarBiometriaNativa() {
   const plugin = await getPlugin()
   const fn = plugin?.verificarBiometria
   if (!fn) throw new Error('Actualizá la APK de Monix para usar huella o Face ID')
-  await fn()
+  await conTiempo(fn(), 45_000)
 }
 
 export async function startVozNativa() {

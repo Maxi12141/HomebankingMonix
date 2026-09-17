@@ -14,6 +14,7 @@ import { Button } from '../components/ui/Button'
 import {
   activarMetodo,
   desactivarMetodo,
+  esCelular,
   metodosBio,
   soportaHuella,
   type MetodoBio,
@@ -71,6 +72,10 @@ export function ProfilePage() {
   useEffect(() => {
     if (!user) return
     setMetodos(metodosBio(user.id))
+    if (esCelular()) {
+      setHuellaDisponible(true)
+      return
+    }
     void soportaHuella().then(setHuellaDisponible)
   }, [user])
 
@@ -220,7 +225,7 @@ export function ProfilePage() {
     try {
       await pedirTodosLosPermisos()
       localStorage.setItem('monix_permisos_ok', '1')
-      toast.success('Listo. Si algún permiso sigue bloqueado, abrilo en Ajustes → Apps → Monix.')
+      toast.success('Listo. Si Android no preguntó, abrí Ajustes → Apps → Monix → Permisos.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudieron pedir los permisos')
     } finally {
@@ -323,7 +328,7 @@ export function ProfilePage() {
               <p className="font-body text-xs text-slate-secondary mt-0.5">
                 {huellaDisponible
                   ? 'Al abrir Monix te pedimos la huella. Siempre podés entrar con la contraseña.'
-                  : 'En la APK se activa con el sensor del teléfono. Si el interruptor no prende, instalá la APK nueva de Monix.'}
+                  : 'Abrí Perfil desde el celular para activar la huella.'}
               </p>
             </div>
             <button
@@ -353,7 +358,7 @@ export function ProfilePage() {
               <p className="font-body text-xs text-slate-secondary mt-0.5">
                 {huellaDisponible
                   ? 'Reconocimiento facial del teléfono (Face ID o desbloqueo facial). Si no está enrolado, el sistema te ofrece la huella.'
-                  : 'En la APK se activa con la cara del teléfono. Si el interruptor no prende, instalá la APK nueva de Monix.'}
+                  : 'Abrí Perfil desde el celular para activar Face ID.'}
               </p>
             </div>
             <button

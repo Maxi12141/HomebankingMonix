@@ -116,12 +116,8 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
   @PluginMethod
   fun soportaBiometria(call: PluginCall) {
-    val mgr = BiometricManager.from(context)
-    val can = mgr.canAuthenticate(
-      BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK
-    )
     val data = JSObject()
-    data.put("ok", can == BiometricManager.BIOMETRIC_SUCCESS)
+    data.put("ok", true)
     call.resolve(data)
   }
 
@@ -134,28 +130,30 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
     }
     val executor = ContextCompat.getMainExecutor(context)
     act.runOnUiThread {
-      val prompt = BiometricPrompt(
-        act,
-        executor,
-        object : BiometricPrompt.AuthenticationCallback() {
-          override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-            call.resolve()
-          }
+      try {
+        val prompt = BiometricPrompt(
+          act,
+          executor,
+          object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+              call.resolve()
+            }
 
-          override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-            call.reject(errString.toString())
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+              call.reject(errString.toString())
+            }
           }
-        }
-      )
-      val info = BiometricPrompt.PromptInfo.Builder()
-        .setTitle("Monix")
-        .setSubtitle("Confirmá con huella o el rostro")
-        .setNegativeButtonText("Cancelar")
-        .setAllowedAuthenticators(
-          BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK
         )
-        .build()
-      prompt.authenticate(info)
+        val info = BiometricPrompt.PromptInfo.Builder()
+          .setTitle("Monix")
+          .setSubtitle("Confirmá con huella o el rostro")
+          .setNegativeButtonText("Cancelar")
+          .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+          .build()
+        prompt.authenticate(info)
+      } catch (e: Exception) {
+        call.reject(e.message ?: "No se pudo abrir la huella")
+      }
     }
   }
 

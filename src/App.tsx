@@ -33,7 +33,6 @@ import { useBiometriaLock } from './hooks/useBiometriaLock'
 import { HuellaLockScreen } from './components/HuellaLockScreen'
 import { PermisosPrimeraVez } from './components/PermisosPrimeraVez'
 import { aplicarBarraDeEstado } from './native/statusBar'
-import { pedirPermisosNativos } from './native/monixRadio'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -50,11 +49,6 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const { user, loading } = useAuth()
   const { locked, unlock } = useBiometriaLock(loading ? null : user)
-
-  useEffect(() => {
-    if (!user || locked) return
-    void pedirPermisosNativos()
-  }, [user, locked])
 
   if (!loading && user && locked) {
     return <HuellaLockScreen onUnlock={unlock} />

@@ -11,7 +11,6 @@ const SKIP_KEY = 'monix_permisos_skip'
 export function PermisosPrimeraVez() {
   const { user } = useAuthStore()
   const [visible, setVisible] = useState(false)
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!user || !esCelular()) {
@@ -26,14 +25,9 @@ export function PermisosPrimeraVez() {
   if (!visible) return null
 
   async function permitir() {
-    setLoading(true)
-    try {
-      await pedirTodosLosPermisos()
-      localStorage.setItem(OK_KEY, '1')
-      setVisible(false)
-    } finally {
-      setLoading(false)
-    }
+    localStorage.setItem(OK_KEY, '1')
+    setVisible(false)
+    await pedirTodosLosPermisos()
   }
 
   function ahoraNo() {
@@ -67,7 +61,7 @@ export function PermisosPrimeraVez() {
             <span className="font-body text-sm text-navy dark:text-white">NFC y Bluetooth para Monix Cerca</span>
           </li>
         </ul>
-        <Button type="button" loading={loading} onClick={() => { void permitir() }} className="w-full mb-3">
+        <Button type="button" onClick={() => { void permitir() }} className="w-full mb-3">
           Permitir todo
         </Button>
         <button

@@ -1,5 +1,4 @@
 import {
-  soportaBiometriaNativa,
   verificarBiometriaNativa,
 } from '../native/monixRadio'
 
@@ -70,7 +69,7 @@ export function esCelular() {
 }
 
 export async function soportaHuella() {
-  if (await soportaBiometriaNativa()) return true
+  if (esCelular()) return true
   if (!window.PublicKeyCredential) return false
   if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== 'function') {
     return false
@@ -104,7 +103,10 @@ export function consumoIngresoConClave() {
 async function asegurarCredencial(userId: string, nombre: string) {
   const existing = loadAll()[userId]
   if (existing?.credId) return existing
-  if (await soportaBiometriaNativa()) {
+  const nativo = Boolean(
+    (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.(),
+  )
+  if (nativo) {
     await verificarBiometriaNativa()
     return { credId: 'native', huella: false, face: false } satisfies BioRecord
   }
