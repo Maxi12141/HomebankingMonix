@@ -158,6 +158,14 @@ export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: Asiste
 
   ranked.sort((a, b) => b.score - a.score || a.index - b.index)
 
+  const preguntaPlata = /\b(saldo|plata|pesos|cuanto tengo|mi sueldo|el sueldo|decime cuanto|decime mi saldo)\b/.test(q)
+    && !/\b(cobro|acreditar|paquete|nomina|haberes)\b/.test(q)
+  if (preguntaPlata) {
+    const saldo = ranked.find((r) => r.topic.id === 'saldo')
+    if (saldo) saldo.score += 14
+    ranked.sort((a, b) => b.score - a.score || a.index - b.index)
+  }
+
   const best = ranked[0]
   const second = ranked[1]
   const compuesta = / y | o |ademas|tambien/.test(q)
