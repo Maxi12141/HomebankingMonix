@@ -189,9 +189,12 @@ export function desactivarHuella(userId: string) {
 export async function verificarHuella(userId: string) {
   const record = loadAll()[userId]
   if (!record) throw new Error('El desbloqueo biométrico no está activado')
-  if (isNativeApp() || record.credId === 'native') {
+  if (isNativeApp()) {
     await verificarBiometriaNativa()
     return
+  }
+  if (record.credId === 'native') {
+    throw new Error('Abrí Monix desde la app instalada para usar la huella')
   }
   const cred = await navigator.credentials.get({
     publicKey: {

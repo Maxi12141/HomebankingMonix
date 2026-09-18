@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Fingerprint, ScanFace } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
-import { esCancelacionBiometrica, metodosBio, verificarHuella } from '../lib/biometria'
+import { metodosBio, verificarHuella } from '../lib/biometria'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import monixLogo from '../assets/logos/logo-blanco.svg'
@@ -20,7 +20,7 @@ export function HuellaLockScreen({ onUnlock }: Props) {
   const [loadingClave, setLoadingClave] = useState(false)
   const metodos = user ? metodosBio(user.id) : { huella: false, face: false }
 
-  const email = persona?.email || user?.email || ''
+  const email = user?.email || persona?.email || ''
   const nombre = persona?.nombre ?? ''
 
   async function pedirBiometria() {
@@ -31,18 +31,14 @@ export function HuellaLockScreen({ onUnlock }: Props) {
       await verificarHuella(user.id)
       onUnlock()
     } catch (err) {
-      if (esCancelacionBiometrica(err)) {
-        setError('No se pudo leer. Entrá con tu contraseña.')
-      } else {
-        setError(err instanceof Error ? err.message : 'No se pudo validar. Entrá con tu contraseña.')
-      }
+      setError(err instanceof Error ? err.message : 'No se pudo validar. Usá la contraseña de Monix.')
     } finally {
       setLoadingBio(false)
     }
   }
 
   useEffect(() => {
-    const t = window.setTimeout(() => { void pedirBiometria() }, 350)
+    const t = window.setTimeout(() => { void pedirBiometria() }, 400)
     return () => window.clearTimeout(t)
   }, [])
 
@@ -60,12 +56,12 @@ export function HuellaLockScreen({ onUnlock }: Props) {
         password,
       })
       if (authError) {
-        setError('Contraseña incorrecta')
+        setError('Contraseña de Monix incorrecta. No es el PIN del teléfono.')
         return
       }
       onUnlock()
     } catch {
-      setError('No se pudo validar la contraseña')
+      setError('No se pudo validar la contraseña de Monix')
     } finally {
       setLoadingClave(false)
     }
@@ -75,11 +71,9 @@ export function HuellaLockScreen({ onUnlock }: Props) {
     await supabase.auth.signOut()
   }
 
-  const subtitulo = metodos.huella && metodos.face
-    ? 'Entrá con huella, Face ID o tu contraseña.'
-    : metodos.face
-      ? 'Entrá con Face ID o tu contraseña.'
-      : 'Entrá con tu huella o tu contraseña.'
+  const subtitulo = metodos.face
+    ? 'Huella, cara o PIN del teléfono. Abajo, la contraseña de tu cuenta Monix.'
+    : 'Huella o PIN del teléfono. Abajo, la contraseña de tu cuenta Monix.'
 
   return (
     <motion.div
@@ -134,11 +128,7 @@ export function HuellaLockScreen({ onUnlock }: Props) {
         onClick={() => { void pedirBiometria() }}
         className="w-full max-w-xs mb-6"
       >
-        {metodos.huella && metodos.face
-          ? 'Usar huella o Face ID'
-          : metodos.face
-            ? 'Usar Face ID'
-            : 'Usar huella'}
+        {metodos.face ? 'Usar huella, cara o PIN' : 'Usar huella o PIN del teléfono'}
       </Button>
 
       {error && (
@@ -147,14 +137,14 @@ export function HuellaLockScreen({ onUnlock }: Props) {
 
       <form onSubmit={(e) => { void entrarConClave(e) }} className="w-full max-w-xs flex flex-col gap-3">
         <Input
-          label="Contraseña"
+          label="Contraseña de Monix"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
         <Button type="submit" loading={loadingClave} className="w-full">
-          Entrar con contraseña
+          Entrar con contraseña de Monix
         </Button>
       </form>
 

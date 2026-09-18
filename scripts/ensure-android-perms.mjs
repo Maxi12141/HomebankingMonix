@@ -123,8 +123,8 @@ writeFileSync(file, xml)
 const gradle = resolve('android/app/build.gradle')
 if (existsSync(gradle)) {
   let g = readFileSync(gradle, 'utf8')
-  g = g.replace(/versionCode \d+/, 'versionCode 18')
-  g = g.replace(/versionName "[^"]+"/, 'versionName "1.0.18"')
+  g = g.replace(/versionCode \d+/, 'versionCode 19')
+  g = g.replace(/versionName "[^"]+"/, 'versionName "1.0.19"')
   writeFileSync(gradle, g)
 }
 
