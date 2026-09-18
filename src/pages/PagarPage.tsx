@@ -1,15 +1,23 @@
+import { useEffect, type MouseEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Button } from '../components/ui/Button'
 import { EscanearYPagar, MiCodigoQr } from '../components/NfcPayPanels'
+import { openQrScanDefault, useQrScanStore } from '../stores/qrScanStore'
 
 export function PagarPage() {
   const [params, setParams] = useSearchParams()
   const cobroInicial = params.get('cobro') ?? undefined
-  const escanear = params.get('scan') === '1' || Boolean(cobroInicial)
+  const escanear = params.get('scan') === '1' && !cobroInicial
 
-  function irAEscanear() {
-    setParams({ scan: '1' })
+  useEffect(() => {
+    if (!escanear) return
+    if (!useQrScanStore.getState().open) openQrScanDefault()
+    setParams({}, { replace: true })
+  }, [escanear, setParams])
+
+  function irAEscanear(e: MouseEvent<HTMLButtonElement>) {
+    useQrScanStore.getState().openFromElement(e.currentTarget)
   }
 
   function volverAMiQr() {
@@ -28,7 +36,7 @@ export function PagarPage() {
           </p>
         </div>
 
-        {escanear ? (
+        {cobroInicial ? (
           <EscanearYPagar
             cobroIdInicial={cobroInicial}
             onCerrarScan={volverAMiQr}
