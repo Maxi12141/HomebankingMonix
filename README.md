@@ -407,7 +407,7 @@ Todos los alumnos comparten un entorno `test` de una API REST que simula el sist
 
 | Variable | Descripción |
 |---|---|
-| `VITE_BC_URL` | URL base de la API (ej: `https://bc-api.example.com`) |
+| `VITE_BC_URL` | Siempre `/bc-api` — un proxy same-origin, nunca la URL absoluta del Banco Central directo (que no manda CORS y el navegador la bloquearía). En dev/preview lo proxea `vite.config.ts`; en producción (Vercel), el rewrite de `vercel.json` |
 | `VITE_BC_API_KEY` | API key del banco Monix registrado |
 | `VITE_BC_ENV` | Entorno (`test`) |
 
@@ -422,6 +422,11 @@ Todos los alumnos comparten un entorno `test` de una API REST que simula el sist
 | `POST` | `/transactions` | Ejecutar una transferencia |
 | `GET` | `/transactions?minutos=N` | Listar transacciones recibidas (últimos N minutos) |
 | `GET` | `/banks/:bankCode` | Obtener nombre del banco por su código |
+| `POST` | `/accounts` | Abrir una cuenta en USD (CBU/alias separados de la caja en pesos) |
+| `PUT` | `/accounts/:cbu/alias` | Asignar alias a la cuenta en USD |
+| `GET` | `/accounts/:cbu` | Buscar cuenta en USD por CBU |
+| `GET` | `/accounts/alias/:alias` | Buscar cuenta en USD por alias |
+| `GET` | `/central-deudores/:dni` | Situación crediticia (BCRA) usada por Préstamos |
 
 ---
 
@@ -435,7 +440,7 @@ VITE_SUPABASE_URL=https://<proyecto>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
 
 # API Banco Central (cátedra)
-VITE_BC_URL=https://<url-del-banco-central>
+VITE_BC_URL=/bc-api
 VITE_BC_API_KEY=<api-key-del-banco-monix>
 VITE_BC_ENV=test
 ```

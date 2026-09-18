@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/bc-api/:path*", "destination": "https://centralbank.brocoly.cc/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

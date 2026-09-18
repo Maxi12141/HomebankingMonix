@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { supabase } from '../lib/supabaseClient'
+import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
@@ -17,6 +18,7 @@ import type { RegisterFormData } from '../types'
 export function RegisterPage() {
   const navigate = useNavigate()
   const { theme } = useThemeStore()
+  const setProvisioning = useAuthStore((s) => s.setProvisioning)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState<RegisterFormData>({
@@ -38,6 +40,10 @@ export function RegisterPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+    // auth.signUp ya deja la sesión activa y dispara el redirect de PublicOnly
+    // antes de que termine el resto del registro (Banco Central + inserts) —
+    // esta bandera lo frena hasta el navigate() explícito de más abajo.
+    setProvisioning(true)
 
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -112,6 +118,7 @@ export function RegisterPage() {
       }
     } finally {
       setLoading(false)
+      setProvisioning(false)
     }
   }
 

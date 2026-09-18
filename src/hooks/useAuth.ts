@@ -17,7 +17,7 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
 }
 
 export function useAuth() {
-  const { user, persona, loading, setUser, setPersona, setLoading, clear } = useAuthStore()
+  const { user, persona, loading, provisioning, setUser, setPersona, setLoading, clear } = useAuthStore()
   const { clear: clearCuenta } = useCuentaStore()
 
   useEffect(() => {
@@ -87,5 +87,5 @@ export function useAuth() {
     await supabase.auth.signOut()
   }
 
-  return { user, persona, loading, login, logout }
+  return { user, persona, loading, provisioning, login, logout }
 }

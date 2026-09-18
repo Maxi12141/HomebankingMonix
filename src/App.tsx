@@ -41,9 +41,9 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 function PublicOnly({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
+  const { user, loading, provisioning } = useAuth()
   if (loading) return null
-  return user ? <Navigate to="/dashboard" replace /> : <>{children}</>
+  return user && !provisioning ? <Navigate to="/dashboard" replace /> : <>{children}</>
 }
 
 function AppRoutes() {
