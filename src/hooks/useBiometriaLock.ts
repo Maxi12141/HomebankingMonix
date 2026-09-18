@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import {
   consumoIngresoConClave,
@@ -6,28 +6,47 @@ import {
   huellaActiva,
 } from '../lib/biometria'
 
-const RELOCK_MS = 1_500
+const RELOCK_MS = 2_000
 
 export function useBiometriaLock(user: User | null) {
+  const sesionAbierta = useRef(false)
+  const lockedRef = useRef(false)
+
   const [locked, setLocked] = useState(() => {
     if (!user) return false
-    if (sessionStorage.getItem('monix_just_authed') === '1') return false
+    if (sessionStorage.getItem('monix_just_authed') === '1') {
+      sesionAbierta.current = true
+      return false
+    }
     return esCelular() && huellaActiva(user.id)
   })
+  lockedRef.current = locked
 
   const shouldLock = useCallback((uid: string) => {
     return esCelular() && huellaActiva(uid)
   }, [])
 
+  const unlock = useCallback(() => {
+    sesionAbierta.current = true
+    setLocked(false)
+  }, [])
+
   useEffect(() => {
     if (!user) {
+      sesionAbierta.current = false
       setLocked(false)
       return
     }
-    if (consumoIngresoConClave() || !shouldLock(user.id)) {
+    if (consumoIngresoConClave()) {
+      sesionAbierta.current = true
       setLocked(false)
       return
     }
+    if (!shouldLock(user.id)) {
+      setLocked(false)
+      return
+    }
+    if (sesionAbierta.current) return
     setLocked(true)
   }, [user, shouldLock])
 
@@ -38,10 +57,15 @@ export function useBiometriaLock(user: User | null) {
     function onVis() {
       if (!user) return
       if (document.hidden) {
+        if (lockedRef.current) {
+          hiddenAt = 0
+          return
+        }
         hiddenAt = Date.now()
         return
       }
       if (hiddenAt && Date.now() - hiddenAt >= RELOCK_MS && shouldLock(user.id)) {
+        sesionAbierta.current = false
         setLocked(true)
       }
       hiddenAt = 0
@@ -53,6 +77,6 @@ export function useBiometriaLock(user: User | null) {
 
   return {
     locked,
-    unlock: () => setLocked(false),
+    unlock,
   }
 }
