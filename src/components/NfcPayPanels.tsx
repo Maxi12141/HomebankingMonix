@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence } from 'framer-motion'
 import { CheckCircle, QrCode, ScanLine } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
@@ -285,11 +284,13 @@ export function EscanearYPagar({
     try {
       return await detectQrUntil(video, signal)
     } finally {
-      stopMediaStream(stream)
-      if (streamRef.current === stream) streamRef.current = null
-      if (videoRef.current) videoRef.current.srcObject = null
-      setTorchOn(false)
-      setTorchOk(false)
+      if (!closingRef.current) {
+        stopMediaStream(stream)
+        if (streamRef.current === stream) streamRef.current = null
+        if (videoRef.current) videoRef.current.srcObject = null
+        setTorchOn(false)
+        setTorchOk(false)
+      }
     }
   }
 
@@ -302,6 +303,7 @@ export function EscanearYPagar({
     try {
       const video = await waitForVideo(() => videoRef.current, controller.signal)
       const raw = await leerQrDeCamara(video, controller.signal)
+      if (closingRef.current) return
       await aplicarQr(raw, cargarCobro, cargarCuenta)
       if (scanAbortRef.current === controller) setScanning(false)
     } catch (err) {
@@ -329,8 +331,7 @@ export function EscanearYPagar({
   function cancelarScan() {
     closingRef.current = true
     setClosing(true)
-    apagarCamara()
-    setScanning(false)
+    scanAbortRef.current?.abort()
   }
 
   async function escanearFoto(file: Blob) {
@@ -513,22 +514,20 @@ export function EscanearYPagar({
       <>
         {inputFoto}
         {createPortal(
-          <AnimatePresence onExitComplete={() => {
-            if (closingRef.current) onCerrarScan?.()
-          }}>
-            {!closing && (
-              <QrScannerFullscreen
-                key="qr-cam"
-                videoRef={videoRef}
-                error={error}
-                torchOk={torchOk}
-                torchOn={torchOn}
-                onClose={cancelarScan}
-                onToggleTorch={() => { void toggleTorch() }}
-                onPickPhoto={() => fotoRef.current?.click()}
-              />
-            )}
-          </AnimatePresence>,
+          <QrScannerFullscreen
+            videoRef={videoRef}
+            error={error}
+            torchOk={torchOk}
+            torchOn={torchOn}
+            closing={closing}
+            onClose={cancelarScan}
+            onClosed={() => {
+              apagarCamara()
+              if (closingRef.current) onCerrarScan?.()
+            }}
+            onToggleTorch={() => { void toggleTorch() }}
+            onPickPhoto={() => fotoRef.current?.click()}
+          />,
           document.body,
         )}
       </>
@@ -540,22 +539,20 @@ export function EscanearYPagar({
       <>
         {inputFoto}
         {createPortal(
-          <AnimatePresence onExitComplete={() => {
-            if (closingRef.current) onCerrarScan?.()
-          }}>
-            {scanning && (
-              <QrScannerFullscreen
-                key="qr-cam"
-                videoRef={videoRef}
-                error={error}
-                torchOk={torchOk}
-                torchOn={torchOn}
-                onClose={cancelarScan}
-                onToggleTorch={() => { void toggleTorch() }}
-                onPickPhoto={() => fotoRef.current?.click()}
-              />
-            )}
-          </AnimatePresence>,
+          <QrScannerFullscreen
+            videoRef={videoRef}
+            error={error}
+            torchOk={torchOk}
+            torchOn={torchOn}
+            closing={closing}
+            onClose={cancelarScan}
+            onClosed={() => {
+              apagarCamara()
+              if (closingRef.current) onCerrarScan?.()
+            }}
+            onToggleTorch={() => { void toggleTorch() }}
+            onPickPhoto={() => fotoRef.current?.click()}
+          />,
           document.body,
         )}
       </>
