@@ -6,7 +6,7 @@ import {
   huellaActiva,
 } from '../lib/biometria'
 
-const RELOCK_MS = 20_000
+const RELOCK_MS = 1_500
 
 export function useBiometriaLock(user: User | null) {
   const [locked, setLocked] = useState(() => {

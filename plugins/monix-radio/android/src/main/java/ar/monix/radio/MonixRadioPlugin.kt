@@ -220,6 +220,7 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
   @PluginMethod
   fun verificarBiometria(call: PluginCall) {
+    call.setKeepAlive(true)
     val act = activity as? FragmentActivity
     if (act == null) {
       call.reject("no activity")
@@ -242,9 +243,9 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
           }
         )
         val info = BiometricPrompt.PromptInfo.Builder()
-          .setTitle("Monix")
-          .setSubtitle("Confirmá con huella o el rostro")
-          .setNegativeButtonText("Cancelar")
+          .setTitle("Desbloquear Monix")
+          .setSubtitle("Usá tu huella o el reconocimiento facial")
+          .setNegativeButtonText("Usar contraseña")
           .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
           .build()
         prompt.authenticate(info)

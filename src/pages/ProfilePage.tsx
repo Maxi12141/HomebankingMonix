@@ -327,7 +327,7 @@ export function ProfilePage() {
               <p className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con huella</p>
               <p className="font-body text-xs text-slate-secondary mt-0.5">
                 {huellaDisponible
-                  ? 'Al abrir Monix te pedimos la huella. Siempre podés entrar con la contraseña.'
+                  ? 'Al activarla te pedimos la huella. Si salís y volvés, desbloqueás con huella o con tu contraseña.'
                   : 'Abrí Perfil desde el celular para activar la huella.'}
               </p>
             </div>

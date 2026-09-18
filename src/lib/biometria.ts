@@ -61,15 +61,19 @@ function rpId() {
   return host === 'localhost' || host === '127.0.0.1' ? 'localhost' : host
 }
 
+function isNativeApp() {
+  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+  return Boolean(cap?.isNativePlatform?.())
+}
+
 export function esCelular() {
   if (typeof window === 'undefined') return false
-  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
-  if (cap?.isNativePlatform?.()) return true
+  if (isNativeApp()) return true
   return window.matchMedia('(max-width: 767px)').matches
 }
 
 export async function soportaHuella() {
-  if (esCelular()) return true
+  if (isNativeApp() || esCelular()) return true
   if (!window.PublicKeyCredential) return false
   if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== 'function') {
     return false
@@ -101,15 +105,13 @@ export function consumoIngresoConClave() {
 }
 
 async function asegurarCredencial(userId: string, nombre: string) {
+  if (isNativeApp()) {
+    await verificarBiometriaNativa()
+    const prev = loadAll()[userId]
+    return { credId: 'native', huella: Boolean(prev?.huella), face: Boolean(prev?.face) } satisfies BioRecord
+  }
   const existing = loadAll()[userId]
   if (existing?.credId) return existing
-  const nativo = Boolean(
-    (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.(),
-  )
-  if (nativo) {
-    await verificarBiometriaNativa()
-    return { credId: 'native', huella: false, face: false } satisfies BioRecord
-  }
   if (!(await soportaHuella())) {
     throw new Error('Este teléfono no tiene huella ni reconocimiento facial disponible')
   }
@@ -177,7 +179,7 @@ export function desactivarHuella(userId: string) {
 export async function verificarHuella(userId: string) {
   const record = loadAll()[userId]
   if (!record) throw new Error('El desbloqueo biométrico no está activado')
-  if (record.credId === 'native') {
+  if (isNativeApp() || record.credId === 'native') {
     await verificarBiometriaNativa()
     return
   }
@@ -197,7 +199,7 @@ export async function verificarHuella(userId: string) {
 }
 
 export function esCancelacionBiometrica(err: unknown) {
-  if (!err || typeof err !== 'object') return false
-  const name = 'name' in err ? String(err.name) : ''
-  return name === 'NotAllowedError' || name === 'AbortError'
+  const name = err && typeof err === 'object' && 'name' in err ? String(err.name) : ''
+  const msg = err instanceof Error ? err.message : String(err ?? '')
+  return name === 'NotAllowedError' || name === 'AbortError' || /cancel/i.test(msg)
 }

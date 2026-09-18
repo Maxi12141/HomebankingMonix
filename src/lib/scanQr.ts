@@ -145,6 +145,12 @@ export function stopMediaStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => track.stop())
 }
 
+export async function startQrCamera(video: HTMLVideoElement): Promise<MediaStream> {
+  const stream = await pedirStreamCamara()
+  await engancharCamara(video, stream)
+  return stream
+}
+
 export async function waitForVideo(getVideo: () => HTMLVideoElement | null, signal: AbortSignal) {
   for (let i = 0; i < 45; i++) {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
