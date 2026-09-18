@@ -78,7 +78,7 @@ const TOUR_MOBILE: TourStep[] = [
   {
     targetId: 'tour-acciones-mobile',
     title: 'La barra de abajo',
-    description: 'Transferir, pagar, historial y depositar. El botón del centro abre la cámara para pagar con QR.',
+    description: 'Inicio, transferir, cuentas y reservas. El botón del centro abre la cámara para pagar con QR.',
     // El botón QR flota por encima de la barra (-top-7 en Navbar.tsx) — sin
     // este margen extra el spotlight lo corta a la mitad.
     padTop: 24,

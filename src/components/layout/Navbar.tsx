@@ -1,11 +1,11 @@
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRightLeft, History, Plus, QrCode, Receipt } from 'lucide-react'
+import { ArrowRightLeft, Landmark, LayoutDashboard, QrCode, Vault } from 'lucide-react'
 
 const sideLinks = [
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Inicio' },
   { to: '/transferir', icon: ArrowRightLeft, label: 'Transferir' },
-  { to: '/pagar', icon: Receipt, label: 'Pagar' },
-  { to: '/historial', icon: History, label: 'Historial' },
-  { to: '/depositar', icon: Plus, label: 'Depositar' },
+  { to: '/cuentas', icon: Landmark, label: 'Cuentas' },
+  { to: '/reservas', icon: Vault, label: 'Reservas' },
 ]
 
 export function Navbar() {
@@ -22,7 +22,7 @@ export function Navbar() {
     >
       <div className="relative flex items-end justify-around px-1 pt-2 pb-[max(0.4rem,env(safe-area-inset-bottom))]">
         {sideLinks.slice(0, 2).map((link) => (
-          <SideLink key={link.to} {...link} dimPagar={onQrScan && link.to === '/pagar'} />
+          <SideLink key={link.to} {...link} />
         ))}
 
         <div className="w-16 shrink-0" aria-hidden />
@@ -60,22 +60,19 @@ function SideLink({
   to,
   icon: Icon,
   label,
-  dimPagar,
 }: {
   to: string
   icon: typeof ArrowRightLeft
   label: string
-  dimPagar?: boolean
 }) {
   return (
     <NavLink
       to={to}
-      className={({ isActive }) => {
-        const active = isActive && !dimPagar
-        return `flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-body font-medium transition-colors ${
-          active ? 'text-mint' : 'text-slate-secondary'
+      className={({ isActive }) =>
+        `flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-body font-medium transition-colors ${
+          isActive ? 'text-mint' : 'text-slate-secondary'
         }`
-      }}
+      }
     >
       <Icon size={20} />
       {label}
