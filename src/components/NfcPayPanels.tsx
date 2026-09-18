@@ -51,7 +51,7 @@ async function aplicarQr(raw: string, cargarCobro: (id: string) => Promise<void>
   await cargarCobro(raw.replace(/^MONIXPAY:/i, ''))
 }
 
-export function MiCodigoQr() {
+export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'overlay' }) {
   const { cuenta, refreshCuenta } = useCuenta()
   const [monto, setMonto] = useState('')
   const [cobro, setCobro] = useState<CobroNfc | null>(null)
@@ -139,6 +139,20 @@ export function MiCodigoQr() {
   }
 
   if (cobro?.estado === 'pagado') {
+    if (variante === 'overlay') {
+      return (
+        <div className="flex h-full flex-col items-center justify-center px-6 pb-28 pt-16 text-center">
+          <CheckCircle size={48} className="text-mint mb-3" />
+          <h2 className="font-display text-lg font-semibold text-white">Cobro acreditado</h2>
+          <p className="font-display text-2xl font-bold text-mint mt-2">
+            {formatMonto(cobro.monto, cobro.moneda)}
+          </p>
+          <Button className="w-full max-w-xs mt-6" type="button" onClick={() => { void nuevoCobro() }}>
+            Nuevo QR
+          </Button>
+        </div>
+      )
+    }
     return (
       <Card className="p-8 text-center">
         <CheckCircle size={48} className="text-mint mx-auto mb-3" />
@@ -158,6 +172,41 @@ export function MiCodigoQr() {
     : cuenta?.id
       ? encodeCuentaQr(cuenta.id)
       : ''
+
+  if (variante === 'overlay') {
+    return (
+      <div className="flex h-full flex-col items-center justify-center px-6 pb-28 pt-16">
+        <p className="font-display text-lg font-semibold text-white text-center">
+          Mostrá tu código para cobrar
+        </p>
+        <p className="font-body text-xs text-white/60 text-center mt-1 mb-5">
+          Que te lo escaneen. Si ponés un monto, ya lo ven.
+        </p>
+        {qrValue && <QrBox value={qrValue} alt="Tu QR de Monix" />}
+        {cuenta?.alias && (
+          <p className="font-body text-sm text-white/70 text-center mt-3">@{cuenta.alias}</p>
+        )}
+        {cobro && (
+          <p className="font-display text-xl font-bold text-mint text-center mt-2">
+            {formatMonto(cobro.monto, cobro.moneda)}
+          </p>
+        )}
+        <div className="w-full max-w-xs mt-4">
+          <Input
+            label="Monto (opcional)"
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+            placeholder="Lo carga quien paga"
+            className="bg-white text-navy"
+          />
+        </div>
+        {error && <p className="text-sm text-red-300 mt-3">{error}</p>}
+      </div>
+    )
+  }
 
   return (
     <Card className="p-6">
@@ -213,6 +262,7 @@ export function EscanearYPagar({
   const [pagado, setPagado] = useState<{ nombre: string; monto: number; moneda: 'ARS' | 'USD' } | null>(null)
   const [scanning, setScanning] = useState(!cobroIdInicial)
   const [closing, setClosing] = useState(false)
+  const [vista, setVista] = useState<'camara' | 'cobrar'>('camara')
   const [torchOk, setTorchOk] = useState(false)
   const [torchOn, setTorchOn] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -328,7 +378,24 @@ export function EscanearYPagar({
     }
   }
 
+  function mostrarMiQr() {
+    apagarCamara()
+    setVista('cobrar')
+    setScanning(false)
+    setError('')
+  }
+
+  function volverACamara() {
+    setVista('camara')
+    setError('')
+    void escanearQr()
+  }
+
   function cancelarScan() {
+    if (vista === 'camara' && overlay) {
+      mostrarMiQr()
+      return
+    }
     closingRef.current = true
     setClosing(true)
     scanAbortRef.current?.abort()
@@ -520,7 +587,10 @@ export function EscanearYPagar({
             torchOk={torchOk}
             torchOn={torchOn}
             closing={closing}
+            vista={vista}
+            cobrar={<MiCodigoQr variante="overlay" />}
             onClose={cancelarScan}
+            onVolverACamara={volverACamara}
             onClosed={() => {
               apagarCamara()
               if (closingRef.current) onCerrarScan?.()
@@ -545,7 +615,10 @@ export function EscanearYPagar({
             torchOk={torchOk}
             torchOn={torchOn}
             closing={closing}
+            vista={vista}
+            cobrar={<MiCodigoQr variante="overlay" />}
             onClose={cancelarScan}
+            onVolverACamara={volverACamara}
             onClosed={() => {
               apagarCamara()
               if (closingRef.current) onCerrarScan?.()
