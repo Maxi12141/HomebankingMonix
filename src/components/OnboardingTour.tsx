@@ -6,6 +6,10 @@ export interface TourStep {
   title: string
   description: string
   openDrawer?: boolean
+  // Margen extra hacia arriba del spotlight, además de PAD — para targets
+  // con contenido que sobresale por encima de su propio bounding box (ej:
+  // el botón QR flotante de la barra inferior, con -top-7).
+  padTop?: number
 }
 
 interface Props {
@@ -76,10 +80,11 @@ export function OnboardingTour({ steps, onComplete }: Props) {
       window.setTimeout(() => {
         const r = el.getBoundingClientRect()
         const tw = tipWidth()
+        const padTop = PAD + (current.padTop ?? 0)
         const spotL = r.left - PAD
-        const spotT = r.top - PAD
+        const spotT = r.top - padTop
         const spotW = r.width + PAD * 2
-        const spotH = r.height + PAD * 2
+        const spotH = r.height + PAD + padTop
         const isLower = r.top + r.height / 2 > window.innerHeight * 0.55
         const tipL = Math.max(16, Math.min(spotL, window.innerWidth - tw - 16))
         const tipT = isLower
