@@ -46,7 +46,7 @@ export function MobileDrawer({ onClose }: Props) {
         </button>
       </div>
 
-      <nav className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <nav className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar">
         {links.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}

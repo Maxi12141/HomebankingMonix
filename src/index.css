@@ -7,6 +7,14 @@
   to { transform: translateX(-50%); }
 }
 
+@layer base {
+  /* Scroll de la página (landing, login, cualquier vista sin PageWrapper)
+     sin la barra gris nativa del navegador de escritorio — el scroll sigue
+     funcionando igual, sólo se oculta el indicador visual. */
+  html::-webkit-scrollbar { display: none; }
+  html { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

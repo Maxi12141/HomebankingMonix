@@ -366,7 +366,7 @@ export function LandingPage() {
             Cuenta en pesos, dólares y crédito en un solo lugar.
           </motion.p>
 
-          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 justify-center">
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link to="/register">
               <Button variant="primary" className="px-8 py-3.5 text-base font-semibold flex items-center gap-2">
                 Abrí tu cuenta gratis

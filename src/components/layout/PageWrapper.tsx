@@ -91,7 +91,7 @@ export function PageWrapper({ children }: PageWrapperProps) {
           </div>
         </header>
 
-        <main className="flex-1 p-6 pb-28 md:pb-6 overflow-y-auto">
+        <main className="flex-1 p-6 pb-28 md:pb-6 overflow-y-auto no-scrollbar">
           {children}
         </main>
         <Navbar />
