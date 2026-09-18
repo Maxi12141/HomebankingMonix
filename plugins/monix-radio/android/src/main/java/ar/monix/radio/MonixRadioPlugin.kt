@@ -214,24 +214,53 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
   @PluginMethod
   fun soportaBiometria(call: PluginCall) {
     val data = JSObject()
-    data.put("ok", true)
+    data.put("ok", puedeBiometria())
     call.resolve(data)
+  }
+
+  private fun puedeBiometria(): Boolean {
+    val mgr = BiometricManager.from(context)
+    val weak = BiometricManager.Authenticators.BIOMETRIC_WEAK
+    val pin = weak or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    return mgr.canAuthenticate(weak) == BiometricManager.BIOMETRIC_SUCCESS
+      || mgr.canAuthenticate(pin) == BiometricManager.BIOMETRIC_SUCCESS
+  }
+
+  private fun mensajeBiometria(status: Int): String {
+    return when (status) {
+      BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
+        "Este teléfono no tiene huella ni cara cargada. Andá a Ajustes → Seguridad y agregá una."
+      BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE,
+      BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
+        "Este teléfono no puede leer la huella ahora."
+      else -> "No se pudo abrir el lector de huella."
+    }
   }
 
   @PluginMethod
   fun verificarBiometria(call: PluginCall) {
-    call.setKeepAlive(true)
     val act = activity as? FragmentActivity
     if (act == null) {
-      call.reject("no activity")
+      call.reject("Reinstalá la APK de Monix para usar la huella")
       return
     }
-    val executor = ContextCompat.getMainExecutor(context)
+    val mgr = BiometricManager.from(context)
+    val weak = BiometricManager.Authenticators.BIOMETRIC_WEAK
+    val pin = weak or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    val authenticators = when {
+      mgr.canAuthenticate(weak) == BiometricManager.BIOMETRIC_SUCCESS -> weak
+      mgr.canAuthenticate(pin) == BiometricManager.BIOMETRIC_SUCCESS -> pin
+      else -> {
+        call.reject(mensajeBiometria(mgr.canAuthenticate(weak)))
+        return
+      }
+    }
     act.runOnUiThread {
       try {
+        call.setKeepAlive(true)
         val prompt = BiometricPrompt(
           act,
-          executor,
+          ContextCompat.getMainExecutor(context),
           object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
               call.resolve()
@@ -242,13 +271,14 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
             }
           }
         )
-        val info = BiometricPrompt.PromptInfo.Builder()
-          .setTitle("Desbloquear Monix")
-          .setSubtitle("Usá tu huella o el reconocimiento facial")
-          .setNegativeButtonText("Usar contraseña")
-          .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
-          .build()
-        prompt.authenticate(info)
+        val builder = BiometricPrompt.PromptInfo.Builder()
+          .setTitle("Monix")
+          .setSubtitle("Confirmá con tu huella o el rostro")
+          .setAllowedAuthenticators(authenticators)
+        if (authenticators == weak) {
+          builder.setNegativeButtonText("Cancelar")
+        }
+        prompt.authenticate(builder.build())
       } catch (e: Exception) {
         call.reject(e.message ?: "No se pudo abrir la huella")
       }

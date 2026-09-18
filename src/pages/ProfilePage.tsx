@@ -65,7 +65,7 @@ export function ProfilePage() {
   const [savingPass, setSavingPass] = useState(false)
   const [passError, setPassError] = useState('')
   const [metodos, setMetodos] = useState({ huella: false, face: false })
-  const [huellaDisponible, setHuellaDisponible] = useState(false)
+  const [huellaDisponible, setHuellaDisponible] = useState(() => esCelular())
   const [savingBio, setSavingBio] = useState(false)
   const [savingPermisos, setSavingPermisos] = useState(false)
 
@@ -214,7 +214,8 @@ export function ProfilePage() {
         )
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo configurar el desbloqueo')
+      const msg = err instanceof Error ? err.message : 'No se pudo configurar el desbloqueo'
+      if (!/cancel/i.test(msg)) toast.error(msg)
     } finally {
       setSavingBio(false)
     }
@@ -335,8 +336,9 @@ export function ProfilePage() {
               type="button"
               role="switch"
               aria-checked={metodos.huella}
-              disabled={!huellaDisponible || savingBio}
-              onClick={() => { void toggleMetodo('huella') }}
+              disabled={!huellaDisponible}
+              aria-busy={savingBio}
+              onClick={() => { if (!savingBio) void toggleMetodo('huella') }}
               className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
                 metodos.huella ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
               }`}
@@ -365,8 +367,9 @@ export function ProfilePage() {
               type="button"
               role="switch"
               aria-checked={metodos.face}
-              disabled={!huellaDisponible || savingBio}
-              onClick={() => { void toggleMetodo('face') }}
+              disabled={!huellaDisponible}
+              aria-busy={savingBio}
+              onClick={() => { if (!savingBio) void toggleMetodo('face') }}
               className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
                 metodos.face ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
               }`}

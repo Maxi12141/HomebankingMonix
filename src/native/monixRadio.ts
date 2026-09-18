@@ -1,3 +1,5 @@
+import { Capacitor, registerPlugin } from '@capacitor/core'
+
 export interface RadioCapabilities {
   native: boolean
   nfc: boolean
@@ -18,8 +20,7 @@ function hasNdef(): boolean {
 }
 
 function isNative(): boolean {
-  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
-  return Boolean(cap?.isNativePlatform?.())
+  return Capacitor.isNativePlatform()
 }
 
 type MonixPlugin = {
@@ -45,16 +46,9 @@ type MonixPlugin = {
   addListener: (event: string, cb: (data: Record<string, unknown>) => void) => Promise<{ remove: () => Promise<void> }>
 }
 
-let pluginMemo: Promise<MonixPlugin | null> | null = null
-
 async function getPlugin(): Promise<MonixPlugin | null> {
   if (!isNative()) return null
-  if (!pluginMemo) {
-    pluginMemo = import('@capacitor/core')
-      .then((core) => core.registerPlugin('MonixRadio') as MonixPlugin)
-      .catch(() => null)
-  }
-  return pluginMemo
+  return registerPlugin<MonixPlugin>('MonixRadio')
 }
 
 export function radioCapabilities(): RadioCapabilities {
@@ -180,7 +174,15 @@ export async function verificarBiometriaNativa() {
   const plugin = await getPlugin()
   const fn = plugin?.verificarBiometria
   if (!fn) throw new Error('Actualizá la APK de Monix para usar huella o Face ID')
-  await conTiempo(fn(), 45_000)
+  try {
+    await conTiempo(fn(), 25_000)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err ?? '')
+    if (/timeout/i.test(msg)) {
+      throw new Error('El teléfono no mostró la huella. Reinstalá la APK nueva de Monix.')
+    }
+    throw err
+  }
 }
 
 export async function startVozNativa() {

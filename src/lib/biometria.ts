@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import {
   verificarBiometriaNativa,
 } from '../native/monixRadio'
@@ -62,8 +63,7 @@ function rpId() {
 }
 
 function isNativeApp() {
-  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
-  return Boolean(cap?.isNativePlatform?.())
+  return Capacitor.isNativePlatform()
 }
 
 export function esCelular() {
@@ -115,7 +115,8 @@ async function asegurarCredencial(userId: string, nombre: string) {
   if (!(await soportaHuella())) {
     throw new Error('Este teléfono no tiene huella ni reconocimiento facial disponible')
   }
-  const cred = await navigator.credentials.create({
+  const cred = await Promise.race([
+    navigator.credentials.create({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
       rp: { name: 'Monix', id: rpId() },
@@ -136,7 +137,14 @@ async function asegurarCredencial(userId: string, nombre: string) {
       timeout: 60_000,
       attestation: 'none',
     },
-  })
+    }),
+    new Promise<never>((_, reject) => {
+      window.setTimeout(
+        () => reject(new Error('El teléfono no mostró la huella. En la app de Monix instalá la APK nueva.')),
+        12_000,
+      )
+    }),
+  ])
   if (!(cred instanceof PublicKeyCredential)) {
     throw new Error('No se pudo registrar el desbloqueo biométrico')
   }
