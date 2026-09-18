@@ -5,6 +5,8 @@ import {
 
 const STORAGE_KEY = 'monix_bio_v1'
 const JUST_AUTH_KEY = 'monix_just_authed'
+const EMAIL_INDEX_KEY = 'monix_email_uid_v1'
+const BIO_CRED_KEY = 'monix_bio_cred_v1'
 
 export type MetodoBio = 'huella' | 'face'
 
@@ -94,6 +96,63 @@ export function metodosBio(userId: string): MetodosBio {
 export function huellaActiva(userId: string) {
   const m = metodosBio(userId)
   return m.huella || m.face
+}
+
+// Índice local email -> userId, para poder chequear si una cuenta tiene
+// biometría activa ANTES de autenticar (metodosBio/huellaActiva necesitan
+// el userId, que recién se conoce después de loguearse). Se completa en
+// useAuth.ts cada vez que se resuelve una sesión.
+function loadEmailIndex(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(EMAIL_INDEX_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, string>
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+export function registrarEmailUid(email: string, userId: string) {
+  const idx = loadEmailIndex()
+  idx[email.trim().toLowerCase()] = userId
+  localStorage.setItem(EMAIL_INDEX_KEY, JSON.stringify(idx))
+}
+
+export function uidParaEmail(email: string): string | null {
+  return loadEmailIndex()[email.trim().toLowerCase()] ?? null
+}
+
+// Contraseña guardada localmente sólo para las cuentas con huella/Face ID
+// activa en este dispositivo — la libera el login en dos pasos de
+// LoginPage.tsx tras un OK biométrico. Mismo nivel de seguridad que ya
+// tenía "Recordarme" (texto plano en localStorage), acotado a las cuentas
+// que explícitamente activaron biometría.
+function loadBioCred(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(BIO_CRED_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, string>
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+export function guardarCredencialBio(email: string, password: string) {
+  const all = loadBioCred()
+  all[email.trim().toLowerCase()] = password
+  localStorage.setItem(BIO_CRED_KEY, JSON.stringify(all))
+}
+
+export function credencialBioParaEmail(email: string): string | null {
+  return loadBioCred()[email.trim().toLowerCase()] ?? null
+}
+
+export function borrarCredencialBio(email: string) {
+  const all = loadBioCred()
+  delete all[email.trim().toLowerCase()]
+  localStorage.setItem(BIO_CRED_KEY, JSON.stringify(all))
 }
 
 export function marcarIngresoConClave() {

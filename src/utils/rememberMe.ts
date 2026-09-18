@@ -1,24 +1,15 @@
-const STORAGE_KEY = 'monix_remembered_credentials'
+const STORAGE_KEY = 'monix_remembered_email'
 
-interface RememberedCredentials {
-  email: string
-  password: string
+// Sólo el email — nunca la contraseña. El desbloqueo con huella/Face ID
+// usa su propio registro (ver activarMetodo en lib/biometria.ts).
+export function getRememberedEmail(): string | null {
+  return localStorage.getItem(STORAGE_KEY)
 }
 
-export function getRememberedCredentials(): RememberedCredentials | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    return JSON.parse(raw) as RememberedCredentials
-  } catch {
-    return null
-  }
+export function saveRememberedEmail(email: string) {
+  localStorage.setItem(STORAGE_KEY, email)
 }
 
-export function saveRememberedCredentials(email: string, password: string) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ email, password }))
-}
-
-export function clearRememberedCredentials() {
+export function clearRememberedEmail() {
   localStorage.removeItem(STORAGE_KEY)
 }

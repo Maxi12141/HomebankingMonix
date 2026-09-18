@@ -11,10 +11,13 @@ import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { Modal } from '../components/ui/Modal'
 import {
   activarMetodo,
+  borrarCredencialBio,
   desactivarMetodo,
   esCelular,
+  guardarCredencialBio,
   metodosBio,
   soportaHuella,
   type MetodoBio,
@@ -68,6 +71,9 @@ export function ProfilePage() {
   const [huellaDisponible, setHuellaDisponible] = useState(() => esCelular())
   const [savingBio, setSavingBio] = useState(false)
   const [savingPermisos, setSavingPermisos] = useState(false)
+  const [confirmMetodo, setConfirmMetodo] = useState<MetodoBio | null>(null)
+  const [confirmPass, setConfirmPass] = useState('')
+  const [confirmError, setConfirmError] = useState('')
 
   useEffect(() => {
     if (!user) return
@@ -198,23 +204,52 @@ export function ProfilePage() {
 
   async function toggleMetodo(metodo: MetodoBio) {
     if (!user || !persona) return
-    setSavingBio(true)
-    try {
-      if (metodos[metodo]) {
+    if (metodos[metodo]) {
+      setSavingBio(true)
+      try {
         desactivarMetodo(user.id, metodo)
-        setMetodos(metodosBio(user.id))
+        const restantes = metodosBio(user.id)
+        setMetodos(restantes)
+        if (!restantes.huella && !restantes.face) borrarCredencialBio(persona.email)
         toast.success(metodo === 'huella' ? 'Huella desactivada' : 'Face ID desactivado')
-      } else {
-        toast.loading('Confirmá con la huella, la cara o el PIN del teléfono…', { id: 'bio' })
-        await activarMetodo(user.id, `${persona.nombre} ${persona.apellido}`, metodo)
-        setMetodos(metodosBio(user.id))
-        toast.success(
-          metodo === 'huella'
-            ? 'Huella activada. Al entrar te la pedimos, o podés usar la contraseña.'
-            : 'Face ID activado. Al entrar te lo pedimos, o podés usar la contraseña.',
-          { id: 'bio' },
-        )
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'No se pudo desactivar'
+        toast.error(msg)
+      } finally {
+        setSavingBio(false)
       }
+      return
+    }
+    // Activar pide confirmar la contraseña una vez — se guarda localmente
+    // (sólo para esta cuenta, sólo en este dispositivo) para poder saltear
+    // el campo de contraseña en el login cuando la huella valide.
+    setConfirmError('')
+    setConfirmPass('')
+    setConfirmMetodo(metodo)
+  }
+
+  async function confirmarYActivar() {
+    if (!user || !persona || !confirmMetodo) return
+    setSavingBio(true)
+    setConfirmError('')
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: persona.email, password: confirmPass })
+      if (error) {
+        setConfirmError('Contraseña incorrecta')
+        return
+      }
+      toast.loading('Confirmá con la huella, la cara o el PIN del teléfono…', { id: 'bio' })
+      await activarMetodo(user.id, `${persona.nombre} ${persona.apellido}`, confirmMetodo)
+      guardarCredencialBio(persona.email, confirmPass)
+      setMetodos(metodosBio(user.id))
+      toast.success(
+        confirmMetodo === 'huella'
+          ? 'Huella activada. Al entrar te la pedimos primero, con la contraseña como respaldo.'
+          : 'Face ID activado. Al entrar te lo pedimos primero, con la contraseña como respaldo.',
+        { id: 'bio' },
+      )
+      setConfirmMetodo(null)
+      setConfirmPass('')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'No se pudo configurar el desbloqueo'
       toast.error(msg, { id: 'bio' })
@@ -535,6 +570,39 @@ export function ProfilePage() {
           </form>
         </Card>
       </div>
+
+      <Modal open={confirmMetodo !== null} onClose={() => setConfirmMetodo(null)}>
+        <Card className="p-6">
+          <h3 className="font-display text-lg font-semibold text-navy dark:text-white mb-1">
+            Confirmá tu contraseña
+          </h3>
+          <p className="font-body text-sm text-slate-secondary mb-4">
+            La necesitamos una vez para activar {confirmMetodo === 'huella' ? 'la huella' : 'Face ID'} en este dispositivo.
+          </p>
+          <form
+            onSubmit={(e) => { e.preventDefault(); void confirmarYActivar() }}
+            className="flex flex-col gap-3"
+          >
+            <Input
+              label="Contraseña de Monix"
+              type="password"
+              value={confirmPass}
+              onChange={(e) => setConfirmPass(e.target.value)}
+              required
+              autoFocus
+            />
+            {confirmError && <p className="text-sm text-red-500 dark:text-red-400 font-body">{confirmError}</p>}
+            <div className="flex gap-2 mt-2">
+              <Button type="button" variant="secondary" className="flex-1" onClick={() => setConfirmMetodo(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" loading={savingBio} className="flex-1">
+                Confirmar
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </Modal>
     </PageWrapper>
   )
 }

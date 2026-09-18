@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
+import { registrarEmailUid } from '../lib/biometria'
 import type { Persona } from '../types'
 
 const AUTH_TIMEOUT_MS = 8000
@@ -28,6 +29,7 @@ export function useAuth() {
         if (cancelled) return
         setUser(session?.user ?? null)
         if (session?.user) {
+          if (session.user.email) registrarEmailUid(session.user.email, session.user.id)
           return fetchPersona(session.user.id)
         }
         setLoading(false)
@@ -43,6 +45,7 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
+        if (session.user.email) registrarEmailUid(session.user.email, session.user.id)
         void fetchPersona(session.user.id)
       } else {
         clear()
