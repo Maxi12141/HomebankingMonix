@@ -106,9 +106,14 @@ export function consumoIngresoConClave() {
 
 async function asegurarCredencial(userId: string, nombre: string) {
   if (isNativeApp()) {
-    await verificarBiometriaNativa()
-    const prev = loadAll()[userId]
-    return { credId: 'native', huella: Boolean(prev?.huella), face: Boolean(prev?.face) } satisfies BioRecord
+    try {
+      await verificarBiometriaNativa()
+      const prev = loadAll()[userId]
+      return { credId: 'native', huella: Boolean(prev?.huella), face: Boolean(prev?.face) } satisfies BioRecord
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err ?? '')
+      if (!/not implemented|unimplemented/i.test(msg)) throw err
+    }
   }
   const existing = loadAll()[userId]
   if (existing?.credId) return existing

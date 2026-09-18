@@ -211,78 +211,72 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
     call.resolve()
   }
 
+  private var bioPrompt: BiometricPrompt? = null
+
   @PluginMethod
   fun soportaBiometria(call: PluginCall) {
     val data = JSObject()
-    data.put("ok", puedeBiometria())
+    data.put("ok", true)
     call.resolve(data)
-  }
-
-  private fun puedeBiometria(): Boolean {
-    val mgr = BiometricManager.from(context)
-    val weak = BiometricManager.Authenticators.BIOMETRIC_WEAK
-    val pin = weak or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-    return mgr.canAuthenticate(weak) == BiometricManager.BIOMETRIC_SUCCESS
-      || mgr.canAuthenticate(pin) == BiometricManager.BIOMETRIC_SUCCESS
-  }
-
-  private fun mensajeBiometria(status: Int): String {
-    return when (status) {
-      BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
-        "Este teléfono no tiene huella ni cara cargada. Andá a Ajustes → Seguridad y agregá una."
-      BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE,
-      BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
-        "Este teléfono no puede leer la huella ahora."
-      else -> "No se pudo abrir el lector de huella."
-    }
   }
 
   @PluginMethod
   fun verificarBiometria(call: PluginCall) {
-    val act = activity as? FragmentActivity
+    call.setKeepAlive(true)
+    val act = (activity as? FragmentActivity) ?: (bridge?.activity as? FragmentActivity)
     if (act == null) {
       call.reject("Reinstalá la APK de Monix para usar la huella")
       return
     }
-    val mgr = BiometricManager.from(context)
-    val weak = BiometricManager.Authenticators.BIOMETRIC_WEAK
-    val pin = weak or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-    val authenticators = when {
-      mgr.canAuthenticate(weak) == BiometricManager.BIOMETRIC_SUCCESS -> weak
-      mgr.canAuthenticate(pin) == BiometricManager.BIOMETRIC_SUCCESS -> pin
-      else -> {
-        call.reject(mensajeBiometria(mgr.canAuthenticate(weak)))
-        return
-      }
-    }
     act.runOnUiThread {
       try {
-        call.setKeepAlive(true)
-        val prompt = BiometricPrompt(
-          act,
-          ContextCompat.getMainExecutor(context),
-          object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-              call.resolve()
-            }
-
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-              call.reject(errString.toString())
-            }
-          }
-        )
-        val builder = BiometricPrompt.PromptInfo.Builder()
-          .setTitle("Monix")
-          .setSubtitle("Confirmá con tu huella o el rostro")
-          .setAllowedAuthenticators(authenticators)
-        if (authenticators == weak) {
-          builder.setNegativeButtonText("Cancelar")
-        }
-        prompt.authenticate(builder.build())
+        lanzarPromptHuella(act, call)
       } catch (e: Exception) {
         call.reject(e.message ?: "No se pudo abrir la huella")
       }
     }
+  }
+
+  private fun lanzarPromptHuella(act: FragmentActivity, call: PluginCall) {
+    val weak = BiometricManager.Authenticators.BIOMETRIC_WEAK
+    val conPin = weak or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    val opciones = intArrayOf(conPin, weak)
+    var ultimo: Exception? = null
+    for (authenticators in opciones) {
+      try {
+        mostrarPromptHuella(act, call, authenticators)
+        return
+      } catch (e: Exception) {
+        ultimo = e
+      }
+    }
+    call.reject(ultimo?.message ?: "No se pudo abrir el lector de huella.")
+  }
+
+  private fun mostrarPromptHuella(act: FragmentActivity, call: PluginCall, authenticators: Int) {
+    val usaPin = authenticators and BiometricManager.Authenticators.DEVICE_CREDENTIAL != 0
+    bioPrompt = BiometricPrompt(
+      act,
+      ContextCompat.getMainExecutor(context),
+      object : BiometricPrompt.AuthenticationCallback() {
+        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+          call.resolve()
+        }
+
+        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+          call.reject(errString.toString())
+        }
+      }
+    )
+    val builder = BiometricPrompt.PromptInfo.Builder()
+      .setTitle("Monix")
+      .setSubtitle("Confirmá con tu huella, el rostro o el PIN")
+      .setAllowedAuthenticators(authenticators)
+      .setConfirmationRequired(false)
+    if (!usaPin) {
+      builder.setNegativeButtonText("Cancelar")
+    }
+    bioPrompt?.authenticate(builder.build())
   }
 
   private var speech: SpeechRecognizer? = null
