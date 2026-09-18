@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { ArrowRightLeft, Landmark, LayoutDashboard, QrCode, Vault } from 'lucide-react'
-import { useQrScanStore } from '../../stores/qrScanStore'
+import { QR_FAB_ID, useQrScanStore } from '../../stores/qrScanStore'
 
 const sideLinks = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Inicio' },
@@ -20,7 +20,7 @@ export function Navbar() {
     if (qrOpen) return
     const el = fabRef.current
     if (el) useQrScanStore.getState().openFromElement(el)
-    else useQrScanStore.getState().openAt(window.innerWidth / 2, window.innerHeight - 88)
+    else useQrScanStore.getState().openAt(window.innerWidth / 2, window.innerHeight - 52)
   }
 
   return (
@@ -49,6 +49,7 @@ export function Navbar() {
           <span className="relative flex h-14 w-16 items-center justify-center">
             <span className="qr-fab-ping absolute h-14 w-14 rounded-full bg-mint/40" />
             <span
+              id={QR_FAB_ID}
               ref={fabRef}
               className={`qr-fab relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-mint text-navy shadow-lg shadow-mint/40 ${
                 qrOpen ? 'ring-2 ring-navy/20 dark:ring-white/30' : ''

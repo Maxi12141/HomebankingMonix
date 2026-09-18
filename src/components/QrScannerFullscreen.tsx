@@ -1,18 +1,23 @@
-import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Image, ScanLine, X, Zap, ZapOff } from 'lucide-react'
 import { useThemeStore } from '../stores/themeStore'
-import { useQrScanStore } from '../stores/qrScanStore'
+import { originFromFab, useQrScanStore } from '../stores/qrScanStore'
 import { aplicarBarraDeEstado, aplicarBarraDeEstadoCamara } from '../native/statusBar'
 
-function coverRadius(x: number, y: number) {
-  const w = window.visualViewport?.width ?? window.innerWidth
-  const h = window.visualViewport?.height ?? window.innerHeight
+const FAB_PX = 56
+
+function layoutViewport() {
+  if (typeof window === 'undefined') return { w: 390, h: 844 }
+  return { w: window.innerWidth, h: window.innerHeight }
+}
+
+function coverRadius(x: number, y: number, w: number, h: number) {
   return Math.max(
     Math.hypot(x, y),
     Math.hypot(w - x, y),
     Math.hypot(x, h - y),
     Math.hypot(w - x, h - y),
-  ) + 48
+  ) + 24
 }
 
 export function QrScannerFullscreen({
@@ -48,6 +53,8 @@ export function QrScannerFullscreen({
   const onClosedRef = useRef(onClosed)
   onClosedRef.current = onClosed
   const closedOnce = useRef(false)
+  const [vp, setVp] = useState(layoutViewport)
+  const [closeAt, setCloseAt] = useState<{ x: number; y: number } | null>(null)
 
   function finishClose() {
     if (closedOnce.current) return
@@ -55,11 +62,37 @@ export function QrScannerFullscreen({
     onClosedRef.current?.()
   }
 
-  const ox = originX || (typeof window !== 'undefined' ? window.innerWidth / 2 : 0)
-  const oy = originY || (typeof window !== 'undefined' ? window.innerHeight - 88 : 0)
-  const radius = coverRadius(ox, oy)
+  useEffect(() => {
+    const update = () => setVp(layoutViewport())
+    update()
+    window.addEventListener('resize', update)
+    window.visualViewport?.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.visualViewport?.removeEventListener('resize', update)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!closing) {
+      setCloseAt(null)
+      return
+    }
+    setCloseAt(originFromFab())
+  }, [closing])
+
+  const ox = originX || vp.w / 2
+  const oy = originY || vp.h - 52
+  const radius = coverRadius(ox, oy, vp.w, vp.h)
   const size = radius * 2
-  const startScale = Math.min(0.12, 56 / size)
+  const startScale = Math.min(1, FAB_PX / size)
+
+  let transformOrigin = '50% 50%'
+  if (closing && closeAt) {
+    const px = ((closeAt.x - (ox - radius)) / size) * 100
+    const py = ((closeAt.y - (oy - radius)) / size) * 100
+    transformOrigin = `${px}% ${py}%`
+  }
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -82,6 +115,73 @@ export function QrScannerFullscreen({
     return () => window.clearTimeout(t)
   }, [closing])
 
+  const chrome = vista === 'cobrar' ? (
+    <>
+      <div className="absolute inset-x-0 top-0 z-10 flex items-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md"
+          aria-label="Cerrar"
+        >
+          <X size={20} strokeWidth={2.2} />
+        </button>
+      </div>
+      {cobrar}
+      <button
+        type="button"
+        onClick={onVolverACamara}
+        className="absolute bottom-[max(1.75rem,calc(env(safe-area-inset-bottom)+1.5rem))] left-1/2 z-10 flex h-14 items-center gap-2 -translate-x-1/2 rounded-full bg-mint px-5 text-navy shadow-lg shadow-black/30 font-body font-medium"
+      >
+        <ScanLine size={20} strokeWidth={2.2} />
+        Escanear
+      </button>
+    </>
+  ) : (
+    <>
+      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md"
+          aria-label="Cerrar cámara"
+        >
+          <X size={20} strokeWidth={2.2} />
+        </button>
+        <p className="rounded-full bg-black/50 px-4 py-2 font-body text-sm font-medium text-white backdrop-blur-md">
+          Escaneá el código
+        </p>
+        {torchOk ? (
+          <button
+            type="button"
+            onClick={onToggleTorch}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md"
+            aria-label={torchOn ? 'Apagar linterna' : 'Prender linterna'}
+          >
+            {torchOn ? <ZapOff size={18} /> : <Zap size={18} />}
+          </button>
+        ) : (
+          <span className="h-10 w-10" aria-hidden />
+        )}
+      </div>
+
+      {error && (
+        <p className="absolute inset-x-0 top-24 z-10 px-6 text-center font-body text-sm text-white/90">
+          {error}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={onPickPhoto}
+        className="absolute bottom-[max(1.75rem,calc(env(safe-area-inset-bottom)+1.5rem))] left-1/2 z-10 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-mint text-navy shadow-lg shadow-black/30"
+        aria-label="Elegir foto del QR"
+      >
+        <Image size={22} strokeWidth={2.2} />
+      </button>
+    </>
+  )
+
   return (
     <div
       className="fixed inset-0 z-[200] overflow-hidden overscroll-none"
@@ -96,6 +196,7 @@ export function QrScannerFullscreen({
           height: size,
           left: ox - radius,
           top: oy - radius,
+          transformOrigin,
           ['--qr-start-scale' as string]: String(startScale),
         }}
         onAnimationEnd={(e) => {
@@ -107,8 +208,8 @@ export function QrScannerFullscreen({
           ref={videoRef}
           className={`absolute max-w-none object-cover ${vista === 'cobrar' ? 'opacity-0' : ''}`}
           style={{
-            width: '100vw',
-            height: '100vh',
+            width: vp.w,
+            height: vp.h,
             left: radius - ox,
             top: radius - oy,
             objectFit: 'cover',
@@ -121,78 +222,13 @@ export function QrScannerFullscreen({
         <div
           className="absolute"
           style={{
-            width: '100vw',
-            height: '100vh',
+            width: vp.w,
+            height: vp.h,
             left: radius - ox,
             top: radius - oy,
           }}
         >
-          {vista === 'cobrar' ? (
-            <>
-              <div className="absolute inset-x-0 top-0 z-10 flex items-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md"
-                  aria-label="Cerrar"
-                >
-                  <X size={20} strokeWidth={2.2} />
-                </button>
-              </div>
-              {cobrar}
-              <button
-                type="button"
-                onClick={onVolverACamara}
-                className="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex h-14 items-center gap-2 -translate-x-1/2 rounded-full bg-mint px-5 text-navy shadow-lg shadow-black/30 font-body font-medium"
-              >
-                <ScanLine size={20} strokeWidth={2.2} />
-                Escanear
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md"
-                  aria-label="Cerrar cámara"
-                >
-                  <X size={20} strokeWidth={2.2} />
-                </button>
-                <p className="rounded-full bg-black/50 px-4 py-2 font-body text-sm font-medium text-white backdrop-blur-md">
-                  Escaneá el código
-                </p>
-                {torchOk ? (
-                  <button
-                    type="button"
-                    onClick={onToggleTorch}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md"
-                    aria-label={torchOn ? 'Apagar linterna' : 'Prender linterna'}
-                  >
-                    {torchOn ? <ZapOff size={18} /> : <Zap size={18} />}
-                  </button>
-                ) : (
-                  <span className="h-10 w-10" aria-hidden />
-                )}
-              </div>
-
-              {error && (
-                <p className="absolute inset-x-0 top-24 z-10 px-6 text-center font-body text-sm text-white/90">
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={onPickPhoto}
-                className="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-mint text-navy shadow-lg shadow-black/30"
-                aria-label="Elegir foto del QR"
-              >
-                <Image size={22} strokeWidth={2.2} />
-              </button>
-            </>
-          )}
+          {chrome}
         </div>
       </div>
     </div>

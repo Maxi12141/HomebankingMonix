@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { pedirStreamCamara } from '../lib/scanQr'
 
+export const QR_FAB_ID = 'nav-qr-fab'
+
 type QrScanStore = {
   open: boolean
   originX: number
@@ -12,9 +14,14 @@ type QrScanStore = {
   takeStreamPromise: () => Promise<MediaStream> | null
 }
 
-function fabOrigin() {
+export function originFromFab() {
   if (typeof window === 'undefined') return { x: 0, y: 0 }
-  return { x: window.innerWidth / 2, y: window.innerHeight - 88 }
+  const el = document.getElementById(QR_FAB_ID)
+  if (el) {
+    const r = el.getBoundingClientRect()
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  }
+  return { x: window.innerWidth / 2, y: window.innerHeight - 52 }
 }
 
 export const useQrScanStore = create<QrScanStore>((set, get) => ({
@@ -52,6 +59,6 @@ export const useQrScanStore = create<QrScanStore>((set, get) => ({
 }))
 
 export function openQrScanDefault() {
-  const { x, y } = fabOrigin()
+  const { x, y } = originFromFab()
   useQrScanStore.getState().openAt(x, y)
 }
