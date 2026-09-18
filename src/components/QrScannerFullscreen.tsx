@@ -76,7 +76,7 @@ export const QrScannerFullscreen = forwardRef<HTMLDivElement, {
       initial={reduce ? { opacity: 0 } : { clipPath: start }}
       animate={reduce ? { opacity: 1 } : { clipPath: end }}
       exit={reduce ? { opacity: 0 } : { clipPath: start }}
-      transition={{ duration: reduce ? 0.2 : 0.52, ease: easeOut }}
+      transition={{ duration: reduce ? 0.18 : 0.48, ease: easeOut }}
     >
       <video
         ref={videoRef}

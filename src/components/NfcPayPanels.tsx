@@ -306,8 +306,11 @@ export function EscanearYPagar({
       if (scanAbortRef.current === controller) setScanning(false)
     } catch (err) {
       if (scanAbortRef.current !== controller) return
-      if (isAbortError(err)) setScanning(false)
-      else setError(mensajeErrorCamara(err))
+      if (isAbortError(err)) {
+        if (!closingRef.current) setScanning(false)
+      } else {
+        setError(mensajeErrorCamara(err))
+      }
     } finally {
       if (scanAbortRef.current === controller) scanAbortRef.current = null
     }
@@ -504,6 +507,33 @@ export function EscanearYPagar({
       }}
     />
   )
+
+  if (overlay && !pagado && !cobro && !destino) {
+    return (
+      <>
+        {inputFoto}
+        {createPortal(
+          <AnimatePresence onExitComplete={() => {
+            if (closingRef.current) onCerrarScan?.()
+          }}>
+            {!closing && (
+              <QrScannerFullscreen
+                key="qr-cam"
+                videoRef={videoRef}
+                error={error}
+                torchOk={torchOk}
+                torchOn={torchOn}
+                onClose={cancelarScan}
+                onToggleTorch={() => { void toggleTorch() }}
+                onPickPhoto={() => fotoRef.current?.click()}
+              />
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
+      </>
+    )
+  }
 
   if (scanning || closing) {
     return (
