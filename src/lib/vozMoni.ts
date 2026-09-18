@@ -85,6 +85,8 @@ export class VozMoni {
   private vivo = false
   private modo: 'wake' | 'dictado' = 'wake'
   private timer: number | null = null
+  private dictadoTimer: number | null = null
+  private dictadoBuf = ''
   private nativo = false
   private unsub: { remove: () => Promise<void> } | null = null
 
@@ -114,6 +116,11 @@ export class VozMoni {
       window.clearTimeout(this.timer)
       this.timer = null
     }
+    if (this.dictadoTimer != null) {
+      window.clearTimeout(this.dictadoTimer)
+      this.dictadoTimer = null
+    }
+    this.dictadoBuf = ''
     if (this.nativo) {
       this.nativo = false
       void this.unsub?.remove()
@@ -128,6 +135,26 @@ export class VozMoni {
     this.rec = null
   }
 
+  private flushDictado() {
+    if (this.dictadoTimer != null) {
+      window.clearTimeout(this.dictadoTimer)
+      this.dictadoTimer = null
+    }
+    const t = this.dictadoBuf.trim()
+    this.dictadoBuf = ''
+    if (t) this.onDictado(t, true)
+  }
+
+  private programarDictado(texto: string, isFinal: boolean) {
+    this.dictadoBuf = texto
+    this.onDictado(texto, false)
+    if (this.dictadoTimer != null) window.clearTimeout(this.dictadoTimer)
+    this.dictadoTimer = window.setTimeout(() => {
+      this.dictadoTimer = null
+      this.flushDictado()
+    }, isFinal ? 900 : 1400)
+  }
+
   private manejarTexto(texto: string, isFinal: boolean) {
     const limpio = texto.trim()
     if (!limpio) return
@@ -136,7 +163,7 @@ export class VozMoni {
       if (woke && isFinal) this.onWake(resto)
       return
     }
-    this.onDictado(limpio, isFinal)
+    this.programarDictado(limpio, isFinal)
   }
 
   private arrancar() {
@@ -179,20 +206,24 @@ export class VozMoni {
 
     const rec = new Ctor()
     rec.lang = 'es-AR'
-    rec.continuous = true
+    rec.continuous = this.modo === 'wake'
     rec.interimResults = true
-    rec.maxAlternatives = 1
+    rec.maxAlternatives = 3
     rec.onresult = (ev) => {
-      const last = ev.results[ev.results.length - 1]
-      if (!last) return
-      const texto = last[0]?.transcript?.trim() ?? ''
+      let texto = ''
+      for (let i = 0; i < ev.results.length; i++) {
+        texto += ev.results[i][0]?.transcript ?? ''
+      }
+      texto = texto.trim()
       if (!texto) return
+      const last = ev.results[ev.results.length - 1]
+      const isFinal = Boolean(last?.isFinal)
       if (this.modo === 'wake') {
         const { woke, resto } = extraerDespertar(texto)
-        if (woke && last.isFinal) this.onWake(resto)
+        if (woke && isFinal) this.onWake(resto)
         return
       }
-      this.onDictado(texto, last.isFinal)
+      this.programarDictado(texto, isFinal)
     }
     rec.onerror = (ev) => {
       if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
@@ -202,6 +233,10 @@ export class VozMoni {
     }
     rec.onend = () => {
       if (!this.vivo || this.rec !== rec) return
+      if (this.modo === 'dictado') {
+        if (this.dictadoBuf && this.dictadoTimer == null) this.flushDictado()
+        return
+      }
       this.timer = window.setTimeout(() => {
         this.timer = null
         if (this.vivo) this.arrancar()

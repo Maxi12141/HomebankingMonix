@@ -336,26 +336,26 @@ export function LandingPage() {
       <MarketTicker />
 
       {/* Hero */}
-      <section className="min-h-[85vh] flex items-center justify-center px-6">
+      <section className="flex items-center justify-center px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-20 md:min-h-[70vh]">
         <motion.div
-          className="max-w-2xl mx-auto text-center"
+          className="w-full max-w-2xl mx-auto text-center"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          <motion.div variants={itemVariants} className="mb-8 flex justify-center">
+          <motion.div variants={itemVariants} className="mb-6 sm:mb-8 flex justify-center">
             <MonixLogoAnimated
-              className="h-16 md:h-20 w-auto"
+              className="h-12 sm:h-16 md:h-20 w-auto max-w-[80vw]"
               variant={theme === 'dark' ? 'white' : 'default'}
             />
           </motion.div>
 
           <motion.h1
             variants={itemVariants}
-            className="font-display text-5xl md:text-6xl font-bold text-navy dark:text-white leading-tight mb-6"
+            className="font-display text-[1.85rem] sm:text-4xl md:text-6xl font-bold text-navy dark:text-white leading-[1.15] mb-5 sm:mb-6 px-1"
           >
-            Banca de verdad,{' '}
-            <span className="text-mint">desde tu celular.</span>
+            <span className="block">Banca de verdad,</span>
+            <span className="block text-mint">desde tu celular.</span>
           </motion.h1>
 
           <motion.p

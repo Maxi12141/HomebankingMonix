@@ -77,6 +77,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
     nombre: persona?.nombre,
     saldoARS: (cuentas.find((c) => c.moneda === 'ARS') ?? cuenta)?.saldo,
     saldoUSD: cuentas.find((c) => c.moneda === 'USD')?.saldo ?? null,
+    tieneUsd: cuentas.some((c) => c.moneda === 'USD'),
     alias: cuenta?.alias,
     cbu: cuenta?.cbu,
   })
@@ -87,6 +88,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
     nombre: persona?.nombre,
     saldoARS: (cuentas.find((c) => c.moneda === 'ARS') ?? cuenta)?.saldo,
     saldoUSD: cuentas.find((c) => c.moneda === 'USD')?.saldo ?? null,
+    tieneUsd: cuentas.some((c) => c.moneda === 'USD'),
     alias: cuenta?.alias,
     cbu: cuenta?.cbu,
   }

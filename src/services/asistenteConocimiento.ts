@@ -4,6 +4,7 @@ export interface AsistenteCtx {
   nombre?: string
   saldoARS?: number
   saldoUSD?: number | null
+  tieneUsd?: boolean
   alias?: string | null
   cbu?: string | null
   saldoReserva?: number | null
@@ -56,7 +57,9 @@ function maskCbu(cbu: string) {
 function saldoTexto(ctx: AsistenteCtx) {
   if (ctx.saldoARS == null) return null
   const usd =
-    ctx.saldoUSD != null ? ` En dólares tenés ${formatMonto(ctx.saldoUSD, 'USD')}.` : ''
+    ctx.tieneUsd && ctx.saldoUSD != null
+      ? ` En dólares tenés ${formatMonto(ctx.saldoUSD, 'USD')}.`
+      : ''
   return { ars: formatMonto(ctx.saldoARS, 'ARS'), usd }
 }
 
@@ -111,16 +114,19 @@ export const TOPICS: Topic[] = [
     id: 'saldo',
     href: '/dashboard',
     hrefLabel: 'Ver en Inicio',
-    phrases: ['cuanto tengo', 'mi saldo', 'ver saldo', 'cuanta plata', 'plata disponible', 'dinero disponible'],
-    keywords: ['saldo', 'disponible', 'plata', 'dinero'],
+    phrases: [
+      'cuanto tengo', 'mi saldo', 'ver saldo', 'cuanta plata', 'plata disponible', 'dinero disponible',
+      'decime mi saldo', 'decime el saldo', 'decime cuanto tengo', 'cuanto hay', 'mi sueldo', 'cuanto sueldo',
+    ],
+    keywords: ['saldo', 'disponible', 'plata', 'dinero', 'pesos'],
     extra: ['cuanto', 'hay', 'queda', 'pesos'],
     weak: ['tengo'],
     answers: (ctx) => {
       const s = saldoTexto(ctx)
       if (!s) {
         return [
-          'Tu saldo está en Inicio. Ahí también podés mostrar CBU y alias con el ícono del ojo.',
-          'Abrí Inicio para ver cuánto tenés en pesos y, si está abierta, en dólares.',
+          'Tu saldo está en Inicio. Ahí ves cuánto tenés en pesos.',
+          'Abrí Inicio para ver el saldo de tu caja en pesos.',
         ]
       }
       const n = nom(ctx)
@@ -405,9 +411,9 @@ export const TOPICS: Topic[] = [
     id: 'sueldo',
     href: '/perfil',
     hrefLabel: 'Ir a Perfil',
-    phrases: ['cobro el sueldo', 'acreditar sueldo', 'paquete sueldo', 'bonificacion sueldo'],
-    keywords: ['sueldo', 'haberes', 'nomina'],
-    extra: ['acreditado', 'ingreso', 'declarar'],
+    phrases: ['cobro el sueldo', 'acreditar sueldo', 'paquete sueldo', 'bonificacion sueldo', 'sueldo en monix'],
+    keywords: ['haberes', 'nomina'],
+    extra: ['acreditar', 'ingreso', 'declarar', 'cobro'],
     answers: () => [
       'En Perfil está “Cobro mi sueldo en Monix” y el ingreso mensual. Eso mejora el préstamo: más monto, mejor tasa y la cuota puede llegar al 35% del ingreso.',
       'El sueldo acreditado no abre productos extra por sí solo: cambia las condiciones de Préstamos. El ingreso declarado es obligatorio para solicitar uno.',
