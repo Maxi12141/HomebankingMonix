@@ -173,11 +173,14 @@ export async function sacarFotoNativa(): Promise<Blob | null> {
 export async function verificarBiometriaNativa() {
   const plugin = await getPlugin()
   const fn = plugin?.verificarBiometria
-  if (!fn) throw new Error('Actualizá la APK de Monix para usar huella o Face ID')
+  if (!fn) throw new Error('Instalá la APK nueva de Monix para usar huella o Face ID')
   try {
-    await conTiempo(fn(), 25_000)
+    await conTiempo(fn(), 90_000)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err ?? '')
+    if (/not implemented|unimplemented/i.test(msg)) {
+      throw new Error('Instalá la APK nueva de Monix. La huella no se actualiza sola.')
+    }
     if (/timeout/i.test(msg)) {
       throw new Error('El teléfono no mostró la huella. Reinstalá la APK nueva de Monix.')
     }
