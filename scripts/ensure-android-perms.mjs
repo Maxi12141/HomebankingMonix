@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 const MAIN_ACTIVITY = `package ar.monix.banco;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.webkit.PermissionRequest;
@@ -18,6 +19,11 @@ import com.getcapacitor.BridgeWebChromeClient;
 public class MainActivity extends BridgeActivity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
+    Intent intent = getIntent();
+    if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+      intent.setData(null);
+      intent.setAction(Intent.ACTION_MAIN);
+    }
     super.onCreate(savedInstanceState);
     WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
     WindowInsetsControllerCompat insets =
@@ -30,6 +36,14 @@ public class MainActivity extends BridgeActivity {
   public void onStart() {
     super.onStart();
     configurarWebView();
+  }
+
+  @Override
+  protected void onNewIntent(Intent intent) {
+    if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+      intent.setData(null);
+    }
+    super.onNewIntent(intent);
   }
 
   private void configurarWebView() {
@@ -99,22 +113,20 @@ if (!xml.includes('android.hardware.camera.any')) {
   )
 }
 
-if (!xml.includes('monix-homebanking.vercel.app')) {
-  xml = xml.replace(
-    '<category android:name="android.intent.category.LAUNCHER" />\n            </intent-filter>',
-    `<category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="monix-homebanking.vercel.app" />
-            </intent-filter>`,
-  )
-}
+xml = xml.replace(
+  /\s*<intent-filter android:autoVerify="true">[\s\S]*?monix-homebanking\.vercel\.app[\s\S]*?<\/intent-filter>/,
+  '',
+)
 
 writeFileSync(file, xml)
+
+const gradle = resolve('android/app/build.gradle')
+if (existsSync(gradle)) {
+  let g = readFileSync(gradle, 'utf8')
+  g = g.replace(/versionCode \d+/, 'versionCode 19')
+  g = g.replace(/versionName "[^"]+"/, 'versionName "1.0.19"')
+  writeFileSync(gradle, g)
+}
 
 const main = resolve('android/app/src/main/java/ar/monix/banco/MainActivity.java')
 if (existsSync(main)) writeFileSync(main, MAIN_ACTIVITY)

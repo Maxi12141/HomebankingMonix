@@ -2,6 +2,7 @@ package ar.monix.radio
 
 import android.Manifest
 import android.app.Activity
+import android.app.KeyguardManager
 import android.content.ClipData
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -222,39 +223,54 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
   @PluginMethod
   fun verificarBiometria(call: PluginCall) {
-    call.setKeepAlive(true)
-    val act = (activity as? FragmentActivity) ?: (bridge?.activity as? FragmentActivity)
+    val act = activity ?: bridge?.activity
     if (act == null) {
-      call.reject("Reinstalá la APK de Monix para usar la huella")
+      call.reject("No se pudo abrir el desbloqueo del teléfono")
       return
     }
     act.runOnUiThread {
       try {
-        lanzarPromptHuella(act, call)
+        pedirHuellaOPin(call)
       } catch (e: Exception) {
         call.reject(e.message ?: "No se pudo abrir la huella")
       }
     }
   }
 
-  private fun lanzarPromptHuella(act: FragmentActivity, call: PluginCall) {
-    val weak = BiometricManager.Authenticators.BIOMETRIC_WEAK
-    val conPin = weak or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-    val opciones = intArrayOf(conPin, weak)
-    var ultimo: Exception? = null
-    for (authenticators in opciones) {
-      try {
-        mostrarPromptHuella(act, call, authenticators)
-        return
-      } catch (e: Exception) {
-        ultimo = e
-      }
+  private fun pedirHuellaOPin(call: PluginCall) {
+    val km = context.getSystemService(KeyguardManager::class.java)
+    if (km == null || !km.isDeviceSecure) {
+      call.reject("Este teléfono no tiene PIN, patrón ni huella. Configuralo en Ajustes → Seguridad.")
+      return
     }
-    call.reject(ultimo?.message ?: "No se pudo abrir el lector de huella.")
+    val intent = km.createConfirmDeviceCredentialIntent(
+      "Monix",
+      "Confirmá con tu huella, el rostro o el PIN",
+    )
+    if (intent != null) {
+      startActivityForResult(call, intent, "onHuellaConfirmada")
+      return
+    }
+    val act = (activity as? FragmentActivity) ?: (bridge?.activity as? FragmentActivity)
+    if (act == null) {
+      call.reject("No se pudo abrir el lector de huella")
+      return
+    }
+    mostrarPromptHuella(act, call)
   }
 
-  private fun mostrarPromptHuella(act: FragmentActivity, call: PluginCall, authenticators: Int) {
-    val usaPin = authenticators and BiometricManager.Authenticators.DEVICE_CREDENTIAL != 0
+  @ActivityCallback
+  fun onHuellaConfirmada(call: PluginCall, result: ActivityResult) {
+    if (result.resultCode == Activity.RESULT_OK) {
+      call.resolve()
+    } else {
+      call.reject("cancelado")
+    }
+  }
+
+  private fun mostrarPromptHuella(act: FragmentActivity, call: PluginCall) {
+    val conPin = BiometricManager.Authenticators.BIOMETRIC_WEAK or
+      BiometricManager.Authenticators.DEVICE_CREDENTIAL
     bioPrompt = BiometricPrompt(
       act,
       ContextCompat.getMainExecutor(context),
@@ -268,15 +284,13 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
         }
       }
     )
-    val builder = BiometricPrompt.PromptInfo.Builder()
+    val info = BiometricPrompt.PromptInfo.Builder()
       .setTitle("Monix")
       .setSubtitle("Confirmá con tu huella, el rostro o el PIN")
-      .setAllowedAuthenticators(authenticators)
+      .setAllowedAuthenticators(conPin)
       .setConfirmationRequired(false)
-    if (!usaPin) {
-      builder.setNegativeButtonText("Cancelar")
-    }
-    bioPrompt?.authenticate(builder.build())
+      .build()
+    bioPrompt?.authenticate(info)
   }
 
   private var speech: SpeechRecognizer? = null
@@ -313,7 +327,7 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
       }
       listening = true
       speech?.destroy()
-      speech = SpeechRecognizer.createSpeechRecognizer(context).apply {
+      speech = SpeechRecognizer.createSpeechRecognizer(act).apply {
         setRecognitionListener(object : RecognitionListener {
           override fun onReadyForSpeech(params: Bundle?) {}
           override fun onBeginningOfSpeech() {}
@@ -324,13 +338,8 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
           override fun onError(error: Int) {
             if (!listening) return
-            if (
-              error == SpeechRecognizer.ERROR_NO_MATCH
-              || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
-              || error == SpeechRecognizer.ERROR_CLIENT
-            ) {
-              listenAgain()
-            }
+            if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) return
+            listenAgain()
           }
 
           override fun onResults(results: Bundle) {
@@ -356,7 +365,8 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
       putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-AR")
       putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "es-AR")
       putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-      putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+      putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+      putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
     }
     try {
       speech?.startListening(intent)
