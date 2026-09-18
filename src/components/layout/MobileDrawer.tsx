@@ -30,7 +30,7 @@ export function MobileDrawer({ onClose }: Props) {
 
   return (
     <div className="flex flex-col h-full py-6 px-4">
-      <div className="flex items-center justify-between mb-8 px-2" id="tour-drawer-intro">
+      <div className="flex items-center justify-between mb-8 px-2 shrink-0" id="tour-drawer-intro">
         <Link to="/dashboard" onClick={onClose}>
           <MonixLogoNavbar
             variant={theme === 'dark' ? 'white' : 'default'}
@@ -46,7 +46,7 @@ export function MobileDrawer({ onClose }: Props) {
         </button>
       </div>
 
-      <nav className="flex flex-col gap-1 flex-1">
+      <nav className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto overscroll-contain">
         {links.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
@@ -68,7 +68,7 @@ export function MobileDrawer({ onClose }: Props) {
 
       <button
         onClick={() => { logout(); onClose() }}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body font-medium text-sm text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-[transform,background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:translate-x-1"
+        className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body font-medium text-sm text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-[transform,background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:translate-x-1 shrink-0"
       >
         <LogOut size={18} />
         Cerrar sesión

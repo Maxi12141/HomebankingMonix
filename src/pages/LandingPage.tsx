@@ -312,21 +312,21 @@ export function LandingPage() {
 
       {/* Navbar */}
       <header className="sticky top-0 z-30 bg-white/80 dark:bg-navy-card/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 transition-colors duration-300 pt-[env(safe-area-inset-top)]">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <MonixLogoNavbar className="h-8 w-auto" variant={theme === 'dark' ? 'white' : 'default'} />
-          <nav className="flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+          <MonixLogoNavbar className="h-6 sm:h-8 w-auto shrink-0" variant={theme === 'dark' ? 'white' : 'default'} />
+          <nav className="flex items-center gap-1.5 sm:gap-3">
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-xl text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-colors"
+              className="p-1.5 sm:p-2 rounded-xl text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-colors shrink-0"
               aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              {theme === 'dark' ? <Sun size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Moon size={16} className="sm:w-[18px] sm:h-[18px]" />}
             </button>
             <Link to="/login">
-              <Button variant="secondary-light" className="py-2 px-4 text-sm">Iniciá sesión</Button>
+              <Button variant="secondary-light" className="py-1.5 px-2.5 text-xs sm:py-2 sm:px-4 sm:text-sm whitespace-nowrap">Iniciá sesión</Button>
             </Link>
             <Link to="/register">
-              <Button variant="primary" className="py-2 px-4 text-sm">Registrate</Button>
+              <Button variant="primary" className="py-1.5 px-2.5 text-xs sm:py-2 sm:px-4 sm:text-sm whitespace-nowrap">Registrate</Button>
             </Link>
           </nav>
         </div>

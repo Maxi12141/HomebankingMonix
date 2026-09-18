@@ -28,21 +28,28 @@ export function PageWrapper({ children }: PageWrapperProps) {
     return () => window.removeEventListener('monix-tour-drawer', onTourDrawer)
   }, [])
 
+  // Con el drawer abierto, el fondo no debe scrollear — sólo la lista de
+  // botones adentro del drawer (ver overflow-y-auto en MobileDrawer).
+  useEffect(() => {
+    document.body.style.overflow = drawerOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [drawerOpen])
+
   return (
     <div className="flex min-h-screen bg-[#F0F2F5] dark:bg-navy font-body transition-colors duration-300">
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-[55] bg-black/40 transition-opacity duration-300 ${
           drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setDrawerOpen(false)}
       />
 
-      {/* Drawer */}
+      {/* Drawer — por encima de la barra inferior (Navbar, z-50) para que no le tape los últimos botones */}
       <div
         id="tour-drawer"
         data-tour-fixed
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-navy-card border-r border-slate-200 dark:border-white/10 transform transition-transform duration-300 ease-in-out pt-[env(safe-area-inset-top)] ${
+        className={`fixed inset-y-0 left-0 z-[60] w-72 bg-white dark:bg-navy-card border-r border-slate-200 dark:border-white/10 transform transition-transform duration-300 ease-in-out pt-[env(safe-area-inset-top)] ${
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
