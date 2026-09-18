@@ -63,7 +63,9 @@ function rpId() {
 }
 
 function isNativeApp() {
-  return Capacitor.isNativePlatform()
+  if (Capacitor.isNativePlatform()) return true
+  if (Capacitor.getPlatform() === 'android') return true
+  return Boolean((window as unknown as { androidBridge?: unknown }).androidBridge)
 }
 
 export function esCelular() {
@@ -106,14 +108,9 @@ export function consumoIngresoConClave() {
 
 async function asegurarCredencial(userId: string, nombre: string) {
   if (isNativeApp()) {
-    try {
-      await verificarBiometriaNativa()
-      const prev = loadAll()[userId]
-      return { credId: 'native', huella: Boolean(prev?.huella), face: Boolean(prev?.face) } satisfies BioRecord
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err ?? '')
-      if (!/not implemented|unimplemented/i.test(msg)) throw err
-    }
+    await verificarBiometriaNativa()
+    const prev = loadAll()[userId]
+    return { credId: 'native', huella: Boolean(prev?.huella), face: Boolean(prev?.face) } satisfies BioRecord
   }
   const existing = loadAll()[userId]
   if (existing?.credId) return existing

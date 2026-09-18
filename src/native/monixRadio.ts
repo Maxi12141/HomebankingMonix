@@ -20,7 +20,10 @@ function hasNdef(): boolean {
 }
 
 function isNative(): boolean {
-  return Capacitor.isNativePlatform()
+  if (typeof window === 'undefined') return false
+  if (Capacitor.isNativePlatform()) return true
+  if (Capacitor.getPlatform() === 'android') return true
+  return Boolean((window as unknown as { androidBridge?: unknown }).androidBridge)
 }
 
 type MonixPlugin = {

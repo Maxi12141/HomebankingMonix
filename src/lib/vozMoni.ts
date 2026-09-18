@@ -159,10 +159,9 @@ export class VozMoni {
       await startVozNativa()
     } catch {
       this.nativo = false
-      this.vivo = false
       void this.unsub?.remove()
       this.unsub = null
-      this.onBloqueado?.()
+      this.arrancarWeb()
     }
   }
 

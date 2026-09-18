@@ -205,17 +205,19 @@ export function ProfilePage() {
         setMetodos(metodosBio(user.id))
         toast.success(metodo === 'huella' ? 'Huella desactivada' : 'Face ID desactivado')
       } else {
+        toast.loading('Confirmá con la huella, la cara o el PIN del teléfono…', { id: 'bio' })
         await activarMetodo(user.id, `${persona.nombre} ${persona.apellido}`, metodo)
         setMetodos(metodosBio(user.id))
         toast.success(
           metodo === 'huella'
             ? 'Huella activada. Al entrar te la pedimos, o podés usar la contraseña.'
             : 'Face ID activado. Al entrar te lo pedimos, o podés usar la contraseña.',
+          { id: 'bio' },
         )
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'No se pudo configurar el desbloqueo'
-      if (!/cancel/i.test(msg)) toast.error(msg)
+      toast.error(msg, { id: 'bio' })
     } finally {
       setSavingBio(false)
     }
