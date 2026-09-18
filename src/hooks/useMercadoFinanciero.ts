@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { getDolares, getPrestamosPersonales, type CotizacionDolar } from '../services/mercadoFinanciero'
+import { getDolares, getPlazoFijo, getPrestamosPersonales, type CotizacionDolar } from '../services/mercadoFinanciero'
 
 export interface MercadoFinanciero {
   dolares: CotizacionDolar[]
   tnaPrestamosProm: number | null
+  tnaPlazoFijoProm: number | null
 }
 
 /** @param intervalMs si se pasa, refresca la cotización en ese intervalo (para pantallas "en tiempo real"). */
@@ -15,7 +16,7 @@ export function useMercadoFinanciero(intervalMs?: number) {
     let cancelled = false
 
     function load() {
-      Promise.allSettled([getDolares(), getPrestamosPersonales()]).then(([dolaresR, prestamosR]) => {
+      Promise.allSettled([getDolares(), getPrestamosPersonales(), getPlazoFijo()]).then(([dolaresR, prestamosR, plazoFijoR]) => {
         if (cancelled) return
 
         const dolares = dolaresR.status === 'fulfilled' ? dolaresR.value : []
@@ -25,7 +26,14 @@ export function useMercadoFinanciero(intervalMs?: number) {
             ? prestamosR.value.reduce((sum, p) => sum + p.tna, 0) / prestamosR.value.length
             : null
 
-        setData({ dolares, tnaPrestamosProm })
+        const tasasPlazoFijo =
+          plazoFijoR.status === 'fulfilled' ? plazoFijoR.value.filter((p) => p.tnaClientes > 0) : []
+        const tnaPlazoFijoProm =
+          tasasPlazoFijo.length > 0
+            ? tasasPlazoFijo.reduce((sum, p) => sum + p.tnaClientes, 0) / tasasPlazoFijo.length
+            : null
+
+        setData({ dolares, tnaPrestamosProm, tnaPlazoFijoProm })
         setLoading(false)
       })
     }

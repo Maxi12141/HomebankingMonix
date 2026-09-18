@@ -40,3 +40,15 @@ export async function getPrestamosPersonales(): Promise<PrestamoPersonal[]> {
   const res = await fetchWithTimeout(`${ARGENTINADATOS_URL}/finanzas/creditos/prestamosPersonales`)
   return handleResponse<PrestamoPersonal[]>(res)
 }
+
+export interface TasaPlazoFijo {
+  entidad: string
+  tnaClientes: number
+  tnaNoClientes: number
+}
+
+/** TNA de plazo fijo por banco real — fuente: argentinadatos.com */
+export async function getPlazoFijo(): Promise<TasaPlazoFijo[]> {
+  const res = await fetchWithTimeout(`${ARGENTINADATOS_URL}/finanzas/tasas/plazoFijo`)
+  return handleResponse<TasaPlazoFijo[]>(res)
+}

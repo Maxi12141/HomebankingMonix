@@ -4,7 +4,7 @@ import { useMercadoFinanciero } from '../hooks/useMercadoFinanciero'
 
 const DOLAR_LABELS: Record<string, string> = {
   oficial: 'Oficial',
-  blue: 'Blue',
+  bolsa: 'MEP',
 }
 
 /** Velocidad constante del scroll, en píxeles por segundo (independiente de cuánto texto haya). */
@@ -53,6 +53,16 @@ export function MarketTicker() {
               icon: Landmark,
               label: 'Préstamos personales',
               value: `TNA promedio ${formatPct(data.tnaPrestamosProm * 100)}`,
+            },
+          ]
+        : []),
+      ...(data.tnaPlazoFijoProm != null
+        ? [
+            {
+              key: 'plazo-fijo',
+              icon: Landmark,
+              label: 'Plazo fijo',
+              value: `TNA promedio ${formatPct(data.tnaPlazoFijoProm * 100)}`,
             },
           ]
         : []),
