@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Fingerprint } from 'lucide-react'
+import { Fingerprint, Download } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useAuth } from '../hooks/useAuth'
 import { useThemeStore } from '../stores/themeStore'
+import { usePwaInstall } from '../hooks/usePwaInstall'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { getRememberedEmail, saveRememberedEmail, clearRememberedEmail } from '../utils/rememberMe'
@@ -13,6 +15,7 @@ import {
   esCelular,
   huellaActiva,
   marcarIngresoConClave,
+  nombreBioParaEmail,
   uidParaEmail,
   verificarHuella,
 } from '../lib/biometria'
@@ -33,12 +36,22 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [bioLoading, setBioLoading] = useState(false)
+  const [nombre, setNombre] = useState<string | null>(null)
+  const [mostrarPassword, setMostrarPassword] = useState(false)
+  const { mostrarBoton: mostrarInstalar, instalar } = usePwaInstall()
 
   useEffect(() => {
     const remembered = getRememberedEmail()
-    if (remembered) {
-      setEmail(remembered)
-      setRememberMe(true)
+    if (!remembered) return
+    setEmail(remembered)
+    setRememberMe(true)
+    // Si ya tiene huella activa en este dispositivo, salteamos el paso de
+    // tipear el email y vamos directo a la pantalla de "Ingresar" con huella.
+    const uid = uidParaEmail(remembered)
+    const credencial = uid ? credencialBioParaEmail(remembered) : null
+    if (uid && esCelular() && huellaActiva(uid) && credencial) {
+      setNombre(nombreBioParaEmail(remembered))
+      setStep('bio')
     }
   }, [])
 
@@ -61,6 +74,7 @@ export function LoginPage() {
     const uid = uidParaEmail(emailNorm)
     const credencial = uid ? credencialBioParaEmail(emailNorm) : null
     if (uid && esCelular() && huellaActiva(uid) && credencial) {
+      setNombre(nombreBioParaEmail(emailNorm))
       setStep('bio')
     } else {
       setStep('password')
@@ -86,12 +100,16 @@ export function LoginPage() {
     }
   }
 
-  useEffect(() => {
-    if (step !== 'bio') return
-    const t = window.setTimeout(() => { void pedirBiometria() }, 400)
-    return () => window.clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step])
+  async function handleInstalar() {
+    const resultado = await instalar()
+    if (resultado === 'manual-ios') {
+      toast('Para instalar: tocá Compartir y elegí "Agregar a Inicio"', { icon: '📲', duration: 5000 })
+    } else if (resultado === 'no-disponible') {
+      toast('Tu navegador todavía no permite instalar. Probá con Chrome en Android.', { duration: 4000 })
+    } else if (resultado === 'instalada') {
+      toast.success('¡Lista! Buscá el ícono de Monix en tu pantalla de inicio.')
+    }
+  }
 
   async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -110,6 +128,8 @@ export function LoginPage() {
     setStep('email')
     setPassword('')
     setError('')
+    setMostrarPassword(false)
+    setNombre(null)
   }
 
   return (
@@ -164,7 +184,7 @@ export function LoginPage() {
           {step === 'bio' && (
             <>
               <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-1">
-                Hola de nuevo
+                {nombre ? `Hola, ${nombre}` : 'Hola de nuevo'}
               </h2>
               <p className="font-body text-sm text-slate-secondary mb-6">{email.trim()}</p>
 
@@ -187,36 +207,59 @@ export function LoginPage() {
                 type="button"
                 loading={bioLoading}
                 onClick={() => { void pedirBiometria() }}
-                className="w-full mb-4"
+                className="w-full"
               >
-                Usar huella, cara o PIN
+                Ingresar
               </Button>
 
               {error && (
-                <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3 mb-4">
+                <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3 mt-4">
                   {error}
                 </p>
               )}
 
-              <p className="text-center text-sm font-body text-slate-secondary mb-3">o con tu contraseña</p>
-              <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-3">
-                <Input
-                  label="Contraseña"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <Button type="submit" variant="secondary" loading={loading} className="w-full">
-                  Entrar con contraseña
-                </Button>
-              </form>
+              <div className="h-px bg-slate-200 dark:bg-white/10 my-5" />
+
+              {!mostrarPassword ? (
+                <button
+                  type="button"
+                  onClick={() => setMostrarPassword(true)}
+                  className="w-full text-center rounded-xl border border-slate-300 dark:border-white/15 text-navy dark:text-white font-body text-sm font-medium py-3 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                >
+                  Ingresar con contraseña
+                </button>
+              ) : (
+                <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-3">
+                  <Input
+                    label="Contraseña"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                  <Button type="submit" variant="secondary" loading={loading} className="w-full">
+                    Ingresar
+                  </Button>
+                </form>
+              )}
+
+              {mostrarInstalar && (
+                <button
+                  type="button"
+                  onClick={() => { void handleInstalar() }}
+                  className="w-full flex items-center justify-center gap-2 text-mint font-body text-sm font-medium py-3 mt-2 hover:text-mint-hover transition-colors"
+                >
+                  <Download size={16} />
+                  Instalar Monix
+                </button>
+              )}
 
               <button
                 type="button"
                 onClick={cambiarCuenta}
-                className="w-full text-center text-sm font-body text-slate-secondary hover:text-navy dark:hover:text-white transition-colors mt-5"
+                className="w-full text-center text-sm font-body text-slate-secondary hover:text-navy dark:hover:text-white transition-colors mt-3"
               >
                 ‹ Cambiar cuenta
               </button>

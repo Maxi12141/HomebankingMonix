@@ -15,9 +15,11 @@ import { Modal } from '../components/ui/Modal'
 import {
   activarBiometria,
   borrarCredencialBio,
+  borrarNombreBio,
   desactivarBiometria,
   esCelular,
   guardarCredencialBio,
+  guardarNombreBio,
   huellaActiva,
   soportaHuella,
 } from '../lib/biometria'
@@ -209,6 +211,7 @@ export function ProfilePage() {
         desactivarBiometria(user.id)
         setBioActiva(false)
         borrarCredencialBio(persona.email)
+        borrarNombreBio(persona.email)
         toast.success('Biometría desactivada')
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'No se pudo desactivar'
@@ -239,6 +242,7 @@ export function ProfilePage() {
       toast.loading('Confirmá con la huella, la cara o el PIN del teléfono…', { id: 'bio' })
       await activarBiometria(user.id, `${persona.nombre} ${persona.apellido}`)
       guardarCredencialBio(persona.email, confirmPass)
+      guardarNombreBio(persona.email, persona.nombre)
       setBioActiva(true)
       toast.success(
         'Biometría activada. Al entrar te la pedimos primero, con la contraseña como respaldo.',

@@ -132,6 +132,39 @@ export function borrarCredencialBio(email: string) {
   localStorage.setItem(BIO_CRED_KEY, JSON.stringify(all))
 }
 
+const BIO_NOMBRE_KEY = 'monix_bio_nombre_v1'
+
+// Nombre para saludar en el login antes de autenticar ("Hola, Diego") — se
+// guarda junto con la credencial al activar biometría en Perfil. Si no está
+// (cuentas que activaron biometría antes de este feature), el login cae de
+// vuelta a mostrar el email nomás.
+function loadBioNombre(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(BIO_NOMBRE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, string>
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+export function guardarNombreBio(email: string, nombre: string) {
+  const all = loadBioNombre()
+  all[email.trim().toLowerCase()] = nombre
+  localStorage.setItem(BIO_NOMBRE_KEY, JSON.stringify(all))
+}
+
+export function nombreBioParaEmail(email: string): string | null {
+  return loadBioNombre()[email.trim().toLowerCase()] ?? null
+}
+
+export function borrarNombreBio(email: string) {
+  const all = loadBioNombre()
+  delete all[email.trim().toLowerCase()]
+  localStorage.setItem(BIO_NOMBRE_KEY, JSON.stringify(all))
+}
+
 export function marcarIngresoConClave() {
   sessionStorage.setItem(JUST_AUTH_KEY, '1')
 }
