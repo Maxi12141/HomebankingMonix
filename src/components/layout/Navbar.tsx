@@ -1,5 +1,7 @@
-import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useRef } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { ArrowRightLeft, Landmark, LayoutDashboard, PiggyBank, QrCode } from 'lucide-react'
+import { QR_FAB_ID, useQrScanStore } from '../../stores/qrScanStore'
 
 const sideLinks = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Inicio' },
@@ -9,10 +11,17 @@ const sideLinks = [
 ]
 
 export function Navbar() {
-  const navigate = useNavigate()
   const location = useLocation()
-  const [params] = useSearchParams()
-  const onQrScan = location.pathname === '/pagar' && params.get('scan') === '1'
+  const fabRef = useRef<HTMLSpanElement>(null)
+  const qrOpen = useQrScanStore((s) => s.open)
+  const onQrPage = location.pathname === '/pagar'
+
+  function abrirQr() {
+    if (qrOpen) return
+    const el = fabRef.current
+    if (el) useQrScanStore.getState().openFromElement(el)
+    else useQrScanStore.getState().openAt(window.innerWidth / 2, window.innerHeight - 52)
+  }
 
   return (
     <nav
@@ -33,21 +42,23 @@ export function Navbar() {
 
         <button
           type="button"
-          onClick={() => navigate('/pagar?scan=1')}
+          onClick={abrirQr}
           className="absolute left-1/2 -translate-x-1/2 -top-7 flex flex-col items-center"
           aria-label="Escanear QR para pagar"
         >
           <span className="relative flex h-14 w-16 items-center justify-center">
             <span className="qr-fab-ping absolute h-14 w-14 rounded-full bg-mint/40" />
             <span
+              id={QR_FAB_ID}
+              ref={fabRef}
               className={`qr-fab relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-mint text-navy shadow-lg shadow-mint/40 ${
-                onQrScan ? 'ring-2 ring-navy/20 dark:ring-white/30' : ''
+                qrOpen ? 'ring-2 ring-navy/20 dark:ring-white/30' : ''
               }`}
             >
               <QrCode size={26} strokeWidth={2.2} />
             </span>
           </span>
-          <span className={`mt-0.5 text-[10px] font-body font-medium ${onQrScan ? 'text-mint' : 'text-navy dark:text-white'}`}>
+          <span className={`mt-0.5 text-[10px] font-body font-medium ${qrOpen || onQrPage ? 'text-mint' : 'text-navy dark:text-white'}`}>
             QR
           </span>
         </button>

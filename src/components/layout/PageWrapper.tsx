@@ -7,8 +7,10 @@ import { Navbar } from './Navbar'
 import { MonixLogoNavbar } from '../MonixLogoNavbar'
 import { NotificationBell } from '../NotificationBell'
 import { AsistenteBubble } from '../AsistenteBubble'
+import { EscanearYPagar } from '../NfcPayPanels'
 import { useSyncTransferenciasEntrantes } from '../../hooks/useSyncTransferenciasEntrantes'
 import { useThemeStore } from '../../stores/themeStore'
+import { useQrScanStore } from '../../stores/qrScanStore'
 
 interface PageWrapperProps {
   children: ReactNode
@@ -18,6 +20,8 @@ export function PageWrapper({ children }: PageWrapperProps) {
   useSyncTransferenciasEntrantes()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const { theme, toggleTheme } = useThemeStore()
+  const qrOpen = useQrScanStore((s) => s.open)
+  const closeQr = useQrScanStore((s) => s.close)
 
   useEffect(() => {
     function onTourDrawer(e: Event) {
@@ -95,7 +99,10 @@ export function PageWrapper({ children }: PageWrapperProps) {
           {children}
         </main>
         <Navbar />
-        <AsistenteBubble hidden={drawerOpen} />
+        <AsistenteBubble hidden={drawerOpen || qrOpen} />
+        {qrOpen && (
+          <EscanearYPagar overlay onCerrarScan={closeQr} />
+        )}
       </div>
     </div>
   )

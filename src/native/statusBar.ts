@@ -17,3 +17,13 @@ export async function aplicarBarraDeEstado(theme: 'light' | 'dark') {
     // En el navegador o si el plugin no está, la app sigue igual.
   }
 }
+
+export async function aplicarBarraDeEstadoCamara() {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await StatusBar.setOverlaysWebView({ overlay: true })
+    await StatusBar.setStyle({ style: Style.Dark })
+  } catch {
+    // Si el plugin no cubre overlay, el visor igual ocupa el webview.
+  }
+}

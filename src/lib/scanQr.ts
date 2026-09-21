@@ -145,6 +145,20 @@ export function stopMediaStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => track.stop())
 }
 
+export function tieneLinterna(stream: MediaStream | null) {
+  const track = stream?.getVideoTracks()[0]
+  if (!track?.getCapabilities) return false
+  return Boolean((track.getCapabilities() as { torch?: boolean }).torch)
+}
+
+export async function setLinterna(stream: MediaStream | null, on: boolean) {
+  const track = stream?.getVideoTracks()[0]
+  if (!track) return
+  await track.applyConstraints({
+    advanced: [{ torch: on } as MediaTrackConstraintSet],
+  })
+}
+
 export async function startQrCamera(video: HTMLVideoElement): Promise<MediaStream> {
   const stream = await pedirStreamCamara()
   await engancharCamara(video, stream)

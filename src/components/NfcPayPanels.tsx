@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { CheckCircle, QrCode, ScanLine } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
@@ -7,10 +8,22 @@ import { Card } from './ui/Card'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { QrBox } from './QrBox'
+import { QrScannerFullscreen } from './QrScannerFullscreen'
 import { formatMonto } from '../utils/cuenta'
 import { encodeCobroQr, encodeCuentaQr, parseRadioPayload } from '../lib/tokens'
-import { detectQrUntil, leerQrDeArchivo, startQrCamera, stopMediaStream, waitForVideo } from '../lib/scanQr'
+import {
+  detectQrUntil,
+  engancharCamara,
+  leerQrDeArchivo,
+  mensajeErrorCamara,
+  setLinterna,
+  startQrCamera,
+  stopMediaStream,
+  tieneLinterna,
+  waitForVideo,
+} from '../lib/scanQr'
 import { isAbortError } from '../native/monixRadio'
+import { useQrScanStore } from '../stores/qrScanStore'
 import {
   cancelarCobroNfc,
   crearCobroNfc,
@@ -38,7 +51,7 @@ async function aplicarQr(raw: string, cargarCobro: (id: string) => Promise<void>
   await cargarCobro(raw.replace(/^MONIXPAY:/i, ''))
 }
 
-export function MiCodigoQr() {
+export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'overlay' }) {
   const { cuenta, refreshCuenta } = useCuenta()
   const [monto, setMonto] = useState('')
   const [cobro, setCobro] = useState<CobroNfc | null>(null)
@@ -126,6 +139,20 @@ export function MiCodigoQr() {
   }
 
   if (cobro?.estado === 'pagado') {
+    if (variante === 'overlay') {
+      return (
+        <div className="flex h-full flex-col items-center justify-center px-6 pb-28 pt-16 text-center">
+          <CheckCircle size={48} className="text-mint mb-3" />
+          <h2 className="font-display text-lg font-semibold text-white">Cobro acreditado</h2>
+          <p className="font-display text-2xl font-bold text-mint mt-2">
+            {formatMonto(cobro.monto, cobro.moneda)}
+          </p>
+          <Button className="w-full max-w-xs mt-6" type="button" onClick={() => { void nuevoCobro() }}>
+            Nuevo QR
+          </Button>
+        </div>
+      )
+    }
     return (
       <Card className="p-8 text-center">
         <CheckCircle size={48} className="text-mint mx-auto mb-3" />
@@ -145,6 +172,41 @@ export function MiCodigoQr() {
     : cuenta?.id
       ? encodeCuentaQr(cuenta.id)
       : ''
+
+  if (variante === 'overlay') {
+    return (
+      <div className="flex h-full flex-col items-center justify-center px-6 pb-28 pt-16">
+        <p className="font-display text-lg font-semibold text-white text-center">
+          Mostrá tu código para cobrar
+        </p>
+        <p className="font-body text-xs text-white/60 text-center mt-1 mb-5">
+          Que te lo escaneen. Si ponés un monto, ya lo ven.
+        </p>
+        {qrValue && <QrBox value={qrValue} alt="Tu QR de Monix" />}
+        {cuenta?.alias && (
+          <p className="font-body text-sm text-white/70 text-center mt-3">@{cuenta.alias}</p>
+        )}
+        {cobro && (
+          <p className="font-display text-xl font-bold text-mint text-center mt-2">
+            {formatMonto(cobro.monto, cobro.moneda)}
+          </p>
+        )}
+        <div className="w-full max-w-xs mt-4">
+          <Input
+            label="Monto (opcional)"
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+            placeholder="Lo carga quien paga"
+            className="bg-white text-navy"
+          />
+        </div>
+        {error && <p className="text-sm text-red-300 mt-3">{error}</p>}
+      </div>
+    )
+  }
 
   return (
     <Card className="p-6">
@@ -185,9 +247,11 @@ export function MiCodigoQr() {
 export function EscanearYPagar({
   cobroIdInicial,
   onCerrarScan,
+  overlay = false,
 }: {
   cobroIdInicial?: string
   onCerrarScan?: () => void
+  overlay?: boolean
 }) {
   const { refreshCuenta } = useCuenta()
   const [cobro, setCobro] = useState<CobroNfc | null>(null)
@@ -196,15 +260,32 @@ export function EscanearYPagar({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [pagado, setPagado] = useState<{ nombre: string; monto: number; moneda: 'ARS' | 'USD' } | null>(null)
-  const [scanning, setScanning] = useState(false)
+  const [scanning, setScanning] = useState(!cobroIdInicial)
+  const [closing, setClosing] = useState(false)
+  const [vista, setVista] = useState<'camara' | 'cobrar'>('camara')
+  const [torchOk, setTorchOk] = useState(false)
+  const [torchOn, setTorchOn] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fotoRef = useRef<HTMLInputElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanAbortRef = useRef<AbortController | null>(null)
+  const closingRef = useRef(false)
+
+  function apagarCamara() {
+    scanAbortRef.current?.abort()
+    scanAbortRef.current = null
+    stopMediaStream(streamRef.current)
+    streamRef.current = null
+    if (videoRef.current) videoRef.current.srcObject = null
+    setTorchOn(false)
+    setTorchOk(false)
+  }
 
   useEffect(() => {
+    if (!cobroIdInicial) void escanearQr()
     return () => {
       scanAbortRef.current?.abort()
+      scanAbortRef.current = null
       stopMediaStream(streamRef.current)
       streamRef.current = null
     }
@@ -241,14 +322,25 @@ export function EscanearYPagar({
   }
 
   async function leerQrDeCamara(video: HTMLVideoElement, signal: AbortSignal) {
-    const stream = await startQrCamera(video)
+    const pending = useQrScanStore.getState().takeStreamPromise()
+    const stream = pending ? await pending : await startQrCamera(video)
+    if (pending) await engancharCamara(video, stream)
+    if (signal.aborted) {
+      stopMediaStream(stream)
+      throw new DOMException('Aborted', 'AbortError')
+    }
     streamRef.current = stream
+    setTorchOk(tieneLinterna(stream))
     try {
       return await detectQrUntil(video, signal)
     } finally {
-      stopMediaStream(stream)
-      streamRef.current = null
-      if (videoRef.current) videoRef.current.srcObject = null
+      if (!closingRef.current) {
+        stopMediaStream(stream)
+        if (streamRef.current === stream) streamRef.current = null
+        if (videoRef.current) videoRef.current.srcObject = null
+        setTorchOn(false)
+        setTorchOk(false)
+      }
     }
   }
 
@@ -261,18 +353,57 @@ export function EscanearYPagar({
     try {
       const video = await waitForVideo(() => videoRef.current, controller.signal)
       const raw = await leerQrDeCamara(video, controller.signal)
+      if (closingRef.current) return
       await aplicarQr(raw, cargarCobro, cargarCuenta)
+      if (scanAbortRef.current === controller) setScanning(false)
     } catch (err) {
-      if (!isAbortError(err)) {
-        setError(err instanceof Error ? err.message : 'No se pudo abrir la cámara')
+      if (scanAbortRef.current !== controller) return
+      if (isAbortError(err)) {
+        if (!closingRef.current) setScanning(false)
+      } else {
+        setError(mensajeErrorCamara(err))
       }
     } finally {
       if (scanAbortRef.current === controller) scanAbortRef.current = null
-      setScanning(false)
     }
   }
 
+  async function toggleTorch() {
+    const next = !torchOn
+    try {
+      await setLinterna(streamRef.current, next)
+      setTorchOn(next)
+    } catch {
+      setTorchOk(false)
+    }
+  }
+
+  function mostrarMiQr() {
+    apagarCamara()
+    setVista('cobrar')
+    setScanning(false)
+    setError('')
+  }
+
+  function volverACamara() {
+    setVista('camara')
+    setError('')
+    void escanearQr()
+  }
+
+  function cancelarScan() {
+    if (vista === 'camara' && overlay) {
+      mostrarMiQr()
+      return
+    }
+    closingRef.current = true
+    setClosing(true)
+    scanAbortRef.current?.abort()
+  }
+
   async function escanearFoto(file: Blob) {
+    apagarCamara()
+    setScanning(false)
     setError('')
     setLoading(true)
     try {
@@ -332,7 +463,8 @@ export function EscanearYPagar({
   }
 
   function volver() {
-    scanAbortRef.current?.abort()
+    apagarCamara()
+    setScanning(false)
     setCobro(null)
     setDestino(null)
     setPagado(null)
@@ -340,8 +472,18 @@ export function EscanearYPagar({
     onCerrarScan?.()
   }
 
+  function caja(node: ReactNode) {
+    if (!overlay) return node
+    return createPortal(
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-navy/85 p-4">
+        <div className="w-full max-w-md">{node}</div>
+      </div>,
+      document.body,
+    )
+  }
+
   if (pagado) {
-    return (
+    return caja(
       <Card className="p-8 text-center">
         <CheckCircle size={48} className="text-mint mx-auto mb-3" />
         <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Pago exitoso</h2>
@@ -350,12 +492,12 @@ export function EscanearYPagar({
         <Button className="w-full mt-6" type="button" onClick={volver}>
           Listo
         </Button>
-      </Card>
+      </Card>,
     )
   }
 
   if (cobro?.estado === 'pagado') {
-    return (
+    return caja(
       <Card className="p-8 text-center">
         <CheckCircle size={48} className="text-mint mx-auto mb-3" />
         <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Pago exitoso</h2>
@@ -364,12 +506,12 @@ export function EscanearYPagar({
         </p>
         <p className="font-display text-2xl font-bold text-mint mt-2">{formatMonto(cobro.monto, cobro.moneda)}</p>
         <Button className="w-full mt-6" type="button" onClick={volver}>Listo</Button>
-      </Card>
+      </Card>,
     )
   }
 
   if (cobro) {
-    return (
+    return caja(
       <Card className="p-6">
         <p className="font-body text-xs text-slate-secondary">Vas a pagar a</p>
         <p className="font-display font-semibold text-navy dark:text-white">
@@ -384,12 +526,12 @@ export function EscanearYPagar({
         <Button variant="secondary" className="w-full mt-2" type="button" onClick={volver}>
           Cancelar
         </Button>
-      </Card>
+      </Card>,
     )
   }
 
   if (destino) {
-    return (
+    return caja(
       <Card className="p-6">
         <p className="font-body text-xs text-slate-secondary">Vas a pagar a</p>
         <p className="font-display font-semibold text-navy dark:text-white">
@@ -414,70 +556,106 @@ export function EscanearYPagar({
         <Button variant="secondary" className="w-full mt-2" type="button" onClick={volver}>
           Cancelar
         </Button>
-      </Card>
+      </Card>,
     )
   }
 
-  return (
+  const inputFoto = (
+    <input
+      ref={fotoRef}
+      type="file"
+      accept="image/*"
+      className="sr-only"
+      aria-hidden
+      tabIndex={-1}
+      onChange={(e) => {
+        const file = e.target.files?.[0]
+        e.target.value = ''
+        if (file) void escanearFoto(file)
+      }}
+    />
+  )
+
+  if (overlay && !pagado && !cobro && !destino) {
+    return (
+      <>
+        {inputFoto}
+        {createPortal(
+          <QrScannerFullscreen
+            videoRef={videoRef}
+            error={error}
+            torchOk={torchOk}
+            torchOn={torchOn}
+            closing={closing}
+            vista={vista}
+            cobrar={<MiCodigoQr variante="overlay" />}
+            onClose={cancelarScan}
+            onVolverACamara={volverACamara}
+            onClosed={() => {
+              apagarCamara()
+              if (closingRef.current) onCerrarScan?.()
+            }}
+            onToggleTorch={() => { void toggleTorch() }}
+            onPickPhoto={() => fotoRef.current?.click()}
+          />,
+          document.body,
+        )}
+      </>
+    )
+  }
+
+  if (scanning || closing) {
+    return (
+      <>
+        {inputFoto}
+        {createPortal(
+          <QrScannerFullscreen
+            videoRef={videoRef}
+            error={error}
+            torchOk={torchOk}
+            torchOn={torchOn}
+            closing={closing}
+            vista={vista}
+            cobrar={<MiCodigoQr variante="overlay" />}
+            onClose={cancelarScan}
+            onVolverACamara={volverACamara}
+            onClosed={() => {
+              apagarCamara()
+              if (closingRef.current) onCerrarScan?.()
+            }}
+            onToggleTorch={() => { void toggleTorch() }}
+            onPickPhoto={() => fotoRef.current?.click()}
+          />,
+          document.body,
+        )}
+      </>
+    )
+  }
+
+  return caja(
     <Card className="p-6">
       <div className="flex items-center gap-2 mb-4">
         <ScanLine size={18} className="text-mint" />
         <h2 className="font-display font-semibold text-navy dark:text-white">Escanear para pagar</h2>
       </div>
-      {scanning ? (
-        <>
-          <video
-            ref={videoRef}
-            className="w-full rounded-xl bg-black aspect-[4/3] object-cover"
-            muted
-            playsInline
-            autoPlay
-          />
-          <p className="font-body text-xs text-slate-secondary text-center mt-3">Apuntá al QR de Monix</p>
-          <Button variant="secondary" className="w-full mt-3" type="button" onClick={() => {
-            scanAbortRef.current?.abort()
-            stopMediaStream(streamRef.current)
-            streamRef.current = null
-            setScanning(false)
-            onCerrarScan?.()
-          }}>
-            Cancelar
-          </Button>
-        </>
-      ) : (
-        <>
-          {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
-          <input
-            ref={fotoRef}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            aria-hidden
-            tabIndex={-1}
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              e.target.value = ''
-              if (file) void escanearFoto(file)
-            }}
-          />
-          <Button className="w-full" type="button" loading={loading} onClick={() => { void escanearQr() }}>
-            Abrir cámara
-          </Button>
-          <Button
-            variant="secondary"
-            className="w-full mt-2"
-            type="button"
-            loading={loading}
-            onClick={() => fotoRef.current?.click()}
-          >
-            Elegir foto del QR
-          </Button>
-          {onCerrarScan && (
-            <Button variant="secondary" className="w-full mt-2" type="button" onClick={onCerrarScan}>
-              Volver a mi QR
-            </Button>
-          )}
-        </>
+      {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
+      {inputFoto}
+      <Button className="w-full" type="button" loading={loading} onClick={() => { void escanearQr() }}>
+        Abrir cámara
+      </Button>
+      <Button
+        variant="secondary"
+        className="w-full mt-2"
+        type="button"
+        loading={loading}
+        onClick={() => fotoRef.current?.click()}
+      >
+        Elegir foto del QR
+      </Button>
+      {onCerrarScan && (
+        <Button variant="secondary" className="w-full mt-2" type="button" onClick={onCerrarScan}>
+          Volver a mi QR
+        </Button>
       )}
     </Card>
   )
