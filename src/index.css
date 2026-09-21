@@ -13,6 +13,14 @@
      funcionando igual, sólo se oculta el indicador visual. */
   html::-webkit-scrollbar { display: none; }
   html { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Evita el "pull to refresh" nativo del navegador/PWA en mobile: tirar
+     hacia abajo estando arriba del todo recargaba la página entera (perdiendo
+     el estado de React) en vez de sólo hacer scroll. El scroll normal sigue
+     funcionando igual, sólo se bloquea el rebote que dispara la recarga. */
+  html, body {
+    overscroll-behavior-y: contain;
+  }
 }
 
 @layer utilities {

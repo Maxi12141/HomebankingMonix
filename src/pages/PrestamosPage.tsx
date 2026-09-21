@@ -396,20 +396,6 @@ function EsquemaPagoModal({
           </button>
         </div>
 
-        <p className="font-body text-[11px] text-slate-secondary leading-relaxed mb-3">
-          La cuota es la misma todos los meses. Lo que cambia es cómo se reparte entre interés y capital —
-          arrancás pagando más interés, y esa parte se va achicando a favor del capital hacia el final.
-        </p>
-
-        <div className="flex items-center gap-4 mb-3 px-0.5">
-          <span className="flex items-center gap-1.5 font-body text-[11px] text-slate-secondary">
-            <span className="h-2 w-2 rounded-full bg-amber-400" /> Interés
-          </span>
-          <span className="flex items-center gap-1.5 font-body text-[11px] text-slate-secondary">
-            <span className="h-2 w-2 rounded-full bg-mint" /> Capital
-          </span>
-        </div>
-
         <div className="overflow-y-auto max-h-[60vh] flex flex-col gap-2 pr-0.5">
           {filas.map((f, idx) => {
             const interesPct = f.cuota > 0 ? Math.min(100, Math.round((f.interes / f.cuota) * 100)) : 0

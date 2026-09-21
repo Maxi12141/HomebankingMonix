@@ -32,7 +32,7 @@ const CASHBACKS = [
 
 const PRESTAMOS_DETALLE = [
   { icon: Percent, title: 'Tasa a tu medida', detail: 'Mejor tasa si cobrás tu sueldo en Monix' },
-  { icon: HandCoins, title: 'Hasta $8.000.000', detail: 'El monto depende de tu situación crediticia' },
+  { icon: HandCoins, title: 'Monto a tu medida', detail: 'Elegís cuánto pedir, dentro de tu límite disponible' },
   { icon: Zap, title: 'Aprobación al instante', detail: 'Simulás y el dinero entra a tu cuenta al momento' },
 ]
 

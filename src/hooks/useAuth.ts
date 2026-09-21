@@ -24,23 +24,41 @@ export function useAuth() {
   useEffect(() => {
     let cancelled = false
 
-    withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS, 'Tiempo agotado al restaurar la sesión')
-      .then(({ data: { session } }) => {
+    // En un reload en frío (p. ej. "pull to refresh" en el celular, o volver
+    // de background) la red puede tardar un instante en estar lista —
+    // reintentamos una vez antes de dar la sesión por perdida, para no
+    // expulsar a alguien con una sesión guardada válida por un hueco de red
+    // de un segundo.
+    async function restaurarSesion(intento = 1): Promise<void> {
+      try {
+        const { data: { session } } = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_TIMEOUT_MS,
+          'Tiempo agotado al restaurar la sesión',
+        )
         if (cancelled) return
         setUser(session?.user ?? null)
         if (session?.user) {
           if (session.user.email) registrarEmailUid(session.user.email, session.user.id)
-          return fetchPersona(session.user.id)
+          await fetchPersona(session.user.id)
+        } else {
+          setLoading(false)
         }
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error('Error al restaurar la sesión:', err)
+      } catch (err) {
         if (cancelled) return
+        if (intento < 2) {
+          await new Promise((resolve) => window.setTimeout(resolve, 1000))
+          if (!cancelled) await restaurarSesion(intento + 1)
+          return
+        }
+        console.error('Error al restaurar la sesión:', err)
         clear()
         clearCuenta()
         setLoading(false)
-      })
+      }
+    }
+
+    void restaurarSesion()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
