@@ -397,39 +397,54 @@ function EsquemaPagoModal({
         </div>
 
         <p className="font-body text-[11px] text-slate-secondary leading-relaxed mb-3">
-          La cuota (columna &quot;Cuota&quot;) es la misma todos los meses. Lo que cambia mes a mes es cómo se reparte
-          esa cuota entre interés y amortización de capital — arrancás pagando más interés y menos capital, y va al revés hacia el final.
+          La cuota es la misma todos los meses. Lo que cambia es cómo se reparte entre interés y capital —
+          arrancás pagando más interés, y esa parte se va achicando a favor del capital hacia el final.
         </p>
 
-        <div className="overflow-y-auto max-h-[60vh]">
-          <table className="w-full text-left border-collapse table-fixed">
-            <thead className="sticky top-0 bg-white dark:bg-navy-card">
-              <tr className="font-body text-[9px] uppercase tracking-wider text-slate-secondary">
-                <th className="py-2 pl-1 pr-1 font-medium w-[8%]">#</th>
-                <th className="py-2 pr-1 font-medium w-[15%]">Vence</th>
-                <th className="py-2 pr-1 font-medium text-right w-[22%]">Cuota</th>
-                <th className="py-2 pr-1 font-medium text-right w-[19%]">Interés</th>
-                <th className="py-2 pr-1 font-medium text-right w-[18%]">Amort.</th>
-                <th className="py-2 pr-1 font-medium text-right w-[18%]">Saldo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map((f, idx) => (
-                <tr key={f.numero} className="font-body text-[11px] border-t border-slate-200 dark:border-white/10">
-                  <td className="py-2 pl-1 pr-1 text-slate-secondary truncate">{f.numero}</td>
-                  <td className="py-2 pr-1 text-slate-secondary truncate">
-                    {new Date(addMonths(fechaInicio, idx)).toLocaleDateString('es-AR', { month: '2-digit', year: '2-digit' })}
-                  </td>
-                  <td className="py-2 pr-1 text-right font-semibold text-navy dark:text-white truncate">
+        <div className="flex items-center gap-4 mb-3 px-0.5">
+          <span className="flex items-center gap-1.5 font-body text-[11px] text-slate-secondary">
+            <span className="h-2 w-2 rounded-full bg-amber-400" /> Interés
+          </span>
+          <span className="flex items-center gap-1.5 font-body text-[11px] text-slate-secondary">
+            <span className="h-2 w-2 rounded-full bg-mint" /> Capital
+          </span>
+        </div>
+
+        <div className="overflow-y-auto max-h-[60vh] flex flex-col gap-2 pr-0.5">
+          {filas.map((f, idx) => {
+            const interesPct = f.cuota > 0 ? Math.min(100, Math.round((f.interes / f.cuota) * 100)) : 0
+            return (
+              <div
+                key={f.numero}
+                className="rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-input/60 dark:bg-white/[0.03] px-3.5 py-3"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-navy/5 dark:bg-white/10 font-body text-[11px] font-bold text-navy dark:text-white">
+                      {f.numero}
+                    </span>
+                    <span className="font-body text-xs text-slate-secondary truncate">
+                      {new Date(addMonths(fechaInicio, idx)).toLocaleDateString('es-AR', { month: 'short', year: '2-digit' })}
+                    </span>
+                  </div>
+                  <span className="font-display text-sm font-bold text-navy dark:text-white shrink-0">
                     {formatARS(f.cuota)}
-                  </td>
-                  <td className="py-2 pr-1 text-right text-slate-secondary truncate">{formatARS(f.interes)}</td>
-                  <td className="py-2 pr-1 text-right text-slate-secondary truncate">{formatARS(f.amortizacion)}</td>
-                  <td className="py-2 pr-1 text-right text-navy dark:text-white truncate">{formatARS(f.saldoPendiente)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </span>
+                </div>
+
+                <div className="h-1.5 rounded-full overflow-hidden bg-slate-200 dark:bg-white/10 flex mb-2">
+                  <div className="h-full bg-amber-400" style={{ width: `${interesPct}%` }} />
+                  <div className="h-full bg-mint" style={{ width: `${100 - interesPct}%` }} />
+                </div>
+
+                <div className="flex items-center justify-between font-body text-[11px] text-slate-secondary">
+                  <span>Interés {formatARS(f.interes)}</span>
+                  <span>Capital {formatARS(f.amortizacion)}</span>
+                  <span>Saldo {formatARS(f.saldoPendiente)}</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </Card>
     </Modal>

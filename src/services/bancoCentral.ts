@@ -214,6 +214,7 @@ export interface BCCuenta {
   apellido: string
   moneda: 'ARS' | 'USD'
   saldo: number
+  bankCode?: number
 }
 
 export async function abrirCuenta(dni: string, moneda: 'ARS' | 'USD'): Promise<BCCuenta> {
@@ -294,7 +295,41 @@ export async function buscarDestinatarioBC(input: string, esCBU: boolean): Promi
     cbu: cuenta.cbu,
     alias: cuenta.alias,
     moneda: monedaValida(cuenta.moneda),
+    bankCode: cuenta.bankCode,
   }
+}
+
+const MI_BANK_CODE_KEY = 'monix_bank_code_v1'
+let miBankCodeCache: number | null = null
+
+/**
+ * bankCode de Monix en este entorno de test — no existe un endpoint "quién
+ * soy" en la API, así que se resuelve una sola vez consultando una cuenta
+ * propia conocida (GET /persons/{cbu} es una búsqueda global y devuelve el
+ * bankCode real del dueño del CBU, sea quien sea) y se cachea: no cambia
+ * mientras no se re-registre el banco con otra api-key. Confirmado con curl
+ * real contra test (21 sep 2026): nuestra api-key resuelve a bankCode 3
+ * ("Monix1" en GET /banks — hay otro bankCode 2 registrado como "Monix" a
+ * secas, de otra sesión/alumno, así que buscar por nombre no sirve).
+ */
+export async function obtenerMiBankCode(cbuPropio: string): Promise<number | null> {
+  if (miBankCodeCache != null) return miBankCodeCache
+  const stored = localStorage.getItem(MI_BANK_CODE_KEY)
+  if (stored) {
+    miBankCodeCache = Number(stored)
+    return miBankCodeCache
+  }
+  try {
+    const persona = await buscarPorCBU(cbuPropio)
+    if (typeof persona.bankCode === 'number') {
+      miBankCodeCache = persona.bankCode
+      localStorage.setItem(MI_BANK_CODE_KEY, String(persona.bankCode))
+      return miBankCodeCache
+    }
+  } catch {
+    // Sin red o CBU inválido: se reintenta la próxima vez, no se cachea nada.
+  }
+  return null
 }
 
 // Central de deudores: situación crediticia real de la persona, usada por

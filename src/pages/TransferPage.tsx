@@ -4,7 +4,7 @@ import { CheckCircle, Search, Star, Home, UserPlus, ChevronDown, ArrowLeft, Arro
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
-import { transferir, buscarDestinatarioBC } from '../services/bancoCentral'
+import { transferir, buscarDestinatarioBC, obtenerMiBankCode, getBankName } from '../services/bancoCentral'
 import { useCuenta } from '../hooks/useCuenta'
 import { useCuentaStore } from '../store/cuentaStore'
 import { useAuthStore } from '../store/authStore'
@@ -30,6 +30,27 @@ interface Destinatario {
   moneda: Moneda
   cuentaId?: string
   saldoActual?: number
+  // Un usuario Monix casi nunca resuelve por `cuentaId` (las RLS de `cuentas`
+  // sólo dejan ver la fila propia), así que "mismo banco" se decide
+  // comparando bankCode contra el nuestro, no por si lo encontramos local.
+  mismoBanco?: boolean
+  bankCode?: number
+}
+
+function BadgeOtroBanco({ bankCode }: { bankCode: number }) {
+  const [nombre, setNombre] = useState<string | null>(null)
+
+  useEffect(() => {
+    let vivo = true
+    getBankName(bankCode).then((n) => { if (vivo) setNombre(n) }).catch(() => undefined)
+    return () => { vivo = false }
+  }, [bankCode])
+
+  return (
+    <span className="inline-block text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-400/15 text-amber-700 dark:text-amber-300">
+      {nombre ? `Otro banco · ${nombre}` : 'Otro banco'}
+    </span>
+  )
 }
 
 function Iniciales({ nombre, apellido }: { nombre: string; apellido: string }) {
@@ -173,11 +194,14 @@ export function TransferPage() {
           moneda: cuentaLocal.moneda,
           cuentaId: cuentaLocal.id,
           saldoActual: cuentaLocal.saldo,
+          // Está en nuestra propia tabla `cuentas` — es Monix sí o sí.
+          mismoBanco: true,
         })
         return
       }
 
       const bc = await buscarDestinatarioBC(input, esCBU)
+      const miBanco = cuenta?.cbu ? await obtenerMiBankCode(cuenta.cbu) : null
       setDestinatario({
         nombre: bc.nombre,
         apellido: bc.apellido,
@@ -185,6 +209,8 @@ export function TransferPage() {
         cbu: bc.cbu,
         alias: bc.alias,
         moneda: bc.moneda,
+        bankCode: bc.bankCode,
+        mismoBanco: miBanco != null && bc.bankCode != null ? bc.bankCode === miBanco : undefined,
       })
     } catch {
       setBusquedaError('No se encontró ninguna cuenta con ese CBU o alias')
@@ -375,10 +401,15 @@ export function TransferPage() {
                           <p className="text-xs font-body text-slate-secondary mt-0.5 truncate">
                             CBU: {destinatario.cbu}
                           </p>
-                          <span className={`inline-block mt-1 text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                            destinatario.moneda === 'USD' ? 'bg-mint/20 text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
-                          }`}>
-                            {destinatario.moneda === 'USD' ? 'Cuenta en dólares' : 'Cuenta en pesos'}
+                          <span className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <span className={`inline-block text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                              destinatario.moneda === 'USD' ? 'bg-mint/20 text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
+                            }`}>
+                              {destinatario.moneda === 'USD' ? 'Cuenta en dólares' : 'Cuenta en pesos'}
+                            </span>
+                            {destinatario.mismoBanco === false && destinatario.bankCode != null && (
+                              <BadgeOtroBanco bankCode={destinatario.bankCode} />
+                            )}
                           </span>
                         </div>
                         {isGuardado(destinatario.cbu) ? (
@@ -438,11 +469,16 @@ export function TransferPage() {
                       </p>
                       <p className="text-xs font-body text-slate-secondary truncate">{destinatario.alias ?? destinatario.cbu}</p>
                     </div>
-                    <span className={`shrink-0 text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                      destinatario.moneda === 'USD' ? 'bg-mint/20 text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
-                    }`}>
-                      {destinatario.moneda === 'USD' ? 'USD' : 'ARS'}
-                    </span>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className={`text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                        destinatario.moneda === 'USD' ? 'bg-mint/20 text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
+                      }`}>
+                        {destinatario.moneda === 'USD' ? 'USD' : 'ARS'}
+                      </span>
+                      {destinatario.mismoBanco === false && destinatario.bankCode != null && (
+                        <BadgeOtroBanco bankCode={destinatario.bankCode} />
+                      )}
+                    </div>
                   </div>
 
                   {cuentaUSD && (

@@ -11,10 +11,12 @@ import {
   Plane,
   Store,
   Utensils,
-  CalendarClock,
+  Percent,
+  HandCoins,
+  Zap,
 } from 'lucide-react'
 
-type PanelId = 'ofertas' | 'cashback' | 'financiacion'
+type PanelId = 'ofertas' | 'cashback' | 'prestamos'
 
 const OFERTAS = [
   { icon: Store, title: '10% supermercados', detail: 'Todos los martes en cadenas adheridas' },
@@ -28,10 +30,10 @@ const CASHBACKS = [
   { icon: Tag, title: 'Combustible', detail: '5% los fines de semana' },
 ]
 
-const PLANES = [
-  { icon: CalendarClock, title: '3 cuotas', detail: 'Sin interés hasta $50.000' },
-  { icon: CalendarClock, title: '6 cuotas', detail: 'Tasa fija · aprobación rápida' },
-  { icon: CalendarClock, title: '12 cuotas', detail: 'Cuotas fijas mensuales' },
+const PRESTAMOS_DETALLE = [
+  { icon: Percent, title: 'Tasa a tu medida', detail: 'Mejor tasa si cobrás tu sueldo en Monix' },
+  { icon: HandCoins, title: 'Hasta $8.000.000', detail: 'El monto depende de tu situación crediticia' },
+  { icon: Zap, title: 'Aprobación al instante', detail: 'Simulás y el dinero entra a tu cuenta al momento' },
 ]
 
 const PROMO_CARDS: {
@@ -75,10 +77,10 @@ const PROMO_CARDS: {
     cta: 'Ver mi cashback',
   },
   {
-    id: 'financiacion',
-    href: '/financiacion',
-    title: 'Financiá con Monix',
-    subtitle: 'Planes flexibles pensados para vos',
+    id: 'prestamos',
+    href: '/prestamos',
+    title: 'Préstamos personalizados',
+    subtitle: 'Tu tasa se ajusta a tu perfil, no al revés',
     accent: 'slate',
     icon: (
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -86,8 +88,8 @@ const PROMO_CARDS: {
         <path d="M8 12h8M8 15h5" stroke="#0F172A" className="dark:stroke-white" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     ),
-    items: PLANES,
-    cta: 'Simular cuotas',
+    items: PRESTAMOS_DETALLE,
+    cta: 'Simular préstamo',
   },
 ]
 
