@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(node -e ' *)",
+      "Bash(node .scratch-full-flow.mjs)",
+      "Bash(git diff *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node .scratch-tour-step2.mjs)",
+      "Bash(cd \"C:\\\\Users\\\\Admin\\\\Desktop\\\\HomebankingMonix\" && rm -f .scratch-*.mjs .scratch-*.png && git status -s)",
+      "Bash(node .scratch-login-flow.mjs)",
+      "Bash(node .scratch-bio-login.mjs)",
+      "Bash(node .scratch-debug-modal.mjs)",
+      "Bash(node .scratch-regression.mjs)",
+      "Bash(node .scratch-tarjeta.mjs)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Admin\\Desktop\\HomebankingMonix"
+    ]
+  }
+}

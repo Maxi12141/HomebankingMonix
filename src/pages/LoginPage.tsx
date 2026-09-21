@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Fingerprint, ScanFace } from 'lucide-react'
+import { Fingerprint } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useThemeStore } from '../stores/themeStore'
 import { Button } from '../components/ui/Button'
@@ -13,7 +13,6 @@ import {
   esCelular,
   huellaActiva,
   marcarIngresoConClave,
-  metodosBio,
   uidParaEmail,
   verificarHuella,
 } from '../lib/biometria'
@@ -113,9 +112,6 @@ export function LoginPage() {
     setError('')
   }
 
-  const uid = step !== 'email' ? uidParaEmail(email.trim()) : null
-  const metodos = uid ? metodosBio(uid) : { huella: false, face: false }
-
   return (
     <div className="min-h-screen bg-[#F0F2F5] dark:bg-navy flex items-center justify-center p-4">
       <motion.div
@@ -173,34 +169,18 @@ export function LoginPage() {
               <p className="font-body text-sm text-slate-secondary mb-6">{email.trim()}</p>
 
               <div className="flex items-center justify-center gap-6 mb-6">
-                {metodos.huella && (
-                  <button
-                    type="button"
-                    onClick={() => { void pedirBiometria() }}
-                    className="relative flex h-24 w-24 items-center justify-center"
-                    aria-label="Ingresar con huella"
-                  >
-                    <span className="huella-ring absolute inset-0 rounded-full border border-mint/25" />
-                    <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-mint/40" />
-                    <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
-                      <Fingerprint size={30} className="text-mint" strokeWidth={1.6} />
-                    </span>
-                  </button>
-                )}
-                {metodos.face && (
-                  <button
-                    type="button"
-                    onClick={() => { void pedirBiometria() }}
-                    className="relative flex h-24 w-24 items-center justify-center"
-                    aria-label="Ingresar con Face ID"
-                  >
-                    <span className="huella-ring absolute inset-0 rounded-full border border-mint/25" />
-                    <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-mint/40" />
-                    <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
-                      <ScanFace size={30} className="text-mint" strokeWidth={1.6} />
-                    </span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => { void pedirBiometria() }}
+                  className="relative flex h-24 w-24 items-center justify-center"
+                  aria-label="Ingresar con biometría"
+                >
+                  <span className="huella-ring absolute inset-0 rounded-full border border-mint/25" />
+                  <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-mint/40" />
+                  <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
+                    <Fingerprint size={30} className="text-mint" strokeWidth={1.6} />
+                  </span>
+                </button>
               </div>
 
               <Button
@@ -209,7 +189,7 @@ export function LoginPage() {
                 onClick={() => { void pedirBiometria() }}
                 className="w-full mb-4"
               >
-                {metodos.face ? 'Usar huella o Face ID' : 'Usar huella'}
+                Usar huella, cara o PIN
               </Button>
 
               {error && (

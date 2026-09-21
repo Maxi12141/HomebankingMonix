@@ -219,6 +219,12 @@ export function PrestamosPage() {
                   <span className="font-body text-sm text-slate-secondary">Cuota mensual</span>
                   <span className="font-display font-bold text-mint">{formatARS(cuota)}</span>
                 </div>
+                <p className="font-body text-[11px] text-slate-secondary leading-relaxed flex items-start gap-1.5">
+                  <Info size={12} className="shrink-0 mt-0.5" />
+                  Sistema francés: la cuota es fija, pero la parte de interés y la de capital que la componen cambian
+                  cada mes (al principio pagás más interés porque el saldo es más alto). El detalle mes a mes está en
+                  &quot;Ver esquema de pago&quot;.
+                </p>
                 <div className="h-px bg-slate-200 dark:bg-white/10" />
                 <div className="flex justify-between gap-3">
                   <span className="font-body text-sm text-slate-secondary">Total a pagar</span>
@@ -228,14 +234,15 @@ export function PrestamosPage() {
                   <span className="font-body text-sm text-slate-secondary">Intereses totales</span>
                   <span className="font-body text-sm text-navy dark:text-white">{formatARS(total - montoNum)}</span>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  className="w-full mt-2 flex items-center justify-center gap-2 py-2 text-sm"
                   onClick={() => setVerEsquema(true)}
-                  className="flex items-center gap-1.5 font-body text-xs text-mint hover:text-mint-hover transition-colors pt-1"
                 >
-                  <ListOrdered size={13} />
-                  Ver esquema de pago
-                </button>
+                  <ListOrdered size={15} />
+                  Ver esquema de pago mes a mes
+                </Button>
               </div>
             )}
 
@@ -388,6 +395,11 @@ function EsquemaPagoModal({
             <X size={18} />
           </button>
         </div>
+
+        <p className="font-body text-[11px] text-slate-secondary leading-relaxed mb-3">
+          La cuota (columna &quot;Cuota&quot;) es la misma todos los meses. Lo que cambia mes a mes es cómo se reparte
+          esa cuota entre interés y amortización de capital — arrancás pagando más interés y menos capital, y va al revés hacia el final.
+        </p>
 
         <div className="overflow-y-auto max-h-[60vh]">
           <table className="w-full text-left border-collapse table-fixed">

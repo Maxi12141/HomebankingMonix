@@ -1,8 +1,21 @@
 import { NavLink, Link } from 'react-router-dom'
-import { LayoutDashboard, ArrowRightLeft, History, User, LogOut, X, PiggyBank, BookUser, CreditCard, Vault, Receipt, Landmark, Repeat, Bluetooth, HandCoins } from 'lucide-react'
+import { LayoutDashboard, ArrowRightLeft, History, User, LogOut, X, PiggyBank, BookUser, CreditCard, Receipt, Landmark, Repeat, Bluetooth, HandCoins, DollarSign, ArrowDown } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useThemeStore } from '../../stores/themeStore'
 import { MonixLogoNavbar } from '../MonixLogoNavbar'
+
+function DepositarIcon({ size = 18 }: { size?: number }) {
+  return (
+    <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
+      <DollarSign size={size} />
+      <ArrowDown
+        size={Math.round(size * 0.6)}
+        strokeWidth={3}
+        className="absolute -bottom-0.5 -right-1 rounded-full bg-white dark:bg-navy-card"
+      />
+    </span>
+  )
+}
 
 const links = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Inicio' },
@@ -11,8 +24,8 @@ const links = [
   { to: '/transferir', icon: ArrowRightLeft, label: 'Transferir' },
   { to: '/cerca', icon: Bluetooth, label: 'Monix Cerca' },
   { to: '/pagar', icon: Receipt, label: 'Pagar' },
-  { to: '/depositar', icon: PiggyBank, label: 'Depositar' },
-  { to: '/reservas', icon: Vault, label: 'Reservas' },
+  { to: '/depositar', icon: DepositarIcon, label: 'Depositar' },
+  { to: '/reservas', icon: PiggyBank, label: 'Reservas' },
   { to: '/prestamos', icon: HandCoins, label: 'Préstamos' },
   { to: '/tarjeta', icon: CreditCard, label: 'Mis Tarjetas' },
   { to: '/historial', icon: History, label: 'Historial' },

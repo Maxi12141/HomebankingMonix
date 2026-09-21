@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Fingerprint, ScanFace } from 'lucide-react'
+import { Fingerprint } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
-import { metodosBio, verificarHuella } from '../lib/biometria'
+import { verificarHuella } from '../lib/biometria'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import monixLogo from '../assets/logos/logo-blanco.svg'
@@ -18,7 +18,6 @@ export function HuellaLockScreen({ onUnlock }: Props) {
   const [password, setPassword] = useState('')
   const [loadingBio, setLoadingBio] = useState(false)
   const [loadingClave, setLoadingClave] = useState(false)
-  const metodos = user ? metodosBio(user.id) : { huella: false, face: false }
 
   const email = user?.email || persona?.email || ''
   const nombre = persona?.nombre ?? ''
@@ -71,9 +70,7 @@ export function HuellaLockScreen({ onUnlock }: Props) {
     await supabase.auth.signOut()
   }
 
-  const subtitulo = metodos.face
-    ? 'Huella, cara o PIN del teléfono. Abajo, la contraseña de tu cuenta Monix.'
-    : 'Huella o PIN del teléfono. Abajo, la contraseña de tu cuenta Monix.'
+  const subtitulo = 'Huella, cara o PIN del teléfono. Abajo, la contraseña de tu cuenta Monix.'
 
   return (
     <motion.div
@@ -92,34 +89,18 @@ export function HuellaLockScreen({ onUnlock }: Props) {
       </p>
 
       <div className="flex items-center justify-center gap-6 mb-6">
-        {metodos.huella && (
-          <button
-            type="button"
-            onClick={() => { void pedirBiometria() }}
-            className="relative flex h-28 w-28 items-center justify-center"
-            aria-label="Ingresar con huella"
-          >
-            <span className="huella-ring absolute inset-0 rounded-full border border-mint/25" />
-            <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-mint/40" />
-            <span className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
-              <Fingerprint size={34} className="text-mint" strokeWidth={1.6} />
-            </span>
-          </button>
-        )}
-        {metodos.face && (
-          <button
-            type="button"
-            onClick={() => { void pedirBiometria() }}
-            className="relative flex h-28 w-28 items-center justify-center"
-            aria-label="Ingresar con Face ID"
-          >
-            <span className="huella-ring absolute inset-0 rounded-full border border-mint/25" />
-            <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-mint/40" />
-            <span className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
-              <ScanFace size={34} className="text-mint" strokeWidth={1.6} />
-            </span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => { void pedirBiometria() }}
+          className="relative flex h-28 w-28 items-center justify-center"
+          aria-label="Ingresar con biometría"
+        >
+          <span className="huella-ring absolute inset-0 rounded-full border border-mint/25" />
+          <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-mint/40" />
+          <span className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
+            <Fingerprint size={34} className="text-mint" strokeWidth={1.6} />
+          </span>
+        </button>
       </div>
 
       <Button
@@ -128,7 +109,7 @@ export function HuellaLockScreen({ onUnlock }: Props) {
         onClick={() => { void pedirBiometria() }}
         className="w-full max-w-xs mb-6"
       >
-        {metodos.face ? 'Usar huella, cara o PIN' : 'Usar huella o PIN del teléfono'}
+        Usar huella, cara o PIN
       </Button>
 
       {error && (

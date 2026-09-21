@@ -1,7 +1,7 @@
 const STORAGE_KEY = 'monix_remembered_email'
 
 // Sólo el email — nunca la contraseña. El desbloqueo con huella/Face ID
-// usa su propio registro (ver activarMetodo en lib/biometria.ts).
+// usa su propio registro (ver activarBiometria en lib/biometria.ts).
 export function getRememberedEmail(): string | null {
   return localStorage.getItem(STORAGE_KEY)
 }

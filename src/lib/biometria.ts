@@ -8,17 +8,13 @@ const JUST_AUTH_KEY = 'monix_just_authed'
 const EMAIL_INDEX_KEY = 'monix_email_uid_v1'
 const BIO_CRED_KEY = 'monix_bio_cred_v1'
 
-export type MetodoBio = 'huella' | 'face'
-
+// El teléfono decide solo qué biometría mostrar (huella, cara, PIN) según lo
+// que tenga configurado el usuario en el sistema operativo — WebAuthn (y el
+// prompt nativo) no le informan al sitio cuál fue, por diseño de privacidad.
+// Por eso acá no se distingue "huella" de "Face ID": es un único toggle de
+// biometría, activado o no.
 interface BioRecord {
   credId: string
-  huella?: boolean
-  face?: boolean
-}
-
-export interface MetodosBio {
-  huella: boolean
-  face: boolean
 }
 
 function loadAll(): Record<string, BioRecord> {
@@ -34,14 +30,6 @@ function loadAll(): Record<string, BioRecord> {
 
 function saveAll(data: Record<string, BioRecord>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-}
-
-function flagsFrom(rec: BioRecord | undefined): MetodosBio {
-  if (!rec?.credId) return { huella: false, face: false }
-  if (rec.huella === undefined && rec.face === undefined) {
-    return { huella: true, face: false }
-  }
-  return { huella: Boolean(rec.huella), face: Boolean(rec.face) }
 }
 
 function bufferToB64(buf: ArrayBuffer) {
@@ -89,13 +77,8 @@ export async function soportaHuella() {
   }
 }
 
-export function metodosBio(userId: string): MetodosBio {
-  return flagsFrom(loadAll()[userId])
-}
-
-export function huellaActiva(userId: string) {
-  const m = metodosBio(userId)
-  return m.huella || m.face
+export function huellaActiva(userId: string): boolean {
+  return Boolean(loadAll()[userId]?.credId)
 }
 
 // Índice local email -> userId, para poder chequear si una cuenta tiene
@@ -165,11 +148,10 @@ export function consumoIngresoConClave() {
   return v
 }
 
-async function asegurarCredencial(userId: string, nombre: string) {
+async function asegurarCredencial(userId: string, nombre: string): Promise<BioRecord> {
   if (isNativeApp()) {
     await verificarBiometriaNativa()
-    const prev = loadAll()[userId]
-    return { credId: 'native', huella: Boolean(prev?.huella), face: Boolean(prev?.face) } satisfies BioRecord
+    return { credId: 'native' }
   }
   const existing = loadAll()[userId]
   if (existing?.credId) return existing
@@ -209,37 +191,17 @@ async function asegurarCredencial(userId: string, nombre: string) {
   if (!(cred instanceof PublicKeyCredential)) {
     throw new Error('No se pudo registrar el desbloqueo biométrico')
   }
-  return { credId: bufferToB64(cred.rawId), huella: false, face: false } satisfies BioRecord
+  return { credId: bufferToB64(cred.rawId) }
 }
 
-export async function activarMetodo(userId: string, nombre: string, metodo: MetodoBio) {
+export async function activarBiometria(userId: string, nombre: string) {
   const rec = await asegurarCredencial(userId, nombre)
-  const flags = flagsFrom(rec)
-  flags[metodo] = true
   const all = loadAll()
-  all[userId] = { credId: rec.credId, ...flags }
+  all[userId] = rec
   saveAll(all)
 }
 
-export function desactivarMetodo(userId: string, metodo: MetodoBio) {
-  const all = loadAll()
-  const rec = all[userId]
-  if (!rec?.credId) return
-  const flags = flagsFrom(rec)
-  flags[metodo] = false
-  if (!flags.huella && !flags.face) {
-    delete all[userId]
-  } else {
-    all[userId] = { credId: rec.credId, ...flags }
-  }
-  saveAll(all)
-}
-
-export async function activarHuella(userId: string, nombre: string) {
-  await activarMetodo(userId, nombre, 'huella')
-}
-
-export function desactivarHuella(userId: string) {
+export function desactivarBiometria(userId: string) {
   const all = loadAll()
   delete all[userId]
   saveAll(all)

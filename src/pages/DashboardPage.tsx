@@ -111,12 +111,14 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 }
 
+const MOSTRAR_SALDO_KEY = 'monix_mostrar_saldo'
+
 function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy: number; titulo: string }) {
   const isUSD = cuenta.moneda === 'USD'
   const tasa = Number(cuenta.tasa_anual ?? 32)
   const rendimientoDiario = estimacionDiaria(cuenta.saldo, tasa)
 
-  const [showData, setShowData] = useState(false)
+  const [showData, setShowData] = useState(() => localStorage.getItem(MOSTRAR_SALDO_KEY) === '1')
   const [copiedCbu, setCopiedCbu] = useState(false)
   const [copiedAlias, setCopiedAlias] = useState(false)
   const prevSaldoRef = useRef<number>(0)
@@ -157,7 +159,11 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
       <div className="flex items-start justify-between gap-3 mb-2">
         <p className="font-body text-sm text-slate-secondary">{titulo}</p>
         <button
-          onClick={() => setShowData((v) => !v)}
+          onClick={() => setShowData((v) => {
+            const next = !v
+            localStorage.setItem(MOSTRAR_SALDO_KEY, next ? '1' : '0')
+            return next
+          })}
           className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors shrink-0"
           aria-label={showData ? 'Ocultar saldo' : 'Mostrar saldo'}
         >

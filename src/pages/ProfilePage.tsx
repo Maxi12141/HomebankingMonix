@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet, Fingerprint, ScanFace, ShieldCheck } from 'lucide-react'
+import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet, Fingerprint, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
@@ -13,14 +13,13 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import {
-  activarMetodo,
+  activarBiometria,
   borrarCredencialBio,
-  desactivarMetodo,
+  desactivarBiometria,
   esCelular,
   guardarCredencialBio,
-  metodosBio,
+  huellaActiva,
   soportaHuella,
-  type MetodoBio,
 } from '../lib/biometria'
 import { pedirTodosLosPermisos } from '../native/monixRadio'
 
@@ -67,17 +66,17 @@ export function ProfilePage() {
   const [newPass, setNewPass] = useState('')
   const [savingPass, setSavingPass] = useState(false)
   const [passError, setPassError] = useState('')
-  const [metodos, setMetodos] = useState({ huella: false, face: false })
+  const [bioActiva, setBioActiva] = useState(false)
   const [huellaDisponible, setHuellaDisponible] = useState(() => esCelular())
   const [savingBio, setSavingBio] = useState(false)
   const [savingPermisos, setSavingPermisos] = useState(false)
-  const [confirmMetodo, setConfirmMetodo] = useState<MetodoBio | null>(null)
+  const [confirmandoBio, setConfirmandoBio] = useState(false)
   const [confirmPass, setConfirmPass] = useState('')
   const [confirmError, setConfirmError] = useState('')
 
   useEffect(() => {
     if (!user) return
-    setMetodos(metodosBio(user.id))
+    setBioActiva(huellaActiva(user.id))
     if (esCelular()) {
       setHuellaDisponible(true)
       return
@@ -202,16 +201,15 @@ export function ProfilePage() {
     setSavingPass(false)
   }
 
-  async function toggleMetodo(metodo: MetodoBio) {
+  async function toggleBiometria() {
     if (!user || !persona) return
-    if (metodos[metodo]) {
+    if (bioActiva) {
       setSavingBio(true)
       try {
-        desactivarMetodo(user.id, metodo)
-        const restantes = metodosBio(user.id)
-        setMetodos(restantes)
-        if (!restantes.huella && !restantes.face) borrarCredencialBio(persona.email)
-        toast.success(metodo === 'huella' ? 'Huella desactivada' : 'Face ID desactivado')
+        desactivarBiometria(user.id)
+        setBioActiva(false)
+        borrarCredencialBio(persona.email)
+        toast.success('Biometría desactivada')
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'No se pudo desactivar'
         toast.error(msg)
@@ -222,14 +220,14 @@ export function ProfilePage() {
     }
     // Activar pide confirmar la contraseña una vez — se guarda localmente
     // (sólo para esta cuenta, sólo en este dispositivo) para poder saltear
-    // el campo de contraseña en el login cuando la huella valide.
+    // el campo de contraseña en el login cuando la biometría valide.
     setConfirmError('')
     setConfirmPass('')
-    setConfirmMetodo(metodo)
+    setConfirmandoBio(true)
   }
 
   async function confirmarYActivar() {
-    if (!user || !persona || !confirmMetodo) return
+    if (!user || !persona) return
     setSavingBio(true)
     setConfirmError('')
     try {
@@ -239,16 +237,14 @@ export function ProfilePage() {
         return
       }
       toast.loading('Confirmá con la huella, la cara o el PIN del teléfono…', { id: 'bio' })
-      await activarMetodo(user.id, `${persona.nombre} ${persona.apellido}`, confirmMetodo)
+      await activarBiometria(user.id, `${persona.nombre} ${persona.apellido}`)
       guardarCredencialBio(persona.email, confirmPass)
-      setMetodos(metodosBio(user.id))
+      setBioActiva(true)
       toast.success(
-        confirmMetodo === 'huella'
-          ? 'Huella activada. Al entrar te la pedimos primero, con la contraseña como respaldo.'
-          : 'Face ID activado. Al entrar te lo pedimos primero, con la contraseña como respaldo.',
+        'Biometría activada. Al entrar te la pedimos primero, con la contraseña como respaldo.',
         { id: 'bio' },
       )
-      setConfirmMetodo(null)
+      setConfirmandoBio(false)
       setConfirmPass('')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'No se pudo configurar el desbloqueo'
@@ -358,62 +354,31 @@ export function ProfilePage() {
           </Button>
         </Card>
 
-        <Card className="p-5 mb-4">
+        <Card className="p-5 mb-6">
           <div className="flex items-start gap-3">
             <Fingerprint size={22} className="text-mint shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con huella</p>
+              <p className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con biometría</p>
               <p className="font-body text-xs text-slate-secondary mt-0.5">
                 {huellaDisponible
-                  ? 'Al activarla te pedimos la huella. Si salís y volvés, desbloqueás con huella o con tu contraseña.'
-                  : 'Abrí Perfil desde el celular para activar la huella.'}
+                  ? 'Usa la huella, la cara o el PIN que ya tengas configurado en el teléfono — el sistema elige solo cuál pedirte. Si sale mal o preferís no usarla, siempre podés entrar con tu contraseña.'
+                  : 'Abrí Perfil desde el celular para activar la biometría.'}
               </p>
             </div>
             <button
               type="button"
               role="switch"
-              aria-checked={metodos.huella}
+              aria-checked={bioActiva}
               disabled={!huellaDisponible}
               aria-busy={savingBio}
-              onClick={() => { if (!savingBio) void toggleMetodo('huella') }}
+              onClick={() => { if (!savingBio) void toggleBiometria() }}
               className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
-                metodos.huella ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
+                bioActiva ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
               }`}
             >
               <span
                 className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  metodos.huella ? 'translate-x-5' : ''
-                }`}
-              />
-            </button>
-          </div>
-        </Card>
-
-        <Card className="p-5 mb-6">
-          <div className="flex items-start gap-3">
-            <ScanFace size={22} className="text-mint shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="font-body font-medium text-navy dark:text-white text-sm">Face ID</p>
-              <p className="font-body text-xs text-slate-secondary mt-0.5">
-                {huellaDisponible
-                  ? 'Reconocimiento facial del teléfono (Face ID o desbloqueo facial). Si no está enrolado, el sistema te ofrece la huella.'
-                  : 'Abrí Perfil desde el celular para activar Face ID.'}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={metodos.face}
-              disabled={!huellaDisponible}
-              aria-busy={savingBio}
-              onClick={() => { if (!savingBio) void toggleMetodo('face') }}
-              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
-                metodos.face ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  metodos.face ? 'translate-x-5' : ''
+                  bioActiva ? 'translate-x-5' : ''
                 }`}
               />
             </button>
@@ -571,13 +536,13 @@ export function ProfilePage() {
         </Card>
       </div>
 
-      <Modal open={confirmMetodo !== null} onClose={() => setConfirmMetodo(null)}>
+      <Modal open={confirmandoBio} onClose={() => setConfirmandoBio(false)}>
         <Card className="p-6">
           <h3 className="font-display text-lg font-semibold text-navy dark:text-white mb-1">
             Confirmá tu contraseña
           </h3>
           <p className="font-body text-sm text-slate-secondary mb-4">
-            La necesitamos una vez para activar {confirmMetodo === 'huella' ? 'la huella' : 'Face ID'} en este dispositivo.
+            La necesitamos una vez para activar el ingreso con biometría en este dispositivo.
           </p>
           <form
             onSubmit={(e) => { e.preventDefault(); void confirmarYActivar() }}
@@ -593,7 +558,7 @@ export function ProfilePage() {
             />
             {confirmError && <p className="text-sm text-red-500 dark:text-red-400 font-body">{confirmError}</p>}
             <div className="flex gap-2 mt-2">
-              <Button type="button" variant="secondary" className="flex-1" onClick={() => setConfirmMetodo(null)}>
+              <Button type="button" variant="secondary" className="flex-1" onClick={() => setConfirmandoBio(false)}>
                 Cancelar
               </Button>
               <Button type="submit" loading={savingBio} className="flex-1">

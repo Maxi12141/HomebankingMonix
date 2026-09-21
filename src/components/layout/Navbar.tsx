@@ -1,11 +1,11 @@
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRightLeft, Landmark, LayoutDashboard, QrCode, Vault } from 'lucide-react'
+import { ArrowRightLeft, Landmark, LayoutDashboard, PiggyBank, QrCode } from 'lucide-react'
 
 const sideLinks = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Inicio' },
   { to: '/transferir', icon: ArrowRightLeft, label: 'Transferir' },
   { to: '/cuentas', icon: Landmark, label: 'Cuentas' },
-  { to: '/reservas', icon: Vault, label: 'Reservas' },
+  { to: '/reservas', icon: PiggyBank, label: 'Reservas' },
 ]
 
 export function Navbar() {

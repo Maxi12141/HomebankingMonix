@@ -105,23 +105,13 @@ export function MonixCard3D({
 
   return (
     <div className="mb-6" id="perfil-tarjeta">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="font-display text-sm font-semibold text-navy dark:text-white">
-            Tu tarjeta débito
-          </p>
-          <p className="font-body text-xs text-slate-secondary mt-0.5">
-            Mové el cursor para inclinarla · tocá para ver el dorso
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={toggleFlip}
-          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-body font-medium text-navy dark:text-white bg-slate-input dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:border-mint/40 transition-colors"
-        >
-          <RotateCcw size={13} />
-          {flipped ? 'Frente' : 'Dorso'}
-        </button>
+      <div className="mb-3">
+        <p className="font-display text-sm font-semibold text-navy dark:text-white">
+          Tu tarjeta débito
+        </p>
+        <p className="font-body text-xs text-slate-secondary mt-0.5">
+          Mové el cursor para inclinarla · tocá para ver el dorso
+        </p>
       </div>
 
       <div
@@ -131,6 +121,14 @@ export function MonixCard3D({
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
       >
+        <button
+          type="button"
+          onClick={toggleFlip}
+          className="absolute top-3 right-3 z-30 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-body font-medium text-white bg-black/30 backdrop-blur-sm border border-white/20 hover:border-mint/50 hover:bg-black/40 transition-colors"
+        >
+          <RotateCcw size={13} />
+          {flipped ? 'Frente' : 'Dorso'}
+        </button>
         {/* Tilt layer */}
         <motion.div
           style={{

@@ -67,6 +67,7 @@ export function CuentasPage() {
   const { cuenta, cuentas, refreshCuenta } = useCuenta()
   const [estado, setEstado] = useState<Estado>('idle')
   const [error, setError] = useState('')
+  const [aceptaTerminos, setAceptaTerminos] = useState(false)
 
   const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
 
@@ -97,6 +98,7 @@ export function CuentasPage() {
 
       await refreshCuenta()
       setEstado('idle')
+      setAceptaTerminos(false)
       toast.success('¡Ya tenés tu cuenta en dólares!')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'No se pudo abrir la cuenta'
@@ -153,7 +155,14 @@ export function CuentasPage() {
         </div>
       </div>
 
-      <Modal open={estado === 'confirmar' || estado === 'abriendo'} onClose={() => estado !== 'abriendo' && setEstado('idle')}>
+      <Modal
+        open={estado === 'confirmar' || estado === 'abriendo'}
+        onClose={() => {
+          if (estado === 'abriendo') return
+          setEstado('idle')
+          setAceptaTerminos(false)
+        }}
+      >
         <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="rounded-xl bg-mint/15 text-mint p-2.5">
@@ -164,15 +173,46 @@ export function CuentasPage() {
             </p>
           </div>
 
-          <p className="font-body text-sm text-slate-secondary mb-6">
+          <p className="font-body text-sm text-slate-secondary mb-4">
             Vamos a abrirte una caja de ahorro en dólares con CBU y alias propios.
           </p>
 
+          <div className="rounded-xl bg-slate-input dark:bg-white/5 p-4 mb-4 max-h-48 overflow-y-auto">
+            <p className="font-body text-xs font-semibold text-navy dark:text-white mb-2">
+              Términos y condiciones
+            </p>
+            <ul className="font-body text-xs text-slate-secondary space-y-1.5 list-disc pl-4">
+              <li>La cuenta en dólares es independiente de tu caja de ahorro en pesos, con CBU y alias propios.</li>
+              <li>Sin costo de apertura ni de mantenimiento.</li>
+              <li>Las transferencias y depósitos en esta cuenta se acreditan en dólares estadounidenses (USD).</li>
+              <li>Podés operar la compra y venta de dólares desde Monix en cualquier momento.</li>
+              <li>Los datos que informamos al Banco Central (CBU y alias) quedan asociados a tu DNI, igual que tu cuenta en pesos.</li>
+            </ul>
+          </div>
+
+          <label className="flex items-start gap-2 mb-6 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={aceptaTerminos}
+              onChange={(e) => setAceptaTerminos(e.target.checked)}
+              disabled={estado === 'abriendo'}
+              className="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-white/20 accent-mint cursor-pointer shrink-0"
+            />
+            <span className="font-body text-sm text-navy dark:text-white">
+              Leí y acepto los términos y condiciones de la cuenta en dólares.
+            </span>
+          </label>
+
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setEstado('idle')} disabled={estado === 'abriendo'}>
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => { setEstado('idle'); setAceptaTerminos(false) }}
+              disabled={estado === 'abriendo'}
+            >
               Cancelar
             </Button>
-            <Button className="flex-1" onClick={solicitarUSD} loading={estado === 'abriendo'}>
+            <Button className="flex-1" onClick={solicitarUSD} loading={estado === 'abriendo'} disabled={!aceptaTerminos}>
               Continuar
             </Button>
           </div>
