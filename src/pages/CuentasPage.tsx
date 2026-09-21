@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuenta } from '../hooks/useCuenta'
-import { abrirCuenta, asignarAliasCuenta } from '../services/bancoCentral'
+import { abrirCuenta, asignarAliasCuenta, BancoCentralError, mensajeAmigableBC } from '../services/bancoCentral'
 import { generateNumeroCuenta, generateAlias, formatMonto } from '../utils/cuenta'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
@@ -101,7 +101,9 @@ export function CuentasPage() {
       setAceptaTerminos(false)
       toast.success('¡Ya tenés tu cuenta en dólares!')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'No se pudo abrir la cuenta'
+      const msg = err instanceof BancoCentralError
+        ? mensajeAmigableBC(err)
+        : err instanceof Error ? err.message : 'No se pudo abrir la cuenta'
       setError(msg)
       setEstado('idle')
       toast.error(msg)

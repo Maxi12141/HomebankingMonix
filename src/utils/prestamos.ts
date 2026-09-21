@@ -125,3 +125,33 @@ export function addMonths(isoOrMs: string | number, months: number): string {
   d.setMonth(d.getMonth() + months)
   return d.toISOString()
 }
+
+// Distribución ficticia usada al registrarse para informarle al Banco Central
+// una situación crediticia inicial (POST /central-deudores) — sin esto, todo
+// usuario nuevo caía siempre en situación 1 por default (sin informe), lo que
+// hacía que Préstamos sólo mostrara ofertas variadas para las ~17 personas
+// sembradas a mano con scripts/seed-central-deudores.mjs. Pesos calcados de
+// esa distribución manual (mayoría situación 1-2, pocos casos de riesgo alto).
+const DISTRIBUCION_SITUACION: { situacion: number; peso: number; montoRango: [number, number] }[] = [
+  { situacion: 1, peso: 50, montoRango: [0, 0] },
+  { situacion: 2, peso: 28, montoRango: [10_000, 40_000] },
+  { situacion: 3, peso: 12, montoRango: [150_000, 350_000] },
+  { situacion: 4, peso: 7, montoRango: [600_000, 900_000] },
+  { situacion: 5, peso: 3, montoRango: [2_000_000, 4_500_000] },
+]
+
+function montoAlAzar([min, max]: [number, number]): number {
+  if (max <= min) return min
+  return Math.round((min + Math.random() * (max - min)) / 1000) * 1000
+}
+
+/** Situación crediticia ficticia inicial para informar al Banco Central al registrarse. */
+export function situacionCrediticiaFicticia(): { situacion: number; monto: number } {
+  const pesoTotal = DISTRIBUCION_SITUACION.reduce((acc, d) => acc + d.peso, 0)
+  let tiro = Math.random() * pesoTotal
+  for (const d of DISTRIBUCION_SITUACION) {
+    tiro -= d.peso
+    if (tiro <= 0) return { situacion: d.situacion, monto: montoAlAzar(d.montoRango) }
+  }
+  return { situacion: 1, monto: 0 }
+}

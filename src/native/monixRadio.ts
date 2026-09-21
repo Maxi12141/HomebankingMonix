@@ -19,7 +19,7 @@ function hasNdef(): boolean {
   return typeof window !== 'undefined' && 'NDEFReader' in window
 }
 
-function isNative(): boolean {
+export function isNative(): boolean {
   if (typeof window === 'undefined') return false
   if (Capacitor.isNativePlatform()) return true
   if (Capacitor.getPlatform() === 'android') return true
@@ -367,7 +367,36 @@ export class MonixRadio {
   async writeNfc(payload: string, options?: { signal?: AbortSignal }) {
     const plugin = await getPlugin()
     if (plugin) {
-      await plugin.writeNfc({ payload })
+      // El plugin nativo no tiene forma de cancelar una llamada en curso (el
+      // puente de Capacitor no lo soporta) — sin esto, cancelar o agotar el
+      // timeout del caller nunca se reflejaba acá y el await quedaba esperando
+      // a que el usuario acerque un tag, sin importar el signal recibido.
+      // El lado nativo (MonixRadioPlugin.kt) igual acota la escritura
+      // pendiente con su propio timeout, así que no queda colgada para siempre.
+      if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      await new Promise<void>((resolve, reject) => {
+        let settled = false
+        const onAbort = () => {
+          if (settled) return
+          settled = true
+          reject(new DOMException('Aborted', 'AbortError'))
+        }
+        options?.signal?.addEventListener('abort', onAbort)
+        plugin.writeNfc({ payload }).then(
+          () => {
+            if (settled) return
+            settled = true
+            options?.signal?.removeEventListener('abort', onAbort)
+            resolve()
+          },
+          (err) => {
+            if (settled) return
+            settled = true
+            options?.signal?.removeEventListener('abort', onAbort)
+            reject(err)
+          },
+        )
+      })
       return
     }
     if (!hasNdef()) {

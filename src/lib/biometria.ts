@@ -1,5 +1,5 @@
-import { Capacitor } from '@capacitor/core'
 import {
+  isNative as isNativeApp,
   verificarBiometriaNativa,
 } from '../native/monixRadio'
 
@@ -50,12 +50,6 @@ function b64ToBytes(b64: string) {
 function rpId() {
   const host = window.location.hostname
   return host === 'localhost' || host === '127.0.0.1' ? 'localhost' : host
-}
-
-function isNativeApp() {
-  if (Capacitor.isNativePlatform()) return true
-  if (Capacitor.getPlatform() === 'android') return true
-  return Boolean((window as unknown as { androidBridge?: unknown }).androidBridge)
 }
 
 export function esCelular() {
@@ -158,8 +152,7 @@ async function asegurarCredencial(userId: string, nombre: string): Promise<BioRe
   if (!(await soportaHuella())) {
     throw new Error('Este teléfono no tiene huella ni reconocimiento facial disponible')
   }
-  const cred = await Promise.race([
-    navigator.credentials.create({
+  const creacion = navigator.credentials.create({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
       rp: { name: 'Monix', id: rpId() },
@@ -180,7 +173,13 @@ async function asegurarCredencial(userId: string, nombre: string): Promise<BioRe
       timeout: 60_000,
       attestation: 'none',
     },
-    }),
+  })
+  // Si gana el timeout de acá abajo, navigator.credentials.create() sigue
+  // pendiente en segundo plano — sin este catch, un rechazo tardío (usuario
+  // cancela el prompt nativo después de los 12s) queda sin manejar.
+  creacion.catch(() => undefined)
+  const cred = await Promise.race([
+    creacion,
     new Promise<never>((_, reject) => {
       window.setTimeout(
         () => reject(new Error('El teléfono no mostró la huella. En la app de Monix instalá la APK nueva.')),

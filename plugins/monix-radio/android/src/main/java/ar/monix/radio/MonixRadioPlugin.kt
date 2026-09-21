@@ -16,6 +16,8 @@ import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
 import android.speech.RecognitionListener
@@ -444,8 +446,25 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
   @PluginMethod
   fun writeNfc(call: PluginCall) {
+    // Una escritura pendiente sin tag presentado se cancela en vez de
+    // perderse: antes, un segundo llamado a writeNfc() pisaba silenciosamente
+    // la referencia y la promesa original del caller anterior quedaba colgada
+    // para siempre (nunca resuelta ni rechazada).
+    writeTimeoutHandler?.removeCallbacksAndMessages(null)
+    writeCall?.reject("Se canceló: se pidió grabar un nuevo tag antes de acercar el anterior")
+
     pendingWrite = call.getString("payload")
     writeCall = call
+
+    val handler = Handler(Looper.getMainLooper())
+    writeTimeoutHandler = handler
+    handler.postDelayed({
+      if (writeCall === call) {
+        pendingWrite = null
+        writeCall = null
+        call.reject("No se detectó ningún tag NFC a tiempo. Acercá el teléfono al tag e intentá de nuevo.")
+      }
+    }, 25_000)
   }
 
   @PluginMethod
@@ -462,10 +481,13 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
   private var pendingWrite: String? = null
   private var writeCall: PluginCall? = null
+  private var writeTimeoutHandler: Handler? = null
 
   override fun onTagDiscovered(tag: Tag) {
     val payload = pendingWrite
     if (payload != null) {
+      writeTimeoutHandler?.removeCallbacksAndMessages(null)
+      writeTimeoutHandler = null
       try {
         val ndef = Ndef.get(tag) ?: return
         ndef.connect()

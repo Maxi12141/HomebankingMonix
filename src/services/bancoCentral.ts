@@ -24,12 +24,64 @@ async function fetchWithTimeout(url: string, options?: RequestInit): Promise<Res
   }
 }
 
-async function handleResponse<T>(res: Response): Promise<T> {
+/**
+ * Error real del Banco Central: guarda el status HTTP y el body JSON crudo
+ * (para loguear en consola y depurar) separado del mensaje que se le puede
+ * mostrar a un usuario final (ver `mensajeAmigableBC`).
+ */
+export class BancoCentralError extends Error {
+  status: number
+  body: unknown
+  endpoint: string
+
+  constructor(status: number, body: unknown, endpoint: string) {
+    const bodyMessage = (body as { message?: string } | null)?.message
+    super(bodyMessage ?? `Error ${status} del Banco Central`)
+    this.name = 'BancoCentralError'
+    this.status = status
+    this.body = body
+    this.endpoint = endpoint
+  }
+}
+
+async function handleResponse<T>(res: Response, endpoint: string): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }))
-    throw new Error(`[${res.status}] ${body.message ?? res.statusText}`)
+    // eslint-disable-next-line no-console
+    console.error(`[BancoCentral] ${res.status} ${endpoint} →`, body)
+    throw new BancoCentralError(res.status, body, endpoint)
   }
   return res.json() as Promise<T>
+}
+
+/**
+ * Mensaje apto para mostrar a un usuario final ante un error del Banco
+ * Central — nunca expone el JSON crudo de la respuesta (eso queda sólo en la
+ * consola, vía `handleResponse`). Usar en el catch de cualquier pantalla que
+ * llame a una función de este archivo y muestre el error en la UI.
+ */
+export function mensajeAmigableBC(err: unknown): string {
+  if (err instanceof BancoCentralError) {
+    switch (err.status) {
+      case 400:
+        return 'Revisá los datos ingresados e intentá de nuevo.'
+      case 401:
+      case 403:
+        return 'No pudimos validar la operación con el banco. Intentá de nuevo en unos minutos.'
+      case 404:
+        return 'No encontramos lo que buscabas en el banco.'
+      case 409:
+        return 'Ese dato ya está registrado en el Banco Central.'
+      case 429:
+        return 'Estamos recibiendo muchas solicitudes en este momento. Esperá un momento y volvé a intentar.'
+      default:
+        return err.status >= 500
+          ? 'El Banco Central no está respondiendo en este momento. Intentá de nuevo en unos minutos.'
+          : 'No pudimos completar la operación con el banco. Intentá de nuevo.'
+    }
+  }
+  if (err instanceof Error && err.message.includes('tardó demasiado')) return err.message
+  return 'No pudimos completar la operación. Intentá de nuevo.'
 }
 
 export interface BCPersona {
@@ -89,19 +141,19 @@ export async function registrarPersona(
     headers: HEADERS,
     body: JSON.stringify({ nombre, apellido, dni }),
   })
-  return handleResponse<BCPersona>(res)
+  return handleResponse<BCPersona>(res, 'POST /persons')
 }
 
 export async function buscarPorCBU(cbu: string): Promise<BCPersona> {
   const res = await fetchWithTimeout(`${BASE_URL}/persons/${cbu}`, { headers: HEADERS })
-  return handleResponse<BCPersona>(res)
+  return handleResponse<BCPersona>(res, 'GET /persons/:cbu')
 }
 
 export async function buscarPorAlias(alias: string): Promise<BCPersona> {
   const res = await fetchWithTimeout(`${BASE_URL}/persons/alias/${encodeURIComponent(alias)}`, {
     headers: HEADERS,
   })
-  return handleResponse<BCPersona>(res)
+  return handleResponse<BCPersona>(res, 'GET /persons/alias/:alias')
 }
 
 export async function asignarAlias(cbu: string, alias: string): Promise<BCPersona> {
@@ -110,7 +162,7 @@ export async function asignarAlias(cbu: string, alias: string): Promise<BCPerson
     headers: HEADERS,
     body: JSON.stringify({ alias }),
   })
-  return handleResponse<BCPersona>(res)
+  return handleResponse<BCPersona>(res, 'PUT /persons/:cbu/alias')
 }
 
 export async function transferir(
@@ -124,7 +176,7 @@ export async function transferir(
     headers: HEADERS,
     body: JSON.stringify({ cbuOrigen, cbuDestino, importe, saldoOrigen }),
   })
-  return handleResponse<BCTransaccion>(res)
+  return handleResponse<BCTransaccion>(res, 'POST /transactions')
 }
 
 export async function listarTransacciones(minutos: number): Promise<BCTransaccionEntrante[]> {
@@ -132,7 +184,7 @@ export async function listarTransacciones(minutos: number): Promise<BCTransaccio
   try {
     const res = await fetchWithTimeout(`${BASE_URL}/transactions?minutos=${minutos}`, { headers: HEADERS })
     if (res.status === 404) return []
-    return await handleResponse<BCTransaccionEntrante[]>(res)
+    return await handleResponse<BCTransaccionEntrante[]>(res, 'GET /transactions')
   } catch (err) {
     if (esNotFound(err)) return []
     throw err
@@ -146,7 +198,7 @@ export interface BCBank {
 
 export async function getBankName(bankCode: number): Promise<string> {
   const res = await fetchWithTimeout(`${BASE_URL}/banks/${bankCode}`, { headers: HEADERS })
-  const bank = await handleResponse<BCBank>(res)
+  const bank = await handleResponse<BCBank>(res, 'GET /banks/:bankCode')
   return bank.name
 }
 
@@ -170,7 +222,7 @@ export async function abrirCuenta(dni: string, moneda: 'ARS' | 'USD'): Promise<B
     headers: HEADERS,
     body: JSON.stringify({ dni, moneda }),
   })
-  return handleResponse<BCCuenta>(res)
+  return handleResponse<BCCuenta>(res, 'POST /accounts')
 }
 
 export async function asignarAliasCuenta(cbu: string, alias: string): Promise<BCCuenta> {
@@ -179,19 +231,19 @@ export async function asignarAliasCuenta(cbu: string, alias: string): Promise<BC
     headers: HEADERS,
     body: JSON.stringify({ alias }),
   })
-  return handleResponse<BCCuenta>(res)
+  return handleResponse<BCCuenta>(res, 'PUT /accounts/:cbu/alias')
 }
 
 export async function buscarCuentaPorCBU(cbu: string): Promise<BCCuenta> {
   const res = await fetchWithTimeout(`${BASE_URL}/accounts/${cbu}`, { headers: HEADERS })
-  return handleResponse<BCCuenta>(res)
+  return handleResponse<BCCuenta>(res, 'GET /accounts/:cbu')
 }
 
 export async function buscarCuentaPorAlias(alias: string): Promise<BCCuenta> {
   const res = await fetchWithTimeout(`${BASE_URL}/accounts/alias/${encodeURIComponent(alias)}`, {
     headers: HEADERS,
   })
-  return handleResponse<BCCuenta>(res)
+  return handleResponse<BCCuenta>(res, 'GET /accounts/alias/:alias')
 }
 
 export interface BCDestinatario {
@@ -205,7 +257,7 @@ export interface BCDestinatario {
 }
 
 function esNotFound(err: unknown): boolean {
-  return err instanceof Error && err.message.startsWith('[404]')
+  return err instanceof BancoCentralError && err.status === 404
 }
 
 function monedaValida(m: string | undefined): 'ARS' | 'USD' {
@@ -266,7 +318,7 @@ export interface BCSituacionCrediticia {
 export async function consultarSituacion(dni: string): Promise<BCSituacionCrediticia> {
   try {
     const res = await fetchWithTimeout(`${BASE_URL}/central-deudores/${dni}`, { headers: HEADERS })
-    return await handleResponse<BCSituacionCrediticia>(res)
+    return await handleResponse<BCSituacionCrediticia>(res, 'GET /central-deudores/:dni')
   } catch (err) {
     // 404 = ningún banco informó deudas para ese DNI. Se interpreta como
     // situación 1 (sin antecedentes negativos) — supuesto de negocio pendiente
@@ -274,4 +326,24 @@ export async function consultarSituacion(dni: string): Promise<BCSituacionCredit
     if (esNotFound(err)) return { dni, situacion: 1, deudas: [] }
     throw err
   }
+}
+
+/**
+ * Informa al Banco Central la situación crediticia que Monix le asigna a un
+ * cliente (POST /central-deudores) — un banco tiene un solo informe activo
+ * por DNI, volver a llamar pisa el anterior. Se usa una sola vez al
+ * registrarse (ver RegisterPage.tsx); la persona puede tener deudas
+ * informadas por otros bancos del curso también, GET agrega todas.
+ */
+export async function informarSituacionCrediticia(
+  dni: string,
+  monto: number,
+  situacion: number,
+): Promise<BCSituacionCrediticia> {
+  const res = await fetchWithTimeout(`${BASE_URL}/central-deudores`, {
+    method: 'POST',
+    headers: HEADERS,
+    body: JSON.stringify({ dni, monto, situacion }),
+  })
+  return handleResponse<BCSituacionCrediticia>(res, 'POST /central-deudores')
 }

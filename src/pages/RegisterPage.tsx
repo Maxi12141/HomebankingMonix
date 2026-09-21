@@ -6,8 +6,9 @@ import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
-import { registrarPersona, asignarAlias } from '../services/bancoCentral'
+import { registrarPersona, asignarAlias, informarSituacionCrediticia, BancoCentralError, mensajeAmigableBC } from '../services/bancoCentral'
 import { generateNumeroCuenta, generateAlias } from '../utils/cuenta'
+import { situacionCrediticiaFicticia } from '../utils/prestamos'
 import { marcarIngresoConClave } from '../lib/biometria'
 import { BONO_BIENVENIDA, marcarUsuarioNuevo } from '../lib/onboarding'
 import { Button } from '../components/ui/Button'
@@ -80,6 +81,22 @@ export function RegisterPage() {
 
       if (personaError) throw personaError
 
+      try {
+        // Le informamos al Banco Central una situación crediticia inicial
+        // ficticia (una persona puede tener cuentas en varios bancos del
+        // curso, y el registro compartido de deudores agrega lo que informa
+        // cada uno). No bloquea el registro si falla: Préstamos ya trata un
+        // DNI sin informe como situación 1 (ver consultarSituacion).
+        const { situacion, monto } = situacionCrediticiaFicticia()
+        await informarSituacionCrediticia(form.dni, monto, situacion)
+        await supabase.from('personas').update({
+          situacion_crediticia_monix: situacion,
+          situacion_informada_at: new Date().toISOString(),
+        }).eq('id', userId)
+      } catch (err) {
+        console.error('No se pudo informar la situación crediticia al Banco Central:', err)
+      }
+
       const { data: cuentaNueva, error: cuentaError } = await supabase.from('cuentas').insert({
         persona_id: userId,
         numero_cuenta: generateNumeroCuenta(),
@@ -111,8 +128,10 @@ export function RegisterPage() {
         setError('Ese email ya está registrado')
       } else if (msg.includes('duplicate') && msg.includes('dni')) {
         setError('Ese DNI ya está registrado')
-      } else if (msg.includes('409') || msg.toLowerCase().includes('dni')) {
+      } else if (err instanceof BancoCentralError && err.status === 409) {
         setError('Ese DNI ya está registrado en el Banco Central')
+      } else if (err instanceof BancoCentralError) {
+        setError(mensajeAmigableBC(err))
       } else {
         setError(msg)
       }

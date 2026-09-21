@@ -10,6 +10,11 @@ export interface Persona {
   // Ficticios, editables en Perfil — usados por Préstamos para tasa/monto máximo.
   sueldo_acreditado: boolean
   ingreso_mensual: number | null
+  // Situación crediticia ficticia que Monix le informó al Banco Central al
+  // registrarse (POST /central-deudores) — null en cuentas creadas antes de
+  // este feature. No se muestra al usuario, sólo la usa Préstamos puertas adentro.
+  situacion_crediticia_monix: number | null
+  situacion_informada_at: string | null
   created_at: string
 }
 

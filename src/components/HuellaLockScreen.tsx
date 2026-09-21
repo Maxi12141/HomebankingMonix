@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Fingerprint } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
-import { verificarHuella } from '../lib/biometria'
+import { verificarHuella, esCancelacionBiometrica } from '../lib/biometria'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import monixLogo from '../assets/logos/logo-blanco.svg'
@@ -30,7 +30,9 @@ export function HuellaLockScreen({ onUnlock }: Props) {
       await verificarHuella(user.id)
       onUnlock()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo validar. Usá la contraseña de Monix.')
+      if (!esCancelacionBiometrica(err)) {
+        setError(err instanceof Error ? err.message : 'No se pudo validar. Usá la contraseña de Monix.')
+      }
     } finally {
       setLoadingBio(false)
     }
