@@ -36,7 +36,7 @@ export default defineConfig({
       injectRegister: null,
       registerType: 'prompt',
       manifest: {
-        name: 'Monix — Homebanking',
+        name: 'Monix',
         short_name: 'Monix',
         description: 'Banco digital Monix: cuentas en pesos y dólares, transferencias, tarjeta, préstamos y más.',
         lang: 'es-AR',
