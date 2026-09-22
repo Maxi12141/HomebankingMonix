@@ -10,6 +10,8 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { getRememberedEmail, saveRememberedEmail, clearRememberedEmail } from '../utils/rememberMe'
 import {
+  borrarCredencialBio,
+  consumoIngresoConClave,
   credencialBioParaEmail,
   esCancelacionBiometrica,
   esCelular,
@@ -56,9 +58,15 @@ export function LoginPage() {
   }, [])
 
   async function finalizarLogin(emailFinal: string, passwordFinal: string) {
-    await login(emailFinal, passwordFinal)
-    descartarOnboarding()
+    // Se marca ANTES de autenticar: onAuthStateChange puede reaccionar al nuevo user antes de este await.
     marcarIngresoConClave()
+    try {
+      await login(emailFinal, passwordFinal)
+    } catch (err) {
+      consumoIngresoConClave()
+      throw err
+    }
+    descartarOnboarding()
     if (rememberMe) {
       saveRememberedEmail(emailFinal)
     } else {
@@ -90,7 +98,14 @@ export function LoginPage() {
     setBioLoading(true)
     try {
       await verificarHuella(uid)
-      await finalizarLogin(emailNorm, credencial)
+      try {
+        await finalizarLogin(emailNorm, credencial)
+      } catch {
+        // Huella OK pero password guardada obsoleta (cambió en Perfil) — evita repetir este fallo en silencio.
+        borrarCredencialBio(emailNorm)
+        setMostrarPassword(true)
+        setError('Tu sesión de huella quedó desactualizada (cambiaste tu contraseña). Ingresá con tu contraseña actual.')
+      }
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
         setError(err instanceof Error ? err.message : 'No se pudo validar. Usá la contraseña.')
@@ -126,6 +141,7 @@ export function LoginPage() {
 
   function cambiarCuenta() {
     setStep('email')
+    setEmail('')
     setPassword('')
     setError('')
     setMostrarPassword(false)
@@ -239,21 +255,16 @@ export function LoginPage() {
                     required
                     autoFocus
                   />
+                  <Link
+                    to="/recuperar-contrasena"
+                    className="self-end -mt-2 text-xs font-body text-mint hover:text-mint-hover transition-colors"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Link>
                   <Button type="submit" variant="secondary" loading={loading} className="w-full">
                     Ingresar
                   </Button>
                 </form>
-              )}
-
-              {mostrarInstalar && (
-                <button
-                  type="button"
-                  onClick={() => { void handleInstalar() }}
-                  className="w-full flex items-center justify-center gap-2 text-mint font-body text-sm font-medium py-3 mt-2 hover:text-mint-hover transition-colors"
-                >
-                  <Download size={16} />
-                  Instalar Monix
-                </button>
               )}
 
               <button
@@ -280,6 +291,12 @@ export function LoginPage() {
                   required
                   autoFocus
                 />
+                <Link
+                  to="/recuperar-contrasena"
+                  className="self-end -mt-2 text-xs font-body text-mint hover:text-mint-hover transition-colors"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
 
                 {error && (
                   <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3">
@@ -299,6 +316,18 @@ export function LoginPage() {
                 ‹ Cambiar cuenta
               </button>
             </>
+          )}
+
+          {mostrarInstalar && (
+            // Visible en los 3 pasos, no sólo en 'bio' — ahí casi nadie llegaba a verlo.
+            <button
+              type="button"
+              onClick={() => { void handleInstalar() }}
+              className="w-full flex items-center justify-center gap-2 text-mint font-body text-sm font-medium py-3 mt-4 hover:text-mint-hover transition-colors"
+            >
+              <Download size={16} />
+              Instalar Monix
+            </button>
           )}
 
           <p className="text-center text-sm font-body text-slate-secondary mt-6">

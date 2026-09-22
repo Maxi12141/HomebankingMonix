@@ -100,11 +100,11 @@ export function uidParaEmail(email: string): string | null {
   return loadEmailIndex()[email.trim().toLowerCase()] ?? null
 }
 
-// Contraseña guardada localmente sólo para las cuentas con huella/Face ID
-// activa en este dispositivo — la libera el login en dos pasos de
-// LoginPage.tsx tras un OK biométrico. Mismo nivel de seguridad que ya
-// tenía "Recordarme" (texto plano en localStorage), acotado a las cuentas
-// que explícitamente activaron biometría.
+// Contraseña en texto plano en localStorage, sólo para cuentas con huella
+// activa en este dispositivo — la libera LoginPage.tsx tras un OK biométrico.
+// Es un trade-off más débil que "Recordarme" (que sólo guarda el email,
+// nunca la contraseña): se acepta porque queda acotado a WebAuthn + a las
+// cuentas que explícitamente activaron biometría, no a cualquier sesión.
 function loadBioCred(): Record<string, string> {
   try {
     const raw = localStorage.getItem(BIO_CRED_KEY)
@@ -249,7 +249,7 @@ export async function verificarHuella(userId: string) {
   if (record.credId === 'native') {
     throw new Error('Abrí Monix desde la app instalada para usar la huella')
   }
-  const cred = await navigator.credentials.get({
+  const verificacion = navigator.credentials.get({
     publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
       rpId: rpId(),
@@ -261,6 +261,14 @@ export async function verificarHuella(userId: string) {
       timeout: 60_000,
     },
   })
+  // Mismo patrón que asegurarCredencial: sin esto, un WebView colgado deja el spinner de login girando para siempre.
+  verificacion.catch(() => undefined)
+  const cred = await Promise.race([
+    verificacion,
+    new Promise<never>((_, reject) => {
+      window.setTimeout(() => reject(new Error('El teléfono no respondió a tiempo. Probá de nuevo o usá tu contraseña.')), 12_000)
+    }),
+  ])
   if (!cred) throw new Error('No se reconoció la huella o el Face ID')
 }
 

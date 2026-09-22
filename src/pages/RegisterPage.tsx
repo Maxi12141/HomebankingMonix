@@ -13,6 +13,7 @@ import { marcarIngresoConClave } from '../lib/biometria'
 import { BONO_BIENVENIDA, marcarUsuarioNuevo } from '../lib/onboarding'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { PasswordInput } from '../components/ui/PasswordInput'
 import { DatePicker } from '../components/ui/DatePicker'
 import type { RegisterFormData } from '../types'
 
@@ -45,15 +46,24 @@ export function RegisterPage() {
     // antes de que termine el resto del registro (Banco Central + inserts) —
     // esta bandera lo frena hasta el navigate() explícito de más abajo.
     setProvisioning(true)
+    let userId: string | null = null
+    // Sin trim, un espacio de autocompletado de teclado en el email/DNI puede
+    // desincronizar contra un login o chequeo posterior que sí normaliza.
+    const nombre = form.nombre.trim()
+    const apellido = form.apellido.trim()
+    const dni = form.dni.trim()
+    const email = form.email.trim()
+    const telefono = form.telefono.trim()
+    const direccion = form.direccion.trim()
 
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: form.email,
+        email,
         password: form.password,
         options: {
           data: {
-            full_name: `${form.nombre} ${form.apellido}`,
-            phone: form.telefono,
+            full_name: `${nombre} ${apellido}`,
+            phone: telefono,
           },
         },
       })
@@ -61,22 +71,22 @@ export function RegisterPage() {
       if (authError) throw authError
       if (!authData.user) throw new Error('No se pudo crear el usuario')
 
-      const userId = authData.user.id
+      userId = authData.user.id
 
-      const { cbu } = await registrarPersona(form.nombre, form.apellido, form.dni)
+      const { cbu } = await registrarPersona(nombre, apellido, dni)
 
       const alias = generateAlias()
       await asignarAlias(cbu, alias)
 
       const { error: personaError } = await supabase.from('personas').insert({
         id: userId,
-        nombre: form.nombre,
-        apellido: form.apellido,
-        dni: form.dni,
-        email: form.email,
-        telefono: form.telefono || null,
+        nombre,
+        apellido,
+        dni,
+        email,
+        telefono: telefono || null,
         fecha_nac: form.fecha_nac || null,
-        direccion: form.direccion || null,
+        direccion: direccion || null,
       })
 
       if (personaError) throw personaError
@@ -88,7 +98,7 @@ export function RegisterPage() {
         // cada uno). No bloquea el registro si falla: Préstamos ya trata un
         // DNI sin informe como situación 1 (ver consultarSituacion).
         const { situacion, monto } = situacionCrediticiaFicticia()
-        await informarSituacionCrediticia(form.dni, monto, situacion)
+        await informarSituacionCrediticia(dni, monto, situacion)
         await supabase.from('personas').update({
           situacion_crediticia_monix: situacion,
           situacion_informada_at: new Date().toISOString(),
@@ -123,6 +133,10 @@ export function RegisterPage() {
       marcarIngresoConClave()
       navigate('/dashboard')
     } catch (err) {
+      // Cierra la sesión a medio crear para que PublicOnly no redirija a /dashboard antes de mostrar el error.
+      if (userId) {
+        await supabase.auth.signOut().catch(() => undefined)
+      }
       const msg = err instanceof Error ? err.message : 'Error al registrarse'
       if (msg.includes('already registered')) {
         setError('Ese email ya está registrado')
@@ -178,7 +192,15 @@ export function RegisterPage() {
               onChange={(iso) => setForm(prev => ({ ...prev, fecha_nac: iso }))}
             />
             <Input label="Domicilio" name="direccion" placeholder="Av. Corrientes 1234" value={form.direccion} onChange={handleChange} />
-            <Input label="Contraseña" type="password" name="password" placeholder="Mínimo 6 caracteres" value={form.password} onChange={handleChange} required minLength={6} />
+            <PasswordInput
+              label="Contraseña"
+              name="password"
+              placeholder="Mínimo 6 caracteres"
+              value={form.password}
+              onChange={handleChange}
+              required
+              minLength={6}
+            />
 
             {error && (
               <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3">

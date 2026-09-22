@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Fingerprint } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -37,11 +37,6 @@ export function HuellaLockScreen({ onUnlock }: Props) {
       setLoadingBio(false)
     }
   }
-
-  useEffect(() => {
-    const t = window.setTimeout(() => { void pedirBiometria() }, 400)
-    return () => window.clearTimeout(t)
-  }, [])
 
   async function entrarConClave(e: React.FormEvent) {
     e.preventDefault()

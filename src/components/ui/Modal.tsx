@@ -19,7 +19,8 @@ export function Modal({ open, onClose, children }: ModalProps) {
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          // z-[300]: antes compartía z-50 con el Navbar mobile, que quedaba clickeable por encima del modal.
+          className="fixed inset-0 z-[300] flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

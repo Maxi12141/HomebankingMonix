@@ -48,6 +48,10 @@ async function aplicarQr(raw: string, cargarCobro: (id: string) => Promise<void>
   if (parsed?.kind === 'pay' || parsed?.kind === 'id') {
     throw new Error('Ese código es de la tarjeta. Para pagar con QR usá el código de esta pantalla.')
   }
+  if (!parsed) {
+    // No matchea ningún formato conocido — sin esto caía a cargarCobro con el raw y mostraba un error de Postgres.
+    throw new Error('Ese código QR no es de Monix.')
+  }
   await cargarCobro(raw.replace(/^MONIXPAY:/i, ''))
 }
 
@@ -361,6 +365,8 @@ export function EscanearYPagar({
       if (isAbortError(err)) {
         if (!closingRef.current) setScanning(false)
       } else {
+        // Sin esto el video queda congelado con el error encima, sin forma de reintentar.
+        if (!closingRef.current) setScanning(false)
         setError(mensajeErrorCamara(err))
       }
     } finally {

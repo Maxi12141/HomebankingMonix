@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Download, Loader2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Modal } from './ui/Modal'
 import { Card } from './ui/Card'
 import { downloadComprobante } from '../utils/comprobante'
@@ -41,7 +42,13 @@ export function TransactionDetailModal({ movimiento, bankName, onClose }: Props)
   async function handleDownload() {
     if (!movimiento || downloading) return
     setDownloading(true)
-    try { await downloadComprobante(movimiento, bankName) } finally { setDownloading(false) }
+    try {
+      await downloadComprobante(movimiento, bankName)
+    } catch {
+      toast.error('No se pudo generar el comprobante')
+    } finally {
+      setDownloading(false)
+    }
   }
 
   const entrada = esEntrada(movimiento.tipo)

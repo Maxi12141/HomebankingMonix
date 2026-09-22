@@ -32,6 +32,7 @@ export function PrestamosPage() {
   const { prestamos, loading: loadingPrestamos, refreshPrestamos } = usePrestamos(cuenta ?? null)
 
   const [situacion, setSituacion] = useState<number | null>(null)
+  const [situacionError, setSituacionError] = useState(false)
 
   const [monto, setMonto] = useState('')
   const [cuotasSel, setCuotasSel] = useState(6)
@@ -41,11 +42,15 @@ export function PrestamosPage() {
 
   useEffect(() => {
     if (!persona) return
+    setSituacion(null)
+    setSituacionError(false)
     consultarSituacion(persona.dni)
       .then((r) => setSituacion(r.situacion))
-      .catch(() => setSituacion(1))
+      // Un 404 ya lo resuelve consultarSituacion como situación 1 — acá sólo llega un error real.
+      .catch(() => setSituacionError(true))
   }, [persona])
 
+  const situacionLista = situacion != null
   const nivel = nivelPorSituacion(situacion ?? 1)
   const oferta = useMemo(
     () => calcularOferta(situacion ?? 1, persona?.sueldo_acreditado ?? false),
@@ -76,6 +81,10 @@ export function PrestamosPage() {
     if (!persona || !cuenta) return
     setError('')
 
+    if (!situacionLista || situacionError) {
+      setError('Todavía no pudimos verificar tu situación crediticia. Probá de nuevo en un momento.')
+      return
+    }
     if (!nivel.disponible) {
       setError('Por ahora no podemos ofrecerte un préstamo.')
       return
@@ -147,6 +156,24 @@ export function PrestamosPage() {
           </p>
         </div>
 
+        {!situacionLista ? (
+          <Card className="p-6 mb-6 animate-pulse">
+            <p className="font-body text-sm text-slate-secondary">Consultando tu situación crediticia…</p>
+          </Card>
+        ) : situacionError ? (
+          <Card className="p-6 mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <ShieldAlert size={20} className="text-red-500 dark:text-red-400" />
+              <p className="font-display text-base font-semibold text-navy dark:text-white">
+                No pudimos verificar tu situación crediticia
+              </p>
+            </div>
+            <p className="font-body text-sm text-slate-secondary">
+              Volvé a intentar en un momento.
+            </p>
+          </Card>
+        ) : (
+          <>
         {ingresoDeclarado == null && nivel.disponible && (
           <p className="font-body text-xs text-slate-secondary mb-4 flex items-center gap-1.5">
             <Info size={13} className="shrink-0" />
@@ -269,6 +296,8 @@ export function PrestamosPage() {
               Solicitar préstamo
             </Button>
           </Card>
+        )}
+          </>
         )}
 
         {/* Mis préstamos */}

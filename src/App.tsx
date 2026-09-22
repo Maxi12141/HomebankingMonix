@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
 import { useAuth } from './hooks/useAuth'
@@ -29,6 +29,8 @@ import { PromosPage } from './pages/PromosPage'
 import { CashbackPage } from './pages/CashbackPage'
 import { FinanciacionPage } from './pages/FinanciacionPage'
 import { PrestamosPage } from './pages/PrestamosPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { useBiometriaLock } from './hooks/useBiometriaLock'
 import { HuellaLockScreen } from './components/HuellaLockScreen'
 import { PermisosPrimeraVez } from './components/PermisosPrimeraVez'
@@ -49,8 +51,10 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const { user, loading } = useAuth()
   const { locked, unlock } = useBiometriaLock(loading ? null : user)
+  const location = useLocation()
 
-  if (!loading && user && locked) {
+  // El link de recuperación no debería toparse con el bloqueo por huella.
+  if (!loading && user && locked && location.pathname !== '/restablecer-contrasena') {
     return <HuellaLockScreen onUnlock={unlock} />
   }
 
@@ -60,6 +64,8 @@ function AppRoutes() {
         <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />
         <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
         <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
+        <Route path="/recuperar-contrasena" element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
+        <Route path="/restablecer-contrasena" element={<ResetPasswordPage />} />
         <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
         <Route path="/cuentas" element={<RequireAuth><CuentasPage /></RequireAuth>} />
         <Route path="/dolares" element={<RequireAuth><CompraVentaDolaresPage /></RequireAuth>} />

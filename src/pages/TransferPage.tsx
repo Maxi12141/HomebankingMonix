@@ -1,22 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle, Search, Star, Home, UserPlus, ChevronDown, ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react'
+import { CheckCircle, Search, Star, Home, UserPlus, ChevronDown, ArrowLeft, ArrowRight, AlertTriangle, Share2, Download } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
-import { transferir, buscarDestinatarioBC, obtenerMiBankCode, getBankName } from '../services/bancoCentral'
+import { transferir, buscarDestinatarioBC, obtenerMiBankCode, getBankName, BancoCentralError, mensajeAmigableBC } from '../services/bancoCentral'
 import { useCuenta } from '../hooks/useCuenta'
 import { useCuentaStore } from '../store/cuentaStore'
-import { useAuthStore } from '../store/authStore'
 import { useContactos } from '../hooks/useContactos'
 import { useTransferenciasRecientes } from '../hooks/useTransferenciasRecientes'
 import { useMercadoFinanciero } from '../hooks/useMercadoFinanciero'
 import { formatMonto } from '../utils/cuenta'
+import { esCelular } from '../lib/biometria'
+import { compartirComprobante, downloadComprobante, puedeCompartirArchivos } from '../utils/comprobante'
 import { AgendaContactosPanel } from '../components/AgendaContactosPanel'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import type { Movimiento } from '../types'
 
 type Step = 'buscar' | 'detalle' | 'resumen' | 'exito'
 type Moneda = 'ARS' | 'USD'
@@ -124,7 +126,6 @@ export function TransferPage() {
   const location = useLocation()
   const { cuenta, cuentas, refreshCuenta } = useCuenta()
   const { updateSaldoCuenta } = useCuentaStore()
-  const { persona } = useAuthStore()
   const { isGuardado, guardar, eliminar } = useContactos()
   const { data: mercado } = useMercadoFinanciero(REFRESH_COTIZACION_MS)
 
@@ -140,6 +141,10 @@ export function TransferPage() {
   const [mensaje, setMensaje] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [comprobante, setComprobante] = useState<Movimiento | null>(null)
+  const [compartiendo, setCompartiendo] = useState(false)
+  // Si el Banco Central ya aceptó el envío, un reintento no debe volver a mandarle la plata.
+  const opRef = useRef<{ id: string; enviadoBC: boolean; bcTransaccionId: string | null; destinoCbu: string; monto: number } | null>(null)
 
   const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
   const cuentaOrigen = monedaOrigen === 'USD' && cuentaUSD ? cuentaUSD : cuenta
@@ -212,8 +217,13 @@ export function TransferPage() {
         bankCode: bc.bankCode,
         mismoBanco: miBanco != null && bc.bankCode != null ? bc.bankCode === miBanco : undefined,
       })
-    } catch {
-      setBusquedaError('No se encontró ninguna cuenta con ese CBU o alias')
+    } catch (err) {
+      // 404 real = no existe esa cuenta; cualquier otra falla usa el mensaje genérico de mensajeAmigableBC.
+      if (err instanceof BancoCentralError && err.status === 404) {
+        setBusquedaError('No se encontró ninguna cuenta con ese CBU o alias')
+      } else {
+        setBusquedaError(mensajeAmigableBC(err))
+      }
     } finally {
       setBuscando(false)
     }
@@ -265,61 +275,94 @@ export function TransferPage() {
   async function handleConfirm() {
     if (!destinatario || !cuentaOrigen) return
     if (!cuentaOrigen.cbu) { setError('Tu cuenta no tiene CBU asignado. Contactá al soporte.'); return }
+
+    // Destino o monto distinto del último intento = operación nueva, no arrastra el "ya enviado".
+    if (
+      !opRef.current
+      || opRef.current.destinoCbu !== destinatario.cbu
+      || opRef.current.monto !== montoNum
+    ) {
+      opRef.current = { id: crypto.randomUUID(), enviadoBC: false, bcTransaccionId: null, destinoCbu: destinatario.cbu, monto: montoNum }
+    }
+    const op = opRef.current
+
     setLoading(true)
     setError('')
 
     try {
-      // El importe que viaja al Banco Central es el que recibe la cuenta
-      // destino, en SU moneda — así lo puede acreditar cualquier banco que
-      // lea la transacción (nuestro propio sync incluido).
-      await transferir(cuentaOrigen.cbu, destinatario.cbu, montoDestino, cuentaOrigen.saldo)
-
-      const nuevoSaldoOrigen = roundMoney(cuentaOrigen.saldo - montoNum)
-      const descValue = mensaje.trim() ? `${descripcion}|${mensaje.trim()}` : descripcion
-
-      const { error: errSaldoOrigen } = await supabase
-        .from('cuentas').update({ saldo: nuevoSaldoOrigen }).eq('id', cuentaOrigen.id)
-      if (errSaldoOrigen) throw new Error()
-
-      if (destinatario.cuentaId && destinatario.saldoActual !== undefined) {
-        const nuevoSaldoDestino = roundMoney(destinatario.saldoActual + montoDestino)
-        await supabase.from('cuentas').update({ saldo: nuevoSaldoDestino }).eq('id', destinatario.cuentaId)
-        await supabase.from('movimientos').insert({
-          cuenta_id: destinatario.cuentaId,
-          tipo: 'transferencia_entrada',
-          monto: montoDestino,
-          saldo_resultante: nuevoSaldoDestino,
-          descripcion: descValue,
-          cuenta_destino_id: cuentaOrigen.id,
-          destinatario_nombre: persona?.nombre ?? null,
-          destinatario_apellido: persona?.apellido ?? null,
-          destinatario_dni: persona?.dni ?? null,
-          destino_cbu: cuentaOrigen.cbu ?? null,
-          destino_alias: cuentaOrigen.alias ?? null,
-        })
+      if (!op.enviadoBC) {
+        // El importe que viaja al Banco Central es el que recibe la cuenta
+        // destino, en SU moneda — así lo puede acreditar cualquier banco que
+        // lea la transacción (nuestro propio sync incluido).
+        const bc = await transferir(cuentaOrigen.cbu, destinatario.cbu, montoDestino, cuentaOrigen.saldo)
+        op.enviadoBC = true
+        op.bcTransaccionId = bc.transaccionId
       }
 
-      await supabase.from('movimientos').insert({
+      const descValue = mensaje.trim() ? `${descripcion}|${mensaje.trim()}` : descripcion
+
+      // El débito/crédito local es atómico en el servidor — el cliente no puede escribir la cuenta ajena (RLS).
+      if (destinatario.mismoBanco) {
+        const { error: rpcError } = await supabase.rpc('transferir_entre_cuentas', {
+          p_operacion_id: op.id,
+          p_cuenta_origen: cuentaOrigen.id,
+          p_destino_cbu: destinatario.cbu,
+          p_monto_origen: montoNum,
+          p_monto_destino: montoDestino,
+          p_descripcion: descValue,
+          // Mismo id que ya generó transferir() — así useSyncTransferenciasEntrantes no la vuelve a acreditar.
+          p_bc_transaccion_id: op.bcTransaccionId,
+        })
+        if (rpcError) throw rpcError
+      } else {
+        const { error: rpcError } = await supabase.rpc('debitar_transferencia_externa', {
+          p_operacion_id: op.id,
+          p_cuenta_origen: cuentaOrigen.id,
+          p_monto: montoNum,
+          p_descripcion: descValue,
+          p_destino_cbu: destinatario.cbu,
+          p_destino_alias: destinatario.alias ?? null,
+          p_destinatario_nombre: destinatario.nombre,
+          p_destinatario_apellido: destinatario.apellido,
+          p_destinatario_dni: destinatario.dni ?? null,
+        })
+        if (rpcError) throw rpcError
+      }
+
+      const nuevoSaldoOrigen = roundMoney(cuentaOrigen.saldo - montoNum)
+      // Se arma con lo ya conocido en el cliente, sin releer el movimiento real que insertó el RPC.
+      setComprobante({
+        id: op.id,
         cuenta_id: cuentaOrigen.id,
         tipo: 'transferencia_salida',
+        moneda: cuentaOrigen.moneda,
         monto: montoNum,
         saldo_resultante: nuevoSaldoOrigen,
         descripcion: descValue,
-        cuenta_destino_id: destinatario.cuentaId ?? null,
+        cuenta_destino_id: null,
         destinatario_nombre: destinatario.nombre,
         destinatario_apellido: destinatario.apellido,
-        destinatario_dni: destinatario.dni ?? null,
+        destinatario_dni: destinatario.dni,
         destino_cbu: destinatario.cbu,
-        destino_alias: destinatario.alias ?? null,
+        destino_alias: destinatario.alias,
+        bc_transaccion_id: op.bcTransaccionId,
+        banco_codigo_origen: null,
+        created_at: new Date().toISOString(),
       })
 
+      opRef.current = null
       updateSaldoCuenta(cuentaOrigen.id, nuevoSaldoOrigen)
       await refreshCuenta()
       setStep('exito')
       toast.success('¡Transferencia realizada con éxito!')
-    } catch {
-      setError('Ocurrió un error al procesar la transferencia')
-      toast.error('No se pudo completar la transferencia')
+    } catch (err) {
+      const msg = op.enviadoBC
+        ? 'La transferencia se envió pero no pudimos actualizar tu saldo. Volvé a intentar — no se va a reenviar el dinero de nuevo.'
+        : err instanceof BancoCentralError
+          ? mensajeAmigableBC(err)
+          : 'Ocurrió un error al procesar la transferencia'
+      setError(msg)
+      toast.error(msg)
       setStep('resumen')
     } finally {
       setLoading(false)
@@ -335,6 +378,24 @@ export function TransferPage() {
     setDescripcion('Varios')
     setMensaje('')
     setError('')
+    setComprobante(null)
+  }
+
+  async function handleComprobante() {
+    if (!comprobante) return
+    setCompartiendo(true)
+    try {
+      if (puedeCompartirArchivos()) {
+        const resultado = await compartirComprobante(comprobante)
+        if (resultado === 'error') toast.error('No se pudo compartir el comprobante')
+      } else {
+        await downloadComprobante(comprobante)
+      }
+    } catch {
+      toast.error('No se pudo generar el comprobante')
+    } finally {
+      setCompartiendo(false)
+    }
   }
 
   const monedaActual = cuentaOrigen?.moneda ?? 'ARS'
@@ -676,6 +737,17 @@ export function TransferPage() {
                       Nuevo saldo: <span className="text-mint font-medium">{saldoFormateado}</span>
                     </p>
                     <div className="flex flex-col gap-3">
+                      {comprobante && (
+                        <Button
+                          variant="secondary"
+                          className="w-full flex items-center justify-center gap-2"
+                          loading={compartiendo}
+                          onClick={() => { void handleComprobante() }}
+                        >
+                          {esCelular() ? <Share2 size={16} /> : <Download size={16} />}
+                          {esCelular() ? 'Compartir comprobante' : 'Descargar comprobante'}
+                        </Button>
+                      )}
                       {destinatario && !isGuardado(destinatario.cbu) && (
                         <button
                           onClick={() => guardar({

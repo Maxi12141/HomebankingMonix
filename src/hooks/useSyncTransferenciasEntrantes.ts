@@ -36,13 +36,10 @@ export function useSyncTransferenciasEntrantes() {
           .maybeSingle()
         if (existente) continue
 
-        // Saltar transferencias Monix→Monix (ya registradas por TransferPage)
-        const { data: cuentaInterna } = await supabase
-          .from('cuentas')
-          .select('id')
-          .eq('cbu', t.cbuOrigen)
-          .maybeSingle()
-        if (cuentaInterna) continue
+        // Saltar transferencias Monix→Monix (ya registradas por TransferPage) — un select
+        // directo a cuentas ajenas lo bloquea RLS en silencio, por eso usa un RPC dedicado.
+        const { data: esInterna } = await supabase.rpc('es_cuenta_interna', { p_cbu: t.cbuOrigen })
+        if (esInterna) continue
 
         const { data: cuentaActual } = await supabase
           .from('cuentas')

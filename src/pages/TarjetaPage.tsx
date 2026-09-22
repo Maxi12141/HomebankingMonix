@@ -61,12 +61,17 @@ export function TarjetaPage() {
   async function toggleFreeze() {
     if (!cuentaMostrada?.id) return
     const next = !frozen
+    const prevLocal = localStorage.getItem(freezeKey(cuentaMostrada.id))
     setFrozen(next)
     localStorage.setItem(freezeKey(cuentaMostrada.id), next ? '1' : '0')
     try {
       await setTarjetaFlags(cuentaMostrada.id, { tarjeta_congelada: next })
       toast.success(next ? 'Tarjeta congelada' : 'Tarjeta descongelada')
     } catch (err) {
+      // Revierte pantalla y caché local si el servidor no llegó a guardar el cambio.
+      setFrozen(!next)
+      if (prevLocal == null) localStorage.removeItem(freezeKey(cuentaMostrada.id))
+      else localStorage.setItem(freezeKey(cuentaMostrada.id), prevLocal)
       toast.error(err instanceof Error ? err.message : 'No se pudo actualizar')
     }
   }

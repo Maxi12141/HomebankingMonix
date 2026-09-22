@@ -194,6 +194,8 @@ export function ProfilePage() {
 
     const { error } = await supabase.auth.updateUser({ password: newPass })
     if (!error) {
+      // La huella usa esta misma contraseña para el login rápido (ver credencialBioParaEmail).
+      if (bioActiva) guardarCredencialBio(user?.email ?? persona!.email, newPass)
       toast.success('Contraseña actualizada correctamente')
       setCurrentPass('')
       setNewPass('')
@@ -210,8 +212,9 @@ export function ProfilePage() {
       try {
         desactivarBiometria(user.id)
         setBioActiva(false)
-        borrarCredencialBio(persona.email)
-        borrarNombreBio(persona.email)
+        // user.email (identidad confirmada de Auth), no persona.email: puede ir adelantado si hay un cambio de email pendiente de confirmar.
+        borrarCredencialBio(user.email ?? persona.email)
+        borrarNombreBio(user.email ?? persona.email)
         toast.success('Biometría desactivada')
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'No se pudo desactivar'
@@ -234,15 +237,16 @@ export function ProfilePage() {
     setSavingBio(true)
     setConfirmError('')
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: persona.email, password: confirmPass })
+      const emailAuth = user.email ?? persona.email
+      const { error } = await supabase.auth.signInWithPassword({ email: emailAuth, password: confirmPass })
       if (error) {
         setConfirmError('Contraseña incorrecta')
         return
       }
       toast.loading('Confirmá con la huella, la cara o el PIN del teléfono…', { id: 'bio' })
       await activarBiometria(user.id, `${persona.nombre} ${persona.apellido}`)
-      guardarCredencialBio(persona.email, confirmPass)
-      guardarNombreBio(persona.email, persona.nombre)
+      guardarCredencialBio(emailAuth, confirmPass)
+      guardarNombreBio(emailAuth, persona.nombre)
       setBioActiva(true)
       toast.success(
         'Biometría activada. Al entrar te la pedimos primero, con la contraseña como respaldo.',

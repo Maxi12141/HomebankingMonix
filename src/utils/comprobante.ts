@@ -184,7 +184,12 @@ function buildHTML(mov: Movimiento, bankName?: string): string {
   `
 }
 
-export async function downloadComprobante(mov: Movimiento, bankName?: string): Promise<void> {
+function nombreArchivo(mov: Movimiento): string {
+  const tipo = (TIPO_LABEL[mov.tipo] ?? mov.tipo).toLowerCase().replace(/\s+/g, '_')
+  return `monix_${tipo}_${mov.id.slice(0, 8)}.pdf`
+}
+
+async function crearPdf(mov: Movimiento, bankName?: string): Promise<jsPDF> {
   const container = document.createElement('div')
   container.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;'
   container.innerHTML = buildHTML(mov, bankName)
@@ -208,10 +213,46 @@ export async function downloadComprobante(mov: Movimiento, bankName?: string): P
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
     doc.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH)
-
-    const tipo = (TIPO_LABEL[mov.tipo] ?? mov.tipo).toLowerCase().replace(/\s+/g, '_')
-    doc.save(`monix_${tipo}_${mov.id.slice(0, 8)}.pdf`)
+    return doc
   } finally {
     document.body.removeChild(container)
+  }
+}
+
+export async function downloadComprobante(mov: Movimiento, bankName?: string): Promise<void> {
+  const doc = await crearPdf(mov, bankName)
+  doc.save(nombreArchivo(mov))
+}
+
+/** PDF del comprobante como File, listo para adjuntar a navigator.share(). */
+export async function comprobantePdfFile(mov: Movimiento, bankName?: string): Promise<File> {
+  const doc = await crearPdf(mov, bankName)
+  const blob = doc.output('blob')
+  return new File([blob], nombreArchivo(mov), { type: 'application/pdf' })
+}
+
+/** true si el navegador puede compartir un archivo con el share sheet nativo (siempre false en desktop). */
+export function puedeCompartirArchivos(): boolean {
+  if (typeof navigator === 'undefined' || !navigator.share || !navigator.canShare) return false
+  try {
+    const sonda = new File([''], 'sonda.pdf', { type: 'application/pdf' })
+    return navigator.canShare({ files: [sonda] })
+  } catch {
+    return false
+  }
+}
+
+export type ResultadoCompartir = 'compartido' | 'cancelado' | 'error'
+
+/** Abre el share sheet nativo con el PDF adjunto — llamar directo desde el handler de un click. */
+export async function compartirComprobante(mov: Movimiento, bankName?: string): Promise<ResultadoCompartir> {
+  try {
+    const file = await comprobantePdfFile(mov, bankName)
+    await navigator.share({ files: [file], title: 'Comprobante Monix' })
+    return 'compartido'
+  } catch (err) {
+    // El usuario cerró el share sheet sin elegir nada — no es un error real.
+    if (err instanceof DOMException && err.name === 'AbortError') return 'cancelado'
+    return 'error'
   }
 }

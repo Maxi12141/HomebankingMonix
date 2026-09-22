@@ -73,40 +73,28 @@ export function CompraVentaDolaresPage() {
     setError('')
 
     try {
-      const nuevoSaldoArs = modo === 'comprar' ? cuenta.saldo - montoArs : cuenta.saldo + montoArs
-      const nuevoSaldoUsd = modo === 'comprar' ? cuentaUSD.saldo + montoUsd : cuentaUSD.saldo - montoUsd
       const descripcion = `${modo === 'comprar' ? 'Compra' : 'Venta'} de USD|Cotización oficial ${formatMonto(precio, 'ARS')} por dólar`
 
-      const { error: errArs } = await supabase.from('cuentas').update({ saldo: nuevoSaldoArs }).eq('id', cuenta.id)
-      if (errArs) throw new Error('No se pudo actualizar tu cuenta en pesos')
+      // Swap atómico del lado del servidor — antes eran dos UPDATE sin lock, con riesgo de lost-update.
+      const { error: rpcError } = await supabase.rpc('convertir_moneda_propia', {
+        p_operacion_id: crypto.randomUUID(),
+        p_cuenta_ars: cuenta.id,
+        p_cuenta_usd: cuentaUSD.id,
+        p_monto_ars: montoArs,
+        p_monto_usd: montoUsd,
+        p_modo: modo,
+        p_descripcion: descripcion,
+      })
+      if (rpcError) throw rpcError
 
-      const { error: errUsd } = await supabase.from('cuentas').update({ saldo: nuevoSaldoUsd }).eq('id', cuentaUSD.id)
-      if (errUsd) throw new Error('No se pudo actualizar tu cuenta en dólares')
-
-      await supabase.from('movimientos').insert([
-        {
-          cuenta_id: cuenta.id,
-          tipo: modo === 'comprar' ? 'extraccion' : 'deposito',
-          monto: montoArs,
-          saldo_resultante: nuevoSaldoArs,
-          descripcion,
-        },
-        {
-          cuenta_id: cuentaUSD.id,
-          tipo: modo === 'comprar' ? 'deposito' : 'extraccion',
-          monto: montoUsd,
-          saldo_resultante: nuevoSaldoUsd,
-          descripcion,
-        },
-      ])
-
-      updateSaldoCuenta(cuenta.id, nuevoSaldoArs)
-      updateSaldoCuenta(cuentaUSD.id, nuevoSaldoUsd)
+      updateSaldoCuenta(cuenta.id, modo === 'comprar' ? cuenta.saldo - montoArs : cuenta.saldo + montoArs)
+      updateSaldoCuenta(cuentaUSD.id, modo === 'comprar' ? cuentaUSD.saldo + montoUsd : cuentaUSD.saldo - montoUsd)
       await refreshCuenta()
       setStep('success')
       toast.success(modo === 'comprar' ? '¡Compra realizada con éxito!' : '¡Venta realizada con éxito!')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Ocurrió un error al procesar la operación'
+      // PostgrestError puede no ser instanceof Error — se lee el message directamente.
+      const msg = (err as { message?: string } | null)?.message || 'Ocurrió un error al procesar la operación'
       setError(msg)
       toast.error(msg)
     } finally {
