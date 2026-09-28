@@ -50,6 +50,33 @@ export function encodeCuentaQr(cuentaId: string) {
   return `${MONIX_CUENTA_QR_PREFIX}${cuentaId}`
 }
 
+const CBU_RE = /\d{22}/
+const ALIAS_RE = /^[a-z0-9][a-z0-9._-]{5,19}$/
+
+export function extraerCbu(raw: string): string | null {
+  const match = raw.replace(/\s+/g, '').match(CBU_RE)
+  return match?.[0] ?? null
+}
+
+export function pareceAliasCbu(raw: string): boolean {
+  const v = raw.trim().toLowerCase()
+  return ALIAS_RE.test(v) && /[a-z]/.test(v)
+}
+
+export type CercaHint = { kind: 'token' | 'cbu' | 'alias'; value: string }
+
+export function parseCercaPayload(raw: string): CercaHint | null {
+  const value = raw.trim()
+  if (!value) return null
+  const radio = parseRadioPayload(value)
+  if (radio?.kind === 'id') return { kind: 'token', value: radio.value }
+  const cbu = extraerCbu(value)
+  if (cbu) return { kind: 'cbu', value: cbu }
+  if (pareceAliasCbu(value)) return { kind: 'alias', value: value.toLowerCase() }
+  if (isToken(value)) return { kind: 'token', value: value.toLowerCase() }
+  return null
+}
+
 export function parseRadioPayload(raw: string): { kind: 'id' | 'pay' | 'cobro' | 'cuenta'; value: string } | null {
   const value = raw.trim()
   if (value.startsWith(MONIX_ID_PREFIX)) {

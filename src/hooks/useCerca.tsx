@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { useCuenta } from './useCuenta'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabaseClient'
-import { randomToken, parseRadioPayload } from '../lib/tokens'
+import { randomToken, parseCercaPayload } from '../lib/tokens'
 import { isAbortError, monixRadio, radioCapabilities, type RadioCapabilities } from '../native/monixRadio'
 import { CercaPrompt } from '../components/CercaPrompt'
 import {
@@ -12,6 +12,7 @@ import {
   abrirDestinoCerca,
   desactivarPresencia,
   presenciaPropia,
+  resolverPersonaRed,
   resolverPresencia,
   type DestinoCerca,
   type PersonaCerca,
@@ -109,22 +110,27 @@ function useCercaRuntime() {
     return () => window.clearInterval(id)
   }, [authLoading, user, cuenta?.id, visible, publish])
 
-  const handleToken = useCallback(async (token: string, rssi?: number) => {
-    if (!token || token === tokenRef.current) return
-    const last = seenRef.current.get(token) ?? 0
+  const handleRaw = useCallback(async (raw: string, rssi?: number) => {
+    const hint = parseCercaPayload(raw)
+    if (!hint) return
+    if (hint.kind === 'token' && hint.value === tokenRef.current) return
+    const key = hint.value
+    const last = seenRef.current.get(key) ?? 0
     if (Date.now() - last < 8_000) return
-    seenRef.current.set(token, Date.now())
+    seenRef.current.set(key, Date.now())
     try {
-      const persona = await resolverPresencia(token)
+      const persona = hint.kind === 'token'
+        ? await resolverPresencia(hint.value)
+        : await resolverPersonaRed(hint.value, hint.kind === 'cbu')
       if (!persona) return
       const found: PersonaCerca = { ...persona, rssi }
       setNearby((prev) => {
-        const rest = prev.filter((p) => p.token !== token)
+        const rest = prev.filter((p) => p.token !== found.token)
         return [found, ...rest].slice(0, 8)
       })
-      const promptedAt = Number(sessionStorage.getItem(`cerca_prompt_${token}`) ?? 0)
+      const promptedAt = Number(sessionStorage.getItem(`cerca_prompt_${found.token}`) ?? 0)
       if (Date.now() - promptedAt > PROMPT_COOLDOWN_MS) {
-        sessionStorage.setItem(`cerca_prompt_${token}`, String(Date.now()))
+        sessionStorage.setItem(`cerca_prompt_${found.token}`, String(Date.now()))
         setPrompt(found)
       }
     } catch (err) {
@@ -135,17 +141,16 @@ function useCercaRuntime() {
 
   useEffect(() => {
     const offNearby = monixRadio.onNearby((ev) => {
-      void handleToken(ev.token, ev.rssi)
+      void handleRaw(ev.payload ?? ev.token, ev.rssi)
     })
     const offNfc = monixRadio.onNfc((payload) => {
-      const parsed = parseRadioPayload(payload)
-      if (parsed?.kind === 'id') void handleToken(parsed.value)
+      void handleRaw(payload)
     })
     return () => {
       offNearby()
       offNfc()
     }
-  }, [handleToken])
+  }, [handleRaw])
 
   const startBusqueda = useCallback(async (opts?: { silent?: boolean }) => {
     setError('')
@@ -190,9 +195,19 @@ function useCercaRuntime() {
     }
   }
 
-  async function abrirTransferencia(token: string): Promise<DestinoCerca | null> {
+  async function abrirTransferencia(persona: PersonaCerca): Promise<DestinoCerca | null> {
     try {
-      return await abrirDestinoCerca(token)
+      if (persona.cbu) {
+        return {
+          nombre: persona.nombre,
+          apellido: persona.apellido,
+          alias: persona.alias,
+          cbu: persona.cbu,
+          cuenta_id: '',
+          moneda: 'ARS',
+        }
+      }
+      return await abrirDestinoCerca(persona.token)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudo abrir la transferencia')
       return null
@@ -218,10 +233,15 @@ export function CercaProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
 
   const transferirA = useCallback(async (token: string) => {
-    const destino = await runtime.abrirTransferencia(token)
+    const persona = runtime.nearby.find((p) => p.token === token)
+      ?? (runtime.prompt?.token === token ? runtime.prompt : null)
+    if (!persona) return
+    const destino = await runtime.abrirTransferencia(persona)
     if (!destino) return
     runtime.dismissPrompt()
-    navigate('/transferir', { state: { cbu: destino.cbu, fromCerca: true } })
+    navigate('/transferir', {
+      state: { cbu: destino.cbu, fromCerca: true, banco: persona.banco },
+    })
   }, [navigate, runtime])
 
   const value: CercaState = {

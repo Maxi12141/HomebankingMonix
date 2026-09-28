@@ -1,11 +1,14 @@
 import { supabase } from '../lib/supabaseClient'
 import { rpcMessage } from '../lib/tokens'
+import { buscarDestinatarioBC, codigoBancoDesdeCbu, nombreBanco } from './bancoCentral'
 
 export interface PersonaCerca {
   nombre: string
   apellido: string
   alias: string | null
   token: string
+  banco: string
+  cbu?: string
   rssi?: number
 }
 
@@ -41,6 +44,25 @@ export async function resolverPresencia(token: string): Promise<PersonaCerca | n
     apellido: row.apellido,
     alias: row.alias ?? null,
     token,
+    banco: 'Monix',
+  }
+}
+
+export async function resolverPersonaRed(input: string, esCBU: boolean): Promise<PersonaCerca | null> {
+  try {
+    const dest = await buscarDestinatarioBC(input, esCBU)
+    const code = dest.bankCode ?? codigoBancoDesdeCbu(dest.cbu)
+    const banco = code != null ? await nombreBanco(code) : 'Otro banco'
+    return {
+      nombre: dest.nombre,
+      apellido: dest.apellido,
+      alias: dest.alias ?? null,
+      token: dest.cbu,
+      cbu: dest.cbu,
+      banco,
+    }
+  } catch {
+    return null
   }
 }
 

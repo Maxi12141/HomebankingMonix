@@ -4,7 +4,7 @@ import { CheckCircle, Search, Star, Home, UserPlus, ChevronDown, ArrowLeft, Arro
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
-import { transferir, buscarDestinatarioBC, obtenerMiBankCode, getBankName, BancoCentralError, mensajeAmigableBC } from '../services/bancoCentral'
+import { transferir, buscarDestinatarioBC, obtenerMiBankCode, getBankName, BancoCentralError, mensajeAmigableBC, nombreBanco, codigoBancoDesdeCbu } from '../services/bancoCentral'
 import { useCuenta } from '../hooks/useCuenta'
 import { useCuentaStore } from '../store/cuentaStore'
 import { useContactos } from '../hooks/useContactos'
@@ -30,6 +30,7 @@ interface Destinatario {
   cbu: string
   alias: string | null
   moneda: Moneda
+  banco?: string
   cuentaId?: string
   saldoActual?: number
   // Un usuario Monix casi nunca resuelve por `cuentaId` (las RLS de `cuentas`
@@ -161,12 +162,16 @@ export function TransferPage() {
     : null
 
   useEffect(() => {
-    const state = location.state as { cbu?: string; fromCerca?: boolean } | null
+    const state = location.state as { cbu?: string; fromCerca?: boolean; banco?: string } | null
     if (state?.cbu) {
       setDestino(state.cbu)
       buscarDestinatario(state.cbu)
       if (state.fromCerca) {
-        toast.success('Persona identificada al acercar el celular')
+        toast.success(
+          state.banco
+            ? `Persona de ${state.banco} identificada al acercar el celular`
+            : 'Persona identificada al acercar el celular',
+        )
       }
     }
   }, [])
@@ -197,6 +202,7 @@ export function TransferPage() {
           cbu: cuentaLocal.cbu,
           alias: cuentaLocal.alias,
           moneda: cuentaLocal.moneda,
+          banco: 'Monix',
           cuentaId: cuentaLocal.id,
           saldoActual: cuentaLocal.saldo,
           // Está en nuestra propia tabla `cuentas` — es Monix sí o sí.
@@ -207,6 +213,8 @@ export function TransferPage() {
 
       const bc = await buscarDestinatarioBC(input, esCBU)
       const miBanco = cuenta?.cbu ? await obtenerMiBankCode(cuenta.cbu) : null
+      const code = bc.bankCode ?? codigoBancoDesdeCbu(bc.cbu)
+      const banco = code != null ? await nombreBanco(code) : undefined
       setDestinatario({
         nombre: bc.nombre,
         apellido: bc.apellido,
@@ -214,6 +222,7 @@ export function TransferPage() {
         cbu: bc.cbu,
         alias: bc.alias,
         moneda: bc.moneda,
+        banco,
         bankCode: bc.bankCode,
         mismoBanco: miBanco != null && bc.bankCode != null ? bc.bankCode === miBanco : undefined,
       })
@@ -460,7 +469,7 @@ export function TransferPage() {
                             {destinatario.nombre} {destinatario.apellido}
                           </p>
                           <p className="text-xs font-body text-slate-secondary mt-0.5 truncate">
-                            CBU: {destinatario.cbu}
+                            {destinatario.banco ? `${destinatario.banco} · ` : ''}CBU: {destinatario.cbu}
                           </p>
                           <span className="flex flex-wrap items-center gap-1.5 mt-1">
                             <span className={`inline-block text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${

@@ -231,7 +231,7 @@ export const TOPICS: Topic[] = [
     extra: ['ble', 'fondo', 'visible', 'token'],
     weak: ['personas'],
     answers: () => [
-      'Monix Cerca detecta otro celular con la app cerca tuyo (Bluetooth o NFC). Ves nombre y alias, y transferís al toque. Nunca se transmite tu CBU.',
+      'Monix Cerca detecta a alguien al lado tuyo: otro usuario de Monix por Bluetooth/NFC, o un CBU/alias de cualquier banco de la red. Te dice de qué banco viene y transferís al toque.',
       'Activá “Visible aunque cierre la app” para que te encuentren en segundo plano (mejor con la APK). El código que se publica rota y no es tu CBU.',
       'Si estás al lado de alguien con Monix, Cerca es más rápido que dictar el alias. En el navegador suele hacer falta NFC (Chrome Android); Bluetooth de fondo pide la app instalada.',
     ],

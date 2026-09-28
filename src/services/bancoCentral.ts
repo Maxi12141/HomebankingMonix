@@ -202,6 +202,28 @@ export async function getBankName(bankCode: number): Promise<string> {
   return bank.name
 }
 
+const nombresBanco = new Map<number, string>()
+
+export function codigoBancoDesdeCbu(cbu: string): number | null {
+  if (!/^\d{22}$/.test(cbu)) return null
+  const code = Number.parseInt(cbu.slice(0, 3), 10)
+  return Number.isFinite(code) ? code : null
+}
+
+export async function nombreBanco(bankCode: number): Promise<string> {
+  const cached = nombresBanco.get(bankCode)
+  if (cached) return cached
+  try {
+    const name = await getBankName(bankCode)
+    nombresBanco.set(bankCode, name)
+    return name
+  } catch {
+    const fallback = `Banco ${bankCode}`
+    nombresBanco.set(bankCode, fallback)
+    return fallback
+  }
+}
+
 // --- Cuentas (no-ARS): /persons sólo indexa la caja en pesos, las cuentas en
 // otras monedas viven en un espacio de CBU/alias separado. Ver plan de cuentas
 // multi-moneda, hallazgo "El bug real: hoy sólo se busca en /persons".

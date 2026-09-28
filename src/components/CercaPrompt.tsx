@@ -50,7 +50,8 @@ export function CercaPrompt({ persona, onTransferir, onDismiss }: Props) {
             {persona.nombre} {persona.apellido}
           </p>
           <p className="font-body text-xs text-slate-secondary mb-5">
-            {persona.alias ? `@${persona.alias}` : 'Alias no disponible'} · identificado al acercar el celular
+            {persona.banco}
+            {persona.alias ? ` · @${persona.alias}` : ''} · identificado al acercar el celular
           </p>
           <div className="flex gap-3">
             <Button variant="secondary" className="flex-1" type="button" onClick={onDismiss}>

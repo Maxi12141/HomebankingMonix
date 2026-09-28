@@ -14,7 +14,7 @@ export function CercaPage() {
           Monix Cerca
         </h1>
         <p className="font-body text-sm text-slate-secondary mt-1 mb-6">
-          Acercá tu celular a otro con Monix. Se identifica el nombre y el alias, y podés transferir al toque.
+          Acercá tu celular a otro. Puede ser Monix u otro banco de la red: ves el nombre, de qué banco viene, y transferís al toque.
         </p>
 
         <Card className="p-6 mb-4 overflow-hidden relative">
@@ -32,7 +32,7 @@ export function CercaPage() {
             <p className="font-body text-xs text-slate-secondary mt-1 max-w-sm">
               {cerca.caps.native
                 ? 'Con la APK, el otro no necesita tener Monix abierto: queda visible en segundo plano.'
-                : 'En Chrome tocá “Buscar ahora” para permitir NFC, o usá la APK de Monix para Bluetooth de fondo.'}
+                : 'En Chrome tocá “Buscar ahora” para permitir NFC, o usá la APK de Monix para Bluetooth de fondo. Si el otro te pasa CBU o alias por NFC, también lo tomamos aunque sea de otro banco.'}
             </p>
           </div>
         </Card>
@@ -76,7 +76,7 @@ export function CercaPage() {
           {cerca.nearby.length === 0 ? (
             <Card className="p-6 text-center">
               <p className="font-body text-sm text-slate-secondary">
-                Todavía no detectamos a nadie. Acercá los teléfonos o tocá una tarjeta Monix.
+                Todavía no detectamos a nadie. Acercá los teléfonos, tocá una tarjeta o un NFC con CBU/alias de cualquier banco.
               </p>
               {!cerca.buscando && (
                 <Button className="mt-4" type="button" onClick={() => { void cerca.startBusqueda() }}>
@@ -102,7 +102,8 @@ export function CercaPage() {
                         {p.nombre} {p.apellido}
                       </p>
                       <p className="font-body text-xs text-slate-secondary truncate">
-                        {p.alias ? `@${p.alias}` : 'Alias oculto'}
+                        {p.banco}
+                        {p.alias ? ` · @${p.alias}` : ''}
                       </p>
                     </div>
                     <span className="text-xs font-body text-mint shrink-0">Transferir</span>
@@ -116,8 +117,7 @@ export function CercaPage() {
         <Card className="p-5 flex items-start gap-3">
           <ShieldCheck size={18} className="text-mint shrink-0 mt-0.5" />
           <p className="font-body text-xs text-slate-secondary leading-relaxed">
-            El Bluetooth solo manda un token de 30 minutos. El nombre y el alias se resuelven en el servidor.
-            El CBU aparece recién cuando confirmás la transferencia.
+            El Bluetooth de Monix solo manda un token de 30 minutos. Si el otro banco publica CBU o alias por NFC, lo resolvemos en la red del Banco Central y te decimos de qué banco es. El CBU para transferir aparece recién cuando confirmás.
           </p>
         </Card>
       </div>

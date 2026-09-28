@@ -258,8 +258,13 @@ export class MonixRadio {
 
   private emitNfc(payload: string) {
     this.nfcHandlers.forEach((h) => h(payload))
+    const cbu = payload.replace(/\s+/g, '').match(/\d{22}/)
+    if (cbu) {
+      this.emitNearby({ token: cbu[0], payload })
+      return
+    }
     const tokenMatch = payload.match(/[0-9a-f]{32,64}/i)
-    if (tokenMatch) this.emitNearby({ token: tokenMatch[0].toLowerCase() })
+    if (tokenMatch) this.emitNearby({ token: tokenMatch[0].toLowerCase(), payload })
   }
 
   async startAdvertising(opts: {
