@@ -27,7 +27,11 @@ interface ChatMsg {
   topicId?: string
 }
 
-const STORAGE_KEY = 'monix-asistente-msgs'
+// Con clave fija, el historial (incluido el saludo con el nombre ya escrito adentro)
+// quedaba pegado en sessionStorage de una cuenta a la siguiente. Se guarda por userId.
+function storageKey(userId?: string) {
+  return `monix-asistente-msgs:${userId ?? 'anon'}`
+}
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -44,9 +48,9 @@ function fromReply(reply: AsistenteReply): ChatMsg {
   }
 }
 
-function loadMessages(welcome: AsistenteReply): ChatMsg[] {
+function loadMessages(key: string, welcome: AsistenteReply): ChatMsg[] {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY)
+    const raw = sessionStorage.getItem(key)
     if (!raw) return [fromReply(welcome)]
     const parsed = JSON.parse(raw) as ChatMsg[]
     if (!Array.isArray(parsed) || parsed.length === 0) return [fromReply(welcome)]
@@ -58,7 +62,7 @@ function loadMessages(welcome: AsistenteReply): ChatMsg[] {
 
 export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   const navigate = useNavigate()
-  const { persona } = useAuthStore()
+  const { persona, user } = useAuthStore()
   const cuenta = useCuentaStore((s) => s.cuenta)
   const cuentas = useCuentaStore((s) => s.cuentas)
   const teclado = useTecladoInset()
@@ -66,9 +70,10 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   const [draft, setDraft] = useState('')
   const [dictando, setDictando] = useState(false)
   const [wakeOn, setWakeOn] = useState(false)
-  const [messages, setMessages] = useState<ChatMsg[]>(() =>
-    loadMessages(mensajeBienvenida({ nombre: useAuthStore.getState().persona?.nombre })),
-  )
+  const [messages, setMessages] = useState<ChatMsg[]>(() => {
+    const { persona: p, user: u } = useAuthStore.getState()
+    return loadMessages(storageKey(u?.id), mensajeBienvenida({ nombre: p?.nombre }))
+  })
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const vozRef = useRef<VozMoni | null>(null)
@@ -100,6 +105,17 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   }, [hidden])
 
   useEffect(() => {
+    // Justo tras registrarse/loguearse, persona todavía puede no estar cargada
+    // cuando se arma el saludo inicial — se corrige apenas llega el nombre,
+    // pero sólo si el chat sigue intacto (nadie escribió nada todavía).
+    if (!persona?.nombre) return
+    setMessages((prev) => {
+      if (prev.length !== 1 || prev[0].role !== 'bot') return prev
+      return [fromReply(mensajeBienvenida({ nombre: persona.nombre }))]
+    })
+  }, [persona?.nombre])
+
+  useEffect(() => {
     if (open) return
     if (!dictando) return
     setDictando(false)
@@ -108,8 +124,8 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
 
   useEffect(() => {
     if (messages.length === 0) return
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-40)))
-  }, [messages])
+    sessionStorage.setItem(storageKey(user?.id), JSON.stringify(messages.slice(-40)))
+  }, [messages, user?.id])
 
   useEffect(() => {
     if (!open) return
