@@ -4,20 +4,25 @@ import { motion } from 'framer-motion'
 import { Fingerprint, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../hooks/useAuth'
+import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { usePwaInstall } from '../hooks/usePwaInstall'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { getRememberedEmail, saveRememberedEmail, clearRememberedEmail } from '../utils/rememberMe'
 import {
+  activarBiometria,
   borrarCredencialBio,
   consumoIngresoConClave,
   credencialBioParaEmail,
   esCancelacionBiometrica,
   esCelular,
+  guardarCredencialBio,
+  guardarNombreBio,
   huellaActiva,
   marcarIngresoConClave,
   nombreBioParaEmail,
+  soportaHuella,
   uidParaEmail,
   verificarHuella,
 } from '../lib/biometria'
@@ -25,10 +30,21 @@ import { descartarOnboarding } from '../lib/onboarding'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
 
-type Step = 'email' | 'password' | 'bio'
+type Step = 'email' | 'password' | 'bio' | 'bio-offer'
+
+// Backoff client-side: no hay captcha real disponible (requeriría claves de un servicio externo).
+const UMBRAL_INTENTOS = 3
+const ESPERAS_SEG = [10, 20, 40, 60]
+
+interface BioOfferInfo {
+  userId: string
+  nombre: string
+  password: string
+}
 
 export function LoginPage() {
   const { login } = useAuth()
+  const setProvisioning = useAuthStore((s) => s.setProvisioning)
   const navigate = useNavigate()
   const { theme } = useThemeStore()
   const [step, setStep] = useState<Step>('email')
@@ -40,7 +56,27 @@ export function LoginPage() {
   const [bioLoading, setBioLoading] = useState(false)
   const [nombre, setNombre] = useState<string | null>(null)
   const [mostrarPassword, setMostrarPassword] = useState(false)
+  const [bioOfferInfo, setBioOfferInfo] = useState<BioOfferInfo | null>(null)
+  const [intentosFallidos, setIntentosFallidos] = useState(0)
+  const [bloqueadoHasta, setBloqueadoHasta] = useState<number | null>(null)
+  const [segundosRestantes, setSegundosRestantes] = useState(0)
   const { mostrarBoton: mostrarInstalar, instalar } = usePwaInstall()
+
+  useEffect(() => {
+    if (!bloqueadoHasta) return
+    const tick = () => {
+      const restante = Math.ceil((bloqueadoHasta - Date.now()) / 1000)
+      if (restante <= 0) {
+        setSegundosRestantes(0)
+        setBloqueadoHasta(null)
+      } else {
+        setSegundosRestantes(restante)
+      }
+    }
+    tick()
+    const id = window.setInterval(tick, 1000)
+    return () => window.clearInterval(id)
+  }, [bloqueadoHasta])
 
   useEffect(() => {
     const remembered = getRememberedEmail()
@@ -60,10 +96,14 @@ export function LoginPage() {
   async function finalizarLogin(emailFinal: string, passwordFinal: string) {
     // Se marca ANTES de autenticar: onAuthStateChange puede reaccionar al nuevo user antes de este await.
     marcarIngresoConClave()
+    // Sin esto, PublicOnly redirige solo a /dashboard apenas ve "user" seteado, sin dejar mostrar la oferta de biometría.
+    setProvisioning(true)
+    let authUser
     try {
-      await login(emailFinal, passwordFinal)
+      authUser = await login(emailFinal, passwordFinal)
     } catch (err) {
       consumoIngresoConClave()
+      setProvisioning(false)
       throw err
     }
     descartarOnboarding()
@@ -72,6 +112,40 @@ export function LoginPage() {
     } else {
       clearRememberedEmail()
     }
+
+    // Ofrecemos biometría acá, recién autenticado, en vez de que el usuario la busque sola en Perfil.
+    if (authUser && esCelular() && !huellaActiva(authUser.id) && await soportaHuella()) {
+      const nombreCompleto = (authUser.user_metadata?.full_name as string | undefined)?.trim()
+      setBioOfferInfo({ userId: authUser.id, nombre: nombreCompleto || emailFinal, password: passwordFinal })
+      setStep('bio-offer')
+      return
+    }
+
+    setProvisioning(false)
+    navigate('/dashboard')
+  }
+
+  async function activarBiometriaDesdeOferta() {
+    if (!bioOfferInfo) return
+    setBioLoading(true)
+    try {
+      await activarBiometria(bioOfferInfo.userId, bioOfferInfo.nombre)
+      guardarCredencialBio(email.trim(), bioOfferInfo.password)
+      guardarNombreBio(email.trim(), bioOfferInfo.nombre.split(' ')[0])
+      toast.success('Biometría activada. La próxima vez entrás más rápido.')
+    } catch (err) {
+      if (!esCancelacionBiometrica(err)) {
+        toast.error(err instanceof Error ? err.message : 'No se pudo activar la biometría')
+      }
+    } finally {
+      setBioLoading(false)
+      setProvisioning(false)
+      navigate('/dashboard')
+    }
+  }
+
+  function omitirOfertaBiometria() {
+    setProvisioning(false)
     navigate('/dashboard')
   }
 
@@ -129,11 +203,19 @@ export function LoginPage() {
   async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    if (bloqueadoHasta && Date.now() < bloqueadoHasta) return
     setLoading(true)
     try {
       await finalizarLogin(email.trim(), password)
+      setIntentosFallidos(0)
     } catch {
       setError('Email o contraseña incorrectos')
+      const nuevosIntentos = intentosFallidos + 1
+      setIntentosFallidos(nuevosIntentos)
+      if (nuevosIntentos >= UMBRAL_INTENTOS) {
+        const idx = Math.min(nuevosIntentos - UMBRAL_INTENTOS, ESPERAS_SEG.length - 1)
+        setBloqueadoHasta(Date.now() + ESPERAS_SEG[idx] * 1000)
+      }
     } finally {
       setLoading(false)
     }
@@ -146,6 +228,8 @@ export function LoginPage() {
     setError('')
     setMostrarPassword(false)
     setNombre(null)
+    setIntentosFallidos(0)
+    setBloqueadoHasta(null)
   }
 
   return (
@@ -261,7 +345,12 @@ export function LoginPage() {
                   >
                     ¿Olvidaste tu contraseña?
                   </Link>
-                  <Button type="submit" variant="secondary" loading={loading} className="w-full">
+                  {segundosRestantes > 0 && (
+                    <p className="text-xs text-center font-body text-slate-secondary">
+                      Demasiados intentos. Podés reintentar en {segundosRestantes}s.
+                    </p>
+                  )}
+                  <Button type="submit" variant="secondary" loading={loading} disabled={segundosRestantes > 0} className="w-full">
                     Ingresar
                   </Button>
                 </form>
@@ -304,7 +393,13 @@ export function LoginPage() {
                   </p>
                 )}
 
-                <Button type="submit" loading={loading} className="w-full mt-2">
+                {segundosRestantes > 0 && (
+                  <p className="text-xs text-center font-body text-slate-secondary">
+                    Demasiados intentos. Podés reintentar en {segundosRestantes}s.
+                  </p>
+                )}
+
+                <Button type="submit" loading={loading} disabled={segundosRestantes > 0} className="w-full mt-2">
                   Iniciar sesión
                 </Button>
               </form>
@@ -318,8 +413,40 @@ export function LoginPage() {
             </>
           )}
 
-          {mostrarInstalar && (
-            // Visible en los 3 pasos, no sólo en 'bio' — ahí casi nadie llegaba a verlo.
+          {step === 'bio-offer' && (
+            <>
+              <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-1">¿Activar tu huella?</h2>
+              <p className="font-body text-sm text-slate-secondary mb-6">
+                La próxima vez vas a poder entrar sin escribir tu contraseña.
+              </p>
+
+              <div className="flex items-center justify-center mb-6">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
+                  <Fingerprint size={30} className="text-mint" strokeWidth={1.6} />
+                </span>
+              </div>
+
+              <Button
+                type="button"
+                loading={bioLoading}
+                loadingLabel="Activando..."
+                onClick={() => { void activarBiometriaDesdeOferta() }}
+                className="w-full mb-3"
+              >
+                Sí, activar
+              </Button>
+              <button
+                type="button"
+                onClick={omitirOfertaBiometria}
+                className="w-full text-center text-sm font-body text-slate-secondary hover:text-navy dark:hover:text-white transition-colors py-2"
+              >
+                Ahora no
+              </button>
+            </>
+          )}
+
+          {step !== 'bio-offer' && mostrarInstalar && (
+            // Visible en los pasos de login, no acá — el usuario ya está entrando.
             <button
               type="button"
               onClick={() => { void handleInstalar() }}
@@ -330,12 +457,14 @@ export function LoginPage() {
             </button>
           )}
 
-          <p className="text-center text-sm font-body text-slate-secondary mt-6">
-            ¿No tenés cuenta?{' '}
-            <Link to="/register" className="text-mint hover:text-mint-hover transition-colors">
-              Registrate
-            </Link>
-          </p>
+          {step !== 'bio-offer' && (
+            <p className="text-center text-sm font-body text-slate-secondary mt-6">
+              ¿No tenés cuenta?{' '}
+              <Link to="/register" className="text-mint hover:text-mint-hover transition-colors">
+                Registrate
+              </Link>
+            </p>
+          )}
         </div>
       </motion.div>
     </div>

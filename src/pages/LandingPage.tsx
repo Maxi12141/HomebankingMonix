@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRightLeft, BarChart2, ShieldCheck, ArrowRight, Sun, Moon, CheckCircle2 } from 'lucide-react'
+import { ArrowRightLeft, BarChart2, ShieldCheck, ArrowRight, Sun, Moon, CheckCircle2, Apple, Smartphone, Download } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import { MarketTicker } from '../components/MarketTicker'
 import { MonixLogoAnimated } from '../components/MonixLogoAnimated'
 import { MonixLogoNavbar } from '../components/MonixLogoNavbar'
 import { useThemeStore } from '../stores/themeStore'
+import { usePwaInstall } from '../hooks/usePwaInstall'
 import monixLogoWhite from '../assets/logos/logo-blanco.svg'
 
 const containerVariants = {
@@ -306,6 +308,16 @@ const products = [
 /* ─── Página ─────────────────────────────────────────────────────── */
 export function LandingPage() {
   const { theme, toggleTheme } = useThemeStore()
+  const { mostrarBoton: mostrarInstalar, instalar } = usePwaInstall()
+
+  async function handleInstalar() {
+    const resultado = await instalar()
+    if (resultado === 'manual-ios') {
+      toast('Para instalar: tocá Compartir y elegí "Agregar a Inicio"', { icon: '📲', duration: 5000 })
+    } else if (resultado === 'no-disponible') {
+      toast('Tu navegador todavía no permite instalar. Probá con Chrome en Android.', { duration: 4000 })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-navy text-navy dark:text-white transition-colors duration-300">
@@ -494,6 +506,37 @@ export function LandingPage() {
           </Link>
         </motion.div>
       </section>
+
+      {/* Instalá la app */}
+      {mostrarInstalar && (
+        <section className="py-20 px-6 bg-white dark:bg-navy transition-colors duration-300">
+          <motion.div
+            className="max-w-xl mx-auto text-center"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-mint/10 flex items-center justify-center text-mint mx-auto mb-5">
+              <Smartphone size={26} />
+            </div>
+            <h2 className="font-display text-3xl font-bold text-navy dark:text-white mb-3">Descargá nuestra app</h2>
+            <p className="font-body text-slate-secondary text-base mb-8 flex items-center justify-center gap-2">
+              <Apple size={16} />
+              Disponible para iOS y Android
+              <Smartphone size={16} />
+            </p>
+            <Button
+              variant="primary"
+              onClick={() => { void handleInstalar() }}
+              className="px-8 py-3.5 text-base font-semibold inline-flex items-center gap-2"
+            >
+              <Download size={18} />
+              Instalar app
+            </Button>
+          </motion.div>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="bg-white dark:bg-navy-card border-t border-slate-200 dark:border-white/10 py-6 px-6 transition-colors duration-300">
