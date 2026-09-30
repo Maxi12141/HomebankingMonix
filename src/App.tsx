@@ -1,7 +1,14 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Toaster } from 'react-hot-toast'
+import toast, { Toaster, useToasterStore } from 'react-hot-toast'
+
+// react-hot-toast no limita solo cuántos toasts se acumulan en pantalla — si
+// varios se disparan seguidos (reintentos de login, red inestable, etc.) se
+// van apilando sin desaparecer hasta que cada uno cumple su propio `duration`.
+// Se recorta a los últimos 4 visibles, descartando los más viejos apenas se
+// supera el máximo (recomendación oficial de la librería).
+const TOASTS_VISIBLES_MAX = 4
 import { useAuth } from './hooks/useAuth'
 import { useThemeStore } from './stores/themeStore'
 import { isSupabaseConfigured } from './lib/supabaseClient'
@@ -91,11 +98,19 @@ function AppShell() {
   const { theme } = useThemeStore()
   const [minTimePassed, setMinTimePassed] = useState(false)
   const [splashTimedOut, setSplashTimedOut] = useState(false)
+  const { toasts } = useToasterStore()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
     void aplicarBarraDeEstado(theme)
   }, [theme])
+
+  useEffect(() => {
+    toasts
+      .filter((t) => t.visible)
+      .filter((_, i) => i >= TOASTS_VISIBLES_MAX)
+      .forEach((t) => toast.dismiss(t.id))
+  }, [toasts])
 
   useEffect(() => {
     const min = window.setTimeout(() => setMinTimePassed(true), 2400)
