@@ -82,12 +82,23 @@ async function aplicarQr(
 }
 
 export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'overlay' }) {
-  const { cuenta, refreshCuenta } = useCuenta()
+  const { cuenta: cuentaArs, cuentas, refreshCuenta } = useCuenta()
+  const cuentaUsd = cuentas.find((c) => c.moneda === 'USD')
+  const [monedaQr, setMonedaQr] = useState<'ARS' | 'USD'>('ARS')
+  // useCuenta().cuenta es siempre la de pesos: el QR se arma sobre la cuenta
+  // de la moneda elegida, así el cobro (cobros_nfc) y el JWT quedan en USD.
+  const cuenta = monedaQr === 'USD' && cuentaUsd ? cuentaUsd : cuentaArs
   const [monto, setMonto] = useState('')
   const [cobro, setCobro] = useState<CobroNfc | null>(null)
   const [error, setError] = useState('')
-  const [jwtQr, setJwtQr] = useState('')
+  // Se guarda junto con la clave de lo que firmó: al cambiar de moneda (o de
+  // monto) el JWT anterior no se muestra mientras llega el nuevo.
+  const [jwtFirmado, setJwtFirmado] = useState<{ clave: string; jwt: string } | null>(null)
   const cobroIdRef = useRef<string | null>(null)
+  // Sube en cada descarte de cobro: un crearCobroNfc que estaba en vuelo
+  // cuando el usuario cambió de moneda no debe pisar el QR nuevo.
+  const generacionRef = useRef(0)
+  const claveQr = `${cuenta?.cbu ?? ''}|${cobro?.id ?? ''}`
 
   // QR interbancario firmado (docs/qr-interbancario-jwt.md): se pide a la
   // Edge Function apenas hay cuenta/cobro para mostrar. Si falla (sin red, la
@@ -95,7 +106,8 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   // solo al formato interno de siempre — nunca se rompe el QR por esto.
   useEffect(() => {
     let vivo = true
-    if (!cuenta?.cbu) { setJwtQr(''); return }
+    if (!cuenta?.cbu) { setJwtFirmado(null); return }
+    const clave = claveQr
     void firmarQrPropio({
       cbu: cuenta.cbu,
       alias: cuenta.alias,
@@ -103,8 +115,8 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       moneda: cobro?.moneda ?? cuenta.moneda,
       cid: cobro?.id,
     })
-      .then((jwt) => { if (vivo) setJwtQr(jwt) })
-      .catch(() => { if (vivo) setJwtQr('') })
+      .then((jwt) => { if (vivo) setJwtFirmado({ clave, jwt }) })
+      .catch(() => { if (vivo) setJwtFirmado(null) })
     return () => { vivo = false }
   }, [cuenta?.cbu, cuenta?.alias, cuenta?.moneda, cobro?.id, cobro?.monto, cobro?.moneda])
 
@@ -144,6 +156,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
     if (!cuenta?.id) return
     const raw = monto.trim().replace(',', '.')
     const n = parseFloat(raw)
+    const generacion = generacionRef.current
     const timer = window.setTimeout(() => {
       void (async () => {
         if (!raw || isNaN(n) || n <= 0) {
@@ -160,6 +173,10 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
             await cancelarCobroNfc(cobroIdRef.current).catch(() => undefined)
           }
           const id = await crearCobroNfc(cuenta.id, n, '')
+          if (generacion !== generacionRef.current) {
+            await cancelarCobroNfc(id).catch(() => undefined)
+            return
+          }
           cobroIdRef.current = id
           setCobro(await obtenerCobroNfc(id))
           setError('')
@@ -179,9 +196,20 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
     }
   }, [])
 
-  async function nuevoCobro() {
+  function cambiarMoneda(m: 'ARS' | 'USD') {
+    if (m === monedaQr) return
+    // El cobro pendiente pertenece a la cuenta anterior: se descarta y el
+    // monto se limpia (100 pesos no son 100 dólares).
+    nuevoCobro()
+    setMonedaQr(m)
+  }
+
+  function nuevoCobro() {
+    generacionRef.current += 1
+    // El estado se limpia en el acto; la cancelación del cobro viejo corre de
+    // fondo para que el QR y el monto no queden un instante desfasados.
     if (cobroIdRef.current) {
-      await cancelarCobroNfc(cobroIdRef.current).catch(() => undefined)
+      void cancelarCobroNfc(cobroIdRef.current).catch(() => undefined)
     }
     cobroIdRef.current = null
     setCobro(null)
@@ -197,7 +225,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
           <p className="font-display text-2xl font-bold text-mint mt-2">
             {formatMonto(cobro.monto, cobro.moneda)}
           </p>
-          <Button className="w-full max-w-xs mt-6" type="button" onClick={() => { void nuevoCobro() }}>
+          <Button className="w-full max-w-xs mt-6" type="button" onClick={nuevoCobro}>
             Nuevo QR
           </Button>
         </div>
@@ -210,13 +238,14 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         <p className="font-display text-2xl font-bold text-mint mt-2">
           {formatMonto(cobro.monto, cobro.moneda)}
         </p>
-        <Button className="w-full mt-6" type="button" onClick={() => { void nuevoCobro() }}>
+        <Button className="w-full mt-6" type="button" onClick={nuevoCobro}>
           Nuevo QR
         </Button>
       </Card>
     )
   }
 
+  const jwtQr = jwtFirmado?.clave === claveQr ? jwtFirmado.jwt : ''
   const qrValue = jwtQr || (cobro
     ? encodeCobroQr(cobro.id)
     : cuenta?.id
@@ -232,6 +261,30 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         <p className="font-body text-xs text-white/60 text-center mt-1 mb-5">
           Que te lo escaneen. Si ponés un monto, ya lo ven.
         </p>
+        {cuentaUsd && (
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-white/10 w-full max-w-xs mb-4">
+            <button
+              type="button"
+              aria-pressed={monedaQr === 'ARS'}
+              onClick={() => cambiarMoneda('ARS')}
+              className={`rounded-lg py-2 font-body text-sm font-medium transition-colors ${
+                monedaQr === 'ARS' ? 'bg-mint text-navy' : 'text-white/60 hover:text-white'
+              }`}
+            >
+              Pesos
+            </button>
+            <button
+              type="button"
+              aria-pressed={monedaQr === 'USD'}
+              onClick={() => cambiarMoneda('USD')}
+              className={`rounded-lg py-2 font-body text-sm font-medium transition-colors ${
+                monedaQr === 'USD' ? 'bg-mint text-navy' : 'text-white/60 hover:text-white'
+              }`}
+            >
+              Dólares
+            </button>
+          </div>
+        )}
         {qrValue && <QrBox value={qrValue} alt="Tu QR de Monix" />}
         {cuenta?.alias && (
           <p className="font-body text-sm text-white/70 text-center mt-3">@{cuenta.alias}</p>
@@ -243,7 +296,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         )}
         <div className="w-full max-w-xs mt-4">
           <Input
-            label="Monto (opcional)"
+            label={`Monto en ${monedaQr === 'USD' ? 'dólares' : 'pesos'} (opcional)`}
             type="number"
             min="0.01"
             step="0.01"
@@ -267,6 +320,30 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       <p className="font-body text-xs text-slate-secondary mb-4">
         Mostralo para cobrar. Si ponés un monto, el que paga ya ve esa cifra; si lo dejás vacío, la carga en el momento.
       </p>
+      {cuentaUsd && (
+        <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-input dark:bg-white/5 mb-4">
+          <button
+            type="button"
+            aria-pressed={monedaQr === 'ARS'}
+            onClick={() => cambiarMoneda('ARS')}
+            className={`rounded-lg py-2 font-body text-sm font-medium transition-colors ${
+              monedaQr === 'ARS' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
+            }`}
+          >
+            Pesos
+          </button>
+          <button
+            type="button"
+            aria-pressed={monedaQr === 'USD'}
+            onClick={() => cambiarMoneda('USD')}
+            className={`rounded-lg py-2 font-body text-sm font-medium transition-colors ${
+              monedaQr === 'USD' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
+            }`}
+          >
+            Dólares
+          </button>
+        </div>
+      )}
       {qrValue && <QrBox value={qrValue} alt="Tu QR de Monix" />}
       {cuenta?.alias && (
         <p className="font-body text-xs text-slate-secondary text-center mt-3">
@@ -280,7 +357,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       )}
       <div className="mt-4">
         <Input
-          label="Monto (opcional)"
+          label={`Monto en ${monedaQr === 'USD' ? 'dólares' : 'pesos'} (opcional)`}
           type="number"
           min="0.01"
           step="0.01"
