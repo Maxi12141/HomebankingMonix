@@ -133,26 +133,51 @@
   <h1>Manual de Despliegue</h1>
   <p>Cómo levantar, desplegar y mantener Monix en producción, de punta a punta. Pensado para cualquiera del equipo — o el profesor — que necesite entender el circuito sin reconstruir el contexto desde cero.</p>
   <p>Monix es 100% web: un mismo build se despliega una sola vez y se instala como PWA en desktop, iOS y Android. No hay build nativo ni distribución por APK. La versión con todo el detalle vive en <code>docs/manual-despliegue.md</code> del repo.</p>
+  <p style="font-size:12.5px;">Investigado como inspiración: <a href="https://12factor.net/" style="color:var(--mint-strong);">The Twelve-Factor App</a> y estructuras de runbook de incident response — por eso suma glosario, diagramas de flujos de negocio y una tabla de accesos, no sólo pasos de deploy.</p>
 </header>
 
 <nav class="toc">
   <p>En este manual</p>
   <ol>
-    <li><a href="#arquitectura"><span class="n">1</span> Arquitectura</a></li>
-    <li><a href="#local"><span class="n">2</span> Puesta en marcha local</a></li>
-    <li><a href="#variables"><span class="n">3</span> Variables de entorno</a></li>
-    <li><a href="#vercel"><span class="n">4</span> Frontend en Vercel</a></li>
-    <li><a href="#supabase"><span class="n">5</span> Backend en Supabase</a></li>
-    <li><a href="#pwa"><span class="n">6</span> PWA</a></li>
-    <li><a href="#seguridad"><span class="n">7</span> Seguridad</a></li>
-    <li><a href="#monitoreo"><span class="n">8</span> Monitoreo y logs</a></li>
-    <li><a href="#checklist"><span class="n">9</span> Checklist de release</a></li>
-    <li><a href="#troubleshooting"><span class="n">10</span> Troubleshooting</a></li>
+    <li><a href="#glosario"><span class="n">1</span> Glosario</a></li>
+    <li><a href="#arquitectura"><span class="n">2</span> Arquitectura</a></li>
+    <li><a href="#flujos"><span class="n">3</span> Flujos críticos</a></li>
+    <li><a href="#local"><span class="n">4</span> Puesta en marcha local</a></li>
+    <li><a href="#variables"><span class="n">5</span> Variables de entorno</a></li>
+    <li><a href="#vercel"><span class="n">6</span> Frontend en Vercel</a></li>
+    <li><a href="#supabase"><span class="n">7</span> Backend en Supabase</a></li>
+    <li><a href="#pwa"><span class="n">8</span> PWA</a></li>
+    <li><a href="#seguridad"><span class="n">9</span> Seguridad</a></li>
+    <li><a href="#monitoreo"><span class="n">10</span> Monitoreo y logs</a></li>
+    <li><a href="#accesos"><span class="n">11</span> Accesos y roles</a></li>
+    <li><a href="#checklist"><span class="n">12</span> Checklist de release</a></li>
+    <li><a href="#troubleshooting"><span class="n">13</span> Troubleshooting</a></li>
   </ol>
 </nav>
 
+<section id="glosario">
+  <h2><span class="num">1</span> Glosario</h2>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <tr><th>Término</th><th>Qué significa</th></tr>
+        <tr><td><b>CBU</b></td><td>Clave Bancaria Uniforme — identifica una cuenta bancaria en Argentina (22 dígitos)</td></tr>
+        <tr><td><b>Alias</b></td><td>Nombre corto y legible que reemplaza al CBU para transferir (ej. <code>cima.alba.isla</code>)</td></tr>
+        <tr><td><b>BCRA</b></td><td>Banco Central de la República Argentina (real); acá lo simula la API de la cátedra, "Banco Central"</td></tr>
+        <tr><td><b>Situación crediticia</b></td><td>Categoría 1 a 5 (BCRA) que indica qué tan al día está una persona con sus deudas; determina la oferta de préstamo</td></tr>
+        <tr><td><b>TNA</b></td><td>Tasa Nominal Anual — la tasa de interés de un préstamo expresada en términos anuales</td></tr>
+        <tr><td><b>RLS</b></td><td>Row Level Security — reglas a nivel de fila en Postgres que deciden qué puede leer/escribir cada usuario</td></tr>
+        <tr><td><b>Edge Function</b></td><td>Función serverless (Deno) del lado de Supabase, para lógica que no puede vivir en el frontend</td></tr>
+        <tr><td><b>JWT</b></td><td>JSON Web Token — token firmado digitalmente; usado acá para el QR interbancario</td></tr>
+        <tr><td><b>PWA</b></td><td>Progressive Web App — página web instalable, con ícono propio y pantalla completa</td></tr>
+        <tr><td><b>Service Worker</b></td><td>Script en segundo plano del navegador que cachea archivos y habilita la PWA</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
 <section id="arquitectura">
-  <h2><span class="num">1</span> Arquitectura</h2>
+  <h2><span class="num">2</span> Arquitectura</h2>
   <div class="card">
     <pre class="mermaid">
 flowchart LR
@@ -176,17 +201,67 @@ flowchart LR
     <span class="ico">ⓘ</span>
     <div>Un solo entorno: no hay staging, <code>main</code> <b>es</b> producción. Para algo riesgoso (una migración destructiva) conviene crear una rama de base de datos temporal en Supabase antes de tocar la real.</div>
   </div>
+  <h3>Qué sigue Monix de "The Twelve-Factor App" (y qué no, a propósito)</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Principio</th><th>Cómo lo hace Monix</th></tr>
+      <tr><td>Config</td><td>Todo en variables de entorno (<code>VITE_*</code>), nunca hardcodeado</td></tr>
+      <tr><td>Backing services</td><td>Supabase y el Banco Central son recursos externos intercambiables (URL + key)</td></tr>
+      <tr><td>Build, release, run</td><td>Etapas separadas: <code>npm run build</code> → deploy Vercel → CDN sirviendo estático</td></tr>
+      <tr><td>Disposability</td><td>Frontend estático sin estado de servidor — cualquier instancia puede caerse sin drama</td></tr>
+      <tr><td>Logs</td><td>Divergencia consciente: no hay logs centralizados (§10) — deuda técnica reconocida, no un descuido</td></tr>
+    </table>
+  </div>
+</section>
+
+<section id="flujos">
+  <h2><span class="num">3</span> Flujos de negocio críticos</h2>
+  <div class="card">
+    <p style="font-size:13px; color:var(--text-secondary); margin:0 0 10px;">No sólo "cómo se despliega" — esto ayuda a entender qué pasa realmente cuando alguien usa la app.</p>
+    <h3>Transferencia (interna o a otro banco)</h3>
+    <pre class="mermaid">
+sequenceDiagram
+  participant U as Usuario
+  participant F as Frontend
+  participant S as Supabase (RPC)
+  participant BC as Banco Central
+  U->>F: Confirma transferencia
+  F->>S: transferir_entre_cuentas() / debitar_transferencia_externa()
+  alt destino es Monix
+    S->>S: Débito y crédito atómico
+  else destino es otro banco
+    S->>BC: Notifica la transferencia saliente
+    BC-->>S: Confirmación
+  end
+  S-->>F: Resultado
+  F-->>U: Comprobante + confirmación
+    </pre>
+    <h3>Pago con QR interbancario</h3>
+    <pre class="mermaid">
+sequenceDiagram
+  participant A as App banco A (cobra)
+  participant EF as Edge Function firmar-qr
+  participant B as App banco B (paga)
+  A->>EF: POST /firmar-qr
+  EF-->>A: JWT firmado (ES256)
+  A->>A: Codifica el JWT en el QR
+  B->>A: Escanea el QR
+  B->>B: Verifica firma con la clave pública del banco A
+  B->>B: Ejecuta la transferencia ya verificada
+    </pre>
+    <p class="diagram-caption">Detalle completo en <code>docs/qr-interbancario-jwt.md</code>.</p>
+  </div>
 </section>
 
 <section id="local">
-  <h2><span class="num">2</span> Puesta en marcha en local</h2>
+  <h2><span class="num">4</span> Puesta en marcha en local</h2>
   <div class="card">
     <div class="term">
       <div class="term-head"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="term-label">terminal</span></div>
       <pre>git clone https://github.com/Maxi12141/HomebankingMonix.git
 cd HomebankingMonix
 npm install
-cp .env.example .env.local   <span class="cm">## completar con los valores reales, ver §3</span>
+cp .env.example .env.local   <span class="cm">## completar con los valores reales, ver §5</span>
 npm run dev                  <span class="cm">## http://localhost:5173</span></pre>
     </div>
     <div class="table-wrap">
@@ -197,12 +272,12 @@ npm run dev                  <span class="cm">## http://localhost:5173</span></p
         <tr><td><code>npm run preview</code></td><td>Sirve el build real localmente antes de pushear</td></tr>
       </table>
     </div>
-    <p style="font-size:13.5px; color:var(--text-secondary); margin:14px 0 0;">No hay suite de tests automatizada ni CI (no existe <code>.github/workflows</code>). La única red de seguridad antes de un deploy es que <code>tsc</code> falle si hay un error de tipos, y el checklist de §9 — por eso ese checklist importa tanto.</p>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin:14px 0 0;">No hay suite de tests automatizada ni CI (no existe <code>.github/workflows</code>). La única red de seguridad antes de un deploy es que <code>tsc</code> falle si hay un error de tipos, y el checklist de §12 — por eso ese checklist importa tanto.</p>
   </div>
 </section>
 
 <section id="variables">
-  <h2><span class="num">3</span> Variables de entorno</h2>
+  <h2><span class="num">5</span> Variables de entorno</h2>
   <div class="card">
     <div class="table-wrap">
       <table>
@@ -214,12 +289,12 @@ npm run dev                  <span class="cm">## http://localhost:5173</span></p
         <tr><td><code>VITE_BC_ENV</code></td><td>Ambiente (<code>test</code>/<code>prod</code>)</td><td>Normalmente <code>test</code></td></tr>
       </table>
     </div>
-    <p style="font-size:13px; color:var(--text-secondary); margin-top:14px;">Cargarlas también en Vercel → Project Settings → Environment Variables: <code>.env.local</code> no llega al build de producción (está en <code>.gitignore</code> — si una clave se commitea por error, se rota, no alcanza con borrar el commit). Los secrets de Edge Functions van aparte (§5).</p>
+    <p style="font-size:13px; color:var(--text-secondary); margin-top:14px;">Cargarlas también en Vercel → Project Settings → Environment Variables: <code>.env.local</code> no llega al build de producción (está en <code>.gitignore</code> — si una clave se commitea por error, se rota, no alcanza con borrar el commit). Los secrets de Edge Functions van aparte (§7).</p>
   </div>
 </section>
 
 <section id="vercel">
-  <h2><span class="num">4</span> Frontend en Vercel</h2>
+  <h2><span class="num">6</span> Frontend en Vercel</h2>
   <div class="card">
     <pre class="mermaid">
 flowchart LR
@@ -243,10 +318,14 @@ flowchart LR
 </section>
 
 <section id="supabase">
-  <h2><span class="num">5</span> Backend en Supabase</h2>
+  <h2><span class="num">7</span> Backend en Supabase</h2>
   <div class="card">
     <h3>Migraciones</h3>
     <p style="font-size:13.5px; color:var(--text-secondary); margin:0 0 14px;">Archivos sueltos en <code>supabase/*.sql</code>, se aplican a mano (SQL Editor de Supabase Studio, o MCP <code>apply_migration</code>). Orden: <code>policies.sql</code> primero (RLS), <code>transferencia_atomica.sql</code> al final.</p>
+    <div class="callout" style="background:var(--surface-2); color:var(--text-secondary); margin-bottom:18px;">
+      <span class="ico">ⓘ</span>
+      <div><b>Antes de una migración destructiva:</b> el plan gratuito de Supabase no tiene point-in-time recovery. Hacer un dump manual (Dashboard → Database → Backups, o <code>pg_dump</code>) o probar primero en una rama de base de datos temporal.</div>
+    </div>
     <h3>Edge Functions</h3>
     <div class="term">
       <div class="term-head"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="term-label">terminal</span></div>
@@ -263,7 +342,7 @@ flowchart LR
 </section>
 
 <section id="pwa">
-  <h2><span class="num">6</span> PWA — instalación en desktop, iOS y Android</h2>
+  <h2><span class="num">8</span> PWA — instalación en desktop, iOS y Android</h2>
   <div class="card">
     <ul class="plain">
       <li>Manifest e iconos generados por <code>vite-plugin-pwa</code>, assets en <code>public/</code>.</li>
@@ -284,7 +363,7 @@ flowchart LR
 </section>
 
 <section id="seguridad">
-  <h2><span class="num">7</span> Seguridad — qué no romper</h2>
+  <h2><span class="num">9</span> Seguridad — qué no romper</h2>
   <div class="card">
     <ul class="plain">
       <li><b>RLS siempre activo</b> en toda tabla nueva. Una tabla sin política es una tabla que cualquier usuario autenticado puede leer/escribir entera.</li>
@@ -297,7 +376,7 @@ flowchart LR
 </section>
 
 <section id="monitoreo">
-  <h2><span class="num">8</span> Monitoreo y logs</h2>
+  <h2><span class="num">10</span> Monitoreo y logs</h2>
   <div class="card">
     <p style="font-size:13.5px; color:var(--text-secondary); margin:0 0 14px;">No hay error tracking integrado (Sentry o similar) — el diagnóstico en producción es manual:</p>
     <div class="table-wrap">
@@ -312,8 +391,24 @@ flowchart LR
   </div>
 </section>
 
+<section id="accesos">
+  <h2><span class="num">11</span> Accesos y roles</h2>
+  <div class="card">
+    <p style="font-size:13px; color:var(--text-secondary); margin:0 0 14px;">Quién administra cada recurso — completar/actualizar a medida que cambie el equipo.</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Recurso</th><th>Quién lo administra</th><th>Cómo pedir acceso</th></tr>
+        <tr><td>Repositorio GitHub</td><td><code>Maxi12141</code> (dueño)</td><td>Pedir colaborador, o abrir un PR</td></tr>
+        <tr><td>Proyecto Vercel</td><td><em>(completar)</em></td><td><em>(completar)</em></td></tr>
+        <tr><td>Proyecto Supabase</td><td><em>(completar)</em></td><td><em>(completar)</em></td></tr>
+        <tr><td>API Banco Central (cátedra)</td><td>El profesor</td><td>Se entrega la API key por curso/comisión</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
 <section id="checklist">
-  <h2><span class="num">9</span> Checklist antes de una release</h2>
+  <h2><span class="num">12</span> Checklist antes de una release</h2>
   <div class="card checklist" id="checklistBox">
     <label><input type="checkbox" data-k="registro"><span>Registro completa el wizard y llega al dashboard</span></label>
     <label><input type="checkbox" data-k="login"><span>Login con contraseña y con huella (celular)</span></label>
@@ -326,7 +421,7 @@ flowchart LR
 </section>
 
 <section id="troubleshooting">
-  <h2><span class="num">10</span> Troubleshooting rápido</h2>
+  <h2><span class="num">13</span> Troubleshooting rápido</h2>
   <div class="card">
     <div class="table-wrap">
       <table>
@@ -335,8 +430,8 @@ flowchart LR
         <tr><td>Edge Function nueva bloqueada por CORS</td><td>Falta manejar <code>OPTIONS</code> + header en la función</td></tr>
         <tr><td>PWA instalada queda vieja</td><td>Revisar <code>registrarPwa.tsx</code> y headers <code>no-cache</code></td></tr>
         <tr><td>"Instalar" siempre dice no disponible</td><td>Evento <code>beforeinstallprompt</code> perdido — ver <code>pwaInstallPrompt.ts</code></td></tr>
-        <tr><td>Usuario nuevo se registra pero queda sin sesión</td><td>Falta desactivar "Confirm email" en Supabase (§5)</td></tr>
-        <tr><td>El link de "olvidé mi contraseña" no funciona</td><td>Falta la Redirect URL permitida en Supabase (§5)</td></tr>
+        <tr><td>Usuario nuevo se registra pero queda sin sesión</td><td>Falta desactivar "Confirm email" en Supabase (§7)</td></tr>
+        <tr><td>El link de "olvidé mi contraseña" no funciona</td><td>Falta la Redirect URL permitida en Supabase (§7)</td></tr>
       </table>
     </div>
   </div>
