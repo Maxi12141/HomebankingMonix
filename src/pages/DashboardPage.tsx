@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, Receipt, ChevronLeft, ChevronRight, Bluetooth } from 'lucide-react'
+import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, Receipt, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CountUp from 'react-countup'
 import { useAuthStore } from '../store/authStore'
@@ -351,15 +351,15 @@ export function DashboardPage() {
           )}
         </motion.div>
 
-        {/* Acciones rápidas: en celular van fijas abajo (Navbar). Cerca solo en notebook/PC. */}
+        {/* Acciones rápidas: en celular van fijas abajo (Navbar). */}
         <motion.div variants={itemVariants} id="tour-acciones" className="hidden md:grid grid-cols-5 gap-3 mb-8">
           <Button variant="primary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/transferir')}>
             <ArrowRightLeft size={20} />
             <span className="text-sm">Transferir</span>
           </Button>
-          <Button variant="secondary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/cerca')}>
-            <Bluetooth size={20} />
-            <span className="text-sm">Cerca</span>
+          <Button variant="secondary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/ahora')}>
+            <Zap size={20} />
+            <span className="text-sm">Ahora</span>
           </Button>
           <Button variant="secondary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/pagar')}>
             <Receipt size={20} />

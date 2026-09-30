@@ -347,7 +347,7 @@ export function ProfilePage() {
             <div className="flex-1 min-w-0">
               <p className="font-body font-medium text-navy dark:text-white text-sm">Permisos del teléfono</p>
               <p className="font-body text-xs text-slate-secondary mt-0.5">
-                Cámara, micrófono, NFC y Bluetooth. Sin esto no abre el QR ni Cerca.
+                Cámara, micrófono y NFC. Sin esto no abre el QR ni el pago acercando la tarjeta.
               </p>
             </div>
           </div>

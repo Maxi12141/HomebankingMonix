@@ -7,7 +7,9 @@ import { useCuentaStore } from '../store/cuentaStore'
 import { useTecladoInset } from '../hooks/useTecladoInset'
 import {
   callar,
+  colapsarRepeticion,
   hablar,
+  mismaFrase,
   soportaVozMoni,
   VozMoni,
 } from '../lib/vozMoni'
@@ -77,6 +79,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const vozRef = useRef<VozMoni | null>(null)
+  const ultimoVoz = useRef({ norm: '', at: 0 })
   const messagesRef = useRef(messages)
   const ctxRef = useRef({
     nombre: persona?.nombre,
@@ -88,7 +91,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   })
   const wakeListo = useRef(false)
 
-  messagesRef.current = messages
+  if (messages.length >= messagesRef.current.length) messagesRef.current = messages
   ctxRef.current = {
     nombre: persona?.nombre,
     saldoARS: (cuentas.find((c) => c.moneda === 'ARS') ?? cuenta)?.saldo,
@@ -194,15 +197,32 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   }, [])
 
   function preguntar(text: string, porVoz = false) {
-    const trimmed = text.trim()
+    const trimmed = (porVoz ? colapsarRepeticion(text) : text).trim()
     if (!trimmed) return
     const hist = messagesRef.current
+    if (porVoz && vozYaEnviada(hist, trimmed)) return
     const lastTopicId = [...hist].reverse().find((m) => m.role === 'bot')?.topicId
     const userMsg: ChatMsg = { id: uid(), role: 'user', text: trimmed }
     const botMsg = fromReply(responder(trimmed, ctxRef.current, { lastTopicId, turn: hist.length }))
-    setMessages((prev) => [...prev, userMsg, botMsg])
+    const next = [...hist, userMsg, botMsg]
+    messagesRef.current = next
+    if (porVoz) ultimoVoz.current = { norm: trimmed, at: Date.now() }
+    setMessages(next)
     setDraft('')
-    if (porVoz) hablar(botMsg.text)
+    if (porVoz) {
+      const ms = hablar(botMsg.text)
+      vozRef.current?.ignorarEco(botMsg.text, ms)
+    }
+  }
+
+  function vozYaEnviada(hist: ChatMsg[], text: string) {
+    const ahora = Date.now()
+    if (mismaFrase(ultimoVoz.current.norm, text) && ahora - ultimoVoz.current.at < 8000) return true
+    const lastUser = [...hist].reverse().find((m) => m.role === 'user')
+    const lastBot = [...hist].reverse().find((m) => m.role === 'bot')
+    if (lastUser && mismaFrase(lastUser.text, text) && ahora - ultimoVoz.current.at < 8000) return true
+    if (lastBot && mismaFrase(lastBot.text, text) && ahora - ultimoVoz.current.at < 15000) return true
+    return false
   }
 
   function ask(text: string) {

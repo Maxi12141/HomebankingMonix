@@ -8,13 +8,13 @@ import { isSupabaseConfigured } from './lib/supabaseClient'
 import { LoadingScreen } from './components/LoadingScreen'
 import { MissingEnvScreen } from './components/MissingEnvScreen'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { CercaProvider } from './hooks/useCerca'
+import { AhoraProvider } from './hooks/useAhora'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { TransferPage } from './pages/TransferPage'
-import { CercaPage } from './pages/CercaPage'
+import { AhoraPage } from './pages/AhoraPage'
 import { HistorialPage } from './pages/HistorialPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { DepositPage } from './pages/DepositPage'
@@ -68,7 +68,8 @@ function AppRoutes() {
       <Route path="/cuentas" element={<RequireAuth><CuentasPage /></RequireAuth>} />
       <Route path="/dolares" element={<RequireAuth><CompraVentaDolaresPage /></RequireAuth>} />
       <Route path="/transferir" element={<RequireAuth><TransferPage /></RequireAuth>} />
-      <Route path="/cerca" element={<RequireAuth><CercaPage /></RequireAuth>} />
+      <Route path="/ahora" element={<RequireAuth><AhoraPage /></RequireAuth>} />
+      <Route path="/cerca" element={<RequireAuth><Navigate to="/ahora" replace /></RequireAuth>} />
       <Route path="/historial" element={<RequireAuth><HistorialPage /></RequireAuth>} />
       <Route path="/depositar" element={<RequireAuth><DepositPage /></RequireAuth>} />
       <Route path="/tarjeta" element={<RequireAuth><TarjetaPage /></RequireAuth>} />
@@ -154,9 +155,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <CercaProvider>
+        <AhoraProvider>
           <AppShell />
-        </CercaProvider>
+        </AhoraProvider>
       </BrowserRouter>
     </ErrorBoundary>
   )

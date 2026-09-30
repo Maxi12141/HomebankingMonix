@@ -14,7 +14,7 @@ function roundMoney(n: number) {
 
 /**
  * Una sola suscripción Realtime por cuenta, compartida entre todos los
- * `useCuenta()` montados (CercaProvider + cada página).
+ * `useCuenta()` montados (AhoraProvider + cada página).
  *
  * supabase-js reutiliza el canal si el nombre coincide. Si un segundo
  * mount hace `.on('postgres_changes')` sobre un canal ya en `subscribe()`,
