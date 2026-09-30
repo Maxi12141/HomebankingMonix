@@ -7,10 +7,11 @@ import type { PersonaCerca } from '../services/cerca'
 interface Props {
   persona: PersonaCerca
   onTransferir: () => void
+  onGuardar?: () => void
   onDismiss: () => void
 }
 
-export function CercaPrompt({ persona, onTransferir, onDismiss }: Props) {
+export function CercaPrompt({ persona, onTransferir, onGuardar, onDismiss }: Props) {
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
       <button
@@ -54,9 +55,11 @@ export function CercaPrompt({ persona, onTransferir, onDismiss }: Props) {
             {persona.alias ? ` · @${persona.alias}` : ''} · identificado al acercar el celular
           </p>
           <div className="flex gap-3">
-            <Button variant="secondary" className="flex-1" type="button" onClick={onDismiss}>
-              Ahora no
-            </Button>
+            {onGuardar && (
+              <Button variant="secondary" className="flex-1" type="button" onClick={onGuardar}>
+                Contacto
+              </Button>
+            )}
             <Button className="flex-1" type="button" onClick={onTransferir}>
               Transferir
             </Button>

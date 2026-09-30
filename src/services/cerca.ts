@@ -9,6 +9,7 @@ export interface PersonaCerca {
   token: string
   banco: string
   cbu?: string
+  cuentaId?: string
   rssi?: number
 }
 
@@ -66,11 +67,14 @@ export async function resolverPersonaRed(input: string, esCBU: boolean): Promise
   }
 }
 
-export async function abrirDestinoCerca(token: string): Promise<DestinoCerca> {
-  const { data, error } = await supabase.rpc('abrir_destino_cerca', { p_token: token })
-  if (error) throw new Error(rpcMessage(error, 'No se pudo abrir la transferencia'))
-  const row = Array.isArray(data) ? data[0] : data
-  if (!row?.cbu) throw new Error('La persona ya no está visible cerca')
+function destinoDesdeRow(row: {
+  nombre: string
+  apellido: string
+  alias: string | null
+  cbu: string
+  cuenta_id: string
+  moneda: string
+}): DestinoCerca {
   return {
     nombre: row.nombre,
     apellido: row.apellido,
@@ -79,6 +83,38 @@ export async function abrirDestinoCerca(token: string): Promise<DestinoCerca> {
     cuenta_id: row.cuenta_id,
     moneda: row.moneda === 'USD' ? 'USD' : 'ARS',
   }
+}
+
+export async function listarVisibles(): Promise<PersonaCerca[]> {
+  const { data, error } = await supabase.rpc('listar_presencias_visibles')
+  if (error) throw new Error(rpcMessage(error, 'No se pudieron listar las personas visibles'))
+  const rows = Array.isArray(data) ? data : data ? [data] : []
+  return rows
+    .filter((row) => row?.cuenta_id)
+    .map((row) => ({
+      nombre: row.nombre,
+      apellido: row.apellido,
+      alias: row.alias ?? null,
+      token: String(row.cuenta_id),
+      cuentaId: String(row.cuenta_id),
+      banco: 'Monix',
+    }))
+}
+
+export async function abrirDestinoCerca(token: string): Promise<DestinoCerca> {
+  const { data, error } = await supabase.rpc('abrir_destino_cerca', { p_token: token })
+  if (error) throw new Error(rpcMessage(error, 'No se pudo abrir la transferencia'))
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row?.cbu) throw new Error('La persona ya no está visible cerca')
+  return destinoDesdeRow(row)
+}
+
+export async function abrirDestinoCercaCuenta(cuentaId: string): Promise<DestinoCerca> {
+  const { data, error } = await supabase.rpc('abrir_destino_cerca_cuenta', { p_cuenta_id: cuentaId })
+  if (error) throw new Error(rpcMessage(error, 'No se pudo abrir la transferencia'))
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row?.cbu) throw new Error('La persona ya no está visible cerca')
+  return destinoDesdeRow(row)
 }
 
 export async function presenciaPropia() {

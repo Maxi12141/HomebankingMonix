@@ -311,7 +311,7 @@ export class MonixRadio {
       return
     }
 
-    await this.startWebNfcListen()
+    if (hasNdef()) await this.startWebNfcListen()
   }
 
   async stopScan() {
