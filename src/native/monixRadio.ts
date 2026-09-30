@@ -56,8 +56,24 @@ async function getPlugin(): Promise<MonixPlugin | null> {
 
 export const MONIX_CERCA_UUID = '6e6f6e69-7801-4c0c-8000-00000000c0ca'
 
+type WebBluetooth = {
+  getAvailability?: () => Promise<boolean>
+  requestLEScan?: (opts: Record<string, unknown>) => Promise<{ stop: () => void }>
+  requestDevice: (opts: Record<string, unknown>) => Promise<{
+    watchAdvertisements?: (opts?: { signal?: AbortSignal }) => Promise<void>
+    addEventListener: (name: string, fn: (event: Event) => void) => void
+  }>
+  addEventListener: (name: string, fn: (event: Event) => void) => void
+  removeEventListener: (name: string, fn: (event: Event) => void) => void
+}
+
+function webBluetooth(): WebBluetooth | undefined {
+  if (typeof navigator === 'undefined') return undefined
+  return (navigator as Navigator & { bluetooth?: WebBluetooth }).bluetooth
+}
+
 function hasWebBluetooth() {
-  return typeof navigator !== 'undefined' && Boolean(navigator.bluetooth)
+  return Boolean(webBluetooth())
 }
 
 export function radioCapabilities(): RadioCapabilities {
@@ -368,9 +384,7 @@ export class MonixRadio {
   }
 
   private async startWebBluetoothScan() {
-    const bt = navigator.bluetooth as (Bluetooth & {
-      requestLEScan?: (opts: Record<string, unknown>) => Promise<{ stop: () => void }>
-    }) | undefined
+    const bt = webBluetooth()
     if (!bt) {
       throw new Error('Este navegador no expone Bluetooth. Usá Chrome en Android, con Bluetooth prendido.')
     }
@@ -396,13 +410,10 @@ export class MonixRadio {
         filters: [{ services: [MONIX_CERCA_UUID] }],
         optionalServices: [MONIX_CERCA_UUID],
       })
-      const watchable = device as BluetoothDevice & {
-        watchAdvertisements?: (opts?: { signal?: AbortSignal }) => Promise<void>
-      }
       this.scanAbort = new AbortController()
-      if (watchable.watchAdvertisements) {
-        watchable.addEventListener('advertisementreceived', this.onAdvertenciaWeb)
-        await watchable.watchAdvertisements({ signal: this.scanAbort.signal })
+      if (device.watchAdvertisements) {
+        device.addEventListener('advertisementreceived', this.onAdvertenciaWeb)
+        await device.watchAdvertisements({ signal: this.scanAbort.signal })
       }
     } catch (err) {
       const name = err && typeof err === 'object' && 'name' in err ? String(err.name) : ''
