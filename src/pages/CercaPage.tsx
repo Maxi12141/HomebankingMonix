@@ -1,8 +1,15 @@
-import { Bluetooth, Radar, ShieldCheck } from 'lucide-react'
+import { Bluetooth, Radar, ShieldCheck, UserPlus } from 'lucide-react'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { useCerca } from '../hooks/useCerca'
+import type { PersonaCerca } from '../services/cerca'
+
+function lineaDetalle(p: PersonaCerca) {
+  const nombre = `${p.nombre} ${p.apellido}`.trim()
+  const dist = p.metros != null ? ` · ${p.metros} m` : ''
+  return `${nombre} · ${p.banco}${dist}`
+}
 
 export function CercaPage() {
   const cerca = useCerca()
@@ -14,7 +21,7 @@ export function CercaPage() {
           Monix Cerca
         </h1>
         <p className="font-body text-sm text-slate-secondary mt-1 mb-6">
-          Acercá tu celular a otro. Puede ser Monix u otro banco de la red: ves el nombre, de qué banco viene, y transferís al toque.
+          Activá Bluetooth: aparecen los que están cerca, con su alias. Después transferís o los guardás en contactos.
         </p>
 
         <Card className="p-6 mb-4 overflow-hidden relative">
@@ -27,40 +34,21 @@ export function CercaPage() {
               {cerca.buscando ? <Radar size={28} /> : <Bluetooth size={28} />}
             </div>
             <p className="font-display font-semibold text-navy dark:text-white">
-              {cerca.buscando ? 'Buscando celulares cerca…' : 'Listo para acercar'}
+              {cerca.buscando ? 'Buscando personas cerca…' : 'Bluetooth apagado'}
             </p>
-            <p className="font-body text-xs text-slate-secondary mt-1 max-w-sm">
-              {cerca.caps.native
-                ? 'Con la APK, el otro no necesita tener Monix abierto: queda visible en segundo plano.'
-                : 'En Chrome tocá “Buscar ahora” para permitir NFC, o usá la APK de Monix para Bluetooth de fondo. Si el otro te pasa CBU o alias por NFC, también lo tomamos aunque sea de otro banco.'}
+            <p className="font-body text-xs text-slate-secondary mt-1 max-w-sm mb-4">
+              Los dos tienen que tocar Activar. Vas a ver el alias y el banco. El CBU aparece recién cuando transferís.
             </p>
+            {cerca.buscando ? (
+              <Button variant="secondary" type="button" onClick={() => { void cerca.stopBusqueda() }}>
+                Dejar de buscar
+              </Button>
+            ) : (
+              <Button type="button" onClick={() => { void cerca.startBusqueda() }}>
+                Activar Bluetooth
+              </Button>
+            )}
           </div>
-        </Card>
-
-        <Card className="p-5 mb-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="font-body text-sm font-medium text-navy dark:text-white">
-              Visible aunque cierre la app
-            </p>
-            <p className="font-body text-xs text-slate-secondary mt-0.5">
-              Publica un código rotativo. Nunca se transmite tu CBU.
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={cerca.visible}
-            onClick={() => { void cerca.setVisible(!cerca.visible) }}
-            className={`relative w-12 h-7 rounded-full transition-colors ${
-              cerca.visible ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
-                cerca.visible ? 'translate-x-5' : ''
-              }`}
-            />
-          </button>
         </Card>
 
         {cerca.error && (
@@ -76,39 +64,48 @@ export function CercaPage() {
           {cerca.nearby.length === 0 ? (
             <Card className="p-6 text-center">
               <p className="font-body text-sm text-slate-secondary">
-                Todavía no detectamos a nadie. Acercá los teléfonos, tocá una tarjeta o un NFC con CBU/alias de cualquier banco.
+                Nadie cerca todavía. Pedile al otro que toque Activar Bluetooth en Monix Cerca.
               </p>
-              {!cerca.buscando && (
-                <Button className="mt-4" type="button" onClick={() => { void cerca.startBusqueda() }}>
-                  Buscar ahora
-                </Button>
-              )}
             </Card>
           ) : (
             <div className="flex flex-col gap-2">
               {cerca.nearby.map((p) => (
-                <button
-                  key={p.token}
-                  type="button"
-                  onClick={() => { void cerca.transferirA(p.token) }}
-                  className="text-left"
-                >
-                  <Card className="px-4 py-3.5 flex items-center gap-3 hover:bg-navy/5 dark:hover:bg-white/5 transition-colors">
+                <Card key={p.token} className="px-4 py-3.5">
+                  <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-mint/20 text-mint flex items-center justify-center font-body font-bold text-sm">
                       {(p.nombre[0] ?? '').toUpperCase()}{(p.apellido[0] ?? '').toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-body text-sm font-medium text-navy dark:text-white truncate">
-                        {p.nombre} {p.apellido}
+                        {p.alias ? `@${p.alias}` : `${p.nombre} ${p.apellido}`}
                       </p>
                       <p className="font-body text-xs text-slate-secondary truncate">
-                        {p.banco}
-                        {p.alias ? ` · @${p.alias}` : ''}
+                        {lineaDetalle(p)}
                       </p>
                     </div>
-                    <span className="text-xs font-body text-mint shrink-0">Transferir</span>
-                  </Card>
-                </button>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      variant="secondary"
+                      className="flex-1 !py-2 text-sm"
+                      type="button"
+                      disabled={cerca.esContacto(p.token)}
+                      onClick={() => { void cerca.guardarContacto(p.token) }}
+                    >
+                      <span className="inline-flex items-center justify-center gap-1.5">
+                        <UserPlus size={14} />
+                        {cerca.esContacto(p.token) ? 'Guardado' : 'Contacto'}
+                      </span>
+                    </Button>
+                    <Button
+                      className="flex-1 !py-2 text-sm"
+                      type="button"
+                      onClick={() => { void cerca.transferirA(p.token) }}
+                    >
+                      Transferir
+                    </Button>
+                  </div>
+                </Card>
               ))}
             </div>
           )}
@@ -117,7 +114,7 @@ export function CercaPage() {
         <Card className="p-5 flex items-start gap-3">
           <ShieldCheck size={18} className="text-mint shrink-0 mt-0.5" />
           <p className="font-body text-xs text-slate-secondary leading-relaxed">
-            El Bluetooth de Monix solo manda un token de 30 minutos. Si el otro banco publica CBU o alias por NFC, lo resolvemos en la red del Banco Central y te decimos de qué banco es. El CBU para transferir aparece recién cuando confirmás.
+            Galicia, Mercado Pago u otro banco no mandan su alias por Bluetooth. Cerca ve a quien tenga Monix abierto y visible. Si te pasan un CBU o alias, también lo resolvemos y te decimos el banco.
           </p>
         </Card>
       </div>
