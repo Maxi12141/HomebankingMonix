@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode, type RefObject, type TransitionEvent } from 'react'
-import { Image, ScanLine, X, Zap, ZapOff } from 'lucide-react'
+import { QrCode, X, Zap, ZapOff } from 'lucide-react'
 import { useThemeStore } from '../stores/themeStore'
 import { originFromFab, useQrScanStore } from '../stores/qrScanStore'
 import { aplicarBarraDeEstado, aplicarBarraDeEstadoCamara } from '../native/statusBar'
@@ -23,7 +23,6 @@ function coverRadius(x: number, y: number, w: number, h: number) {
 export function QrScannerFullscreen({
   videoRef,
   error,
-  torchOk,
   torchOn,
   closing,
   vista = 'camara',
@@ -31,13 +30,10 @@ export function QrScannerFullscreen({
   onClose,
   onClosed,
   onMostrarQr,
-  onVolverACamara,
   onToggleTorch,
-  onPickPhoto,
 }: {
   videoRef: RefObject<HTMLVideoElement>
   error?: string
-  torchOk: boolean
   torchOn: boolean
   closing?: boolean
   vista?: 'camara' | 'cobrar'
@@ -45,9 +41,7 @@ export function QrScannerFullscreen({
   onClose: () => void
   onClosed?: () => void
   onMostrarQr?: () => void
-  onVolverACamara?: () => void
   onToggleTorch: () => void
-  onPickPhoto: () => void
 }) {
   const theme = useThemeStore((s) => s.theme)
   const originX = useQrScanStore((s) => s.originX)
@@ -151,6 +145,14 @@ export function QrScannerFullscreen({
     ponerLift(drag.lift + (drag.y - e.clientY))
   }
 
+  function generarQr() {
+    dragRef.current = null
+    setDragging(false)
+    const yaEstaba = Math.abs(liftRef.current - vp.h) < 1
+    ponerLift(vp.h)
+    if (yaEstaba && vistaRef.current !== 'cobrar') onMostrarQrRef.current?.()
+  }
+
   function soltarArrastre() {
     if (!dragRef.current) return
     dragRef.current = null
@@ -194,18 +196,14 @@ export function QrScannerFullscreen({
           >
             <span className="h-1.5 w-14 rounded-full bg-white/90 shadow-sm" />
           </button>
-          {torchOk ? (
-            <button
-              type="button"
-              onClick={onToggleTorch}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md"
-              aria-label={torchOn ? 'Apagar linterna' : 'Prender linterna'}
-            >
-              {torchOn ? <ZapOff size={18} /> : <Zap size={18} />}
-            </button>
-          ) : (
-            <span className="h-10 w-10" aria-hidden />
-          )}
+          <button
+            type="button"
+            onClick={onToggleTorch}
+            className={`relative z-20 flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-md ${torchOn ? 'bg-mint text-navy' : 'bg-black/50 text-white'}`}
+            aria-label={torchOn ? 'Apagar linterna' : 'Prender linterna'}
+          >
+            {torchOn ? <ZapOff size={18} /> : <Zap size={18} />}
+          </button>
         </div>
         <p className="mx-auto mt-2 w-fit rounded-full bg-black/50 px-4 py-2 font-body text-sm font-medium text-white backdrop-blur-md">
           Escaneá el código
@@ -220,11 +218,11 @@ export function QrScannerFullscreen({
 
       <button
         type="button"
-        onClick={onPickPhoto}
-        className="absolute bottom-[max(1.75rem,calc(env(safe-area-inset-bottom)+1.5rem))] left-1/2 z-10 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-mint text-navy shadow-lg shadow-black/30"
-        aria-label="Elegir foto del QR"
+        onClick={generarQr}
+        className="absolute bottom-[max(1.75rem,calc(env(safe-area-inset-bottom)+1.5rem))] left-1/2 z-20 flex h-14 -translate-x-1/2 items-center gap-2 rounded-full bg-mint px-5 font-body font-medium text-navy shadow-lg shadow-black/30"
       >
-        <Image size={22} strokeWidth={2.2} />
+        <QrCode size={20} strokeWidth={2.2} />
+        Generar QR
       </button>
     </>
   )
@@ -272,14 +270,6 @@ export function QrScannerFullscreen({
               </button>
             </div>
             {cobrar}
-            <button
-              type="button"
-              onClick={onVolverACamara}
-              className="absolute bottom-[max(1.75rem,calc(env(safe-area-inset-bottom)+1.5rem))] left-1/2 z-10 flex h-14 items-center gap-2 -translate-x-1/2 rounded-full bg-mint px-5 text-navy shadow-lg shadow-black/30 font-body font-medium"
-            >
-              <ScanLine size={20} strokeWidth={2.2} />
-              Escanear
-            </button>
           </div>
 
           <div

@@ -21,7 +21,6 @@ import {
   setLinterna,
   startQrCamera,
   stopMediaStream,
-  tieneLinterna,
   waitForVideo,
 } from '../lib/scanQr'
 import { isAbortError } from '../native/monixRadio'
@@ -383,7 +382,6 @@ export function EscanearYPagar({
   const [scanning, setScanning] = useState(!cobroIdInicial)
   const [closing, setClosing] = useState(false)
   const [vista, setVista] = useState<'camara' | 'cobrar'>('camara')
-  const [torchOk, setTorchOk] = useState(false)
   const [torchOn, setTorchOn] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fotoRef = useRef<HTMLInputElement>(null)
@@ -398,7 +396,6 @@ export function EscanearYPagar({
     streamRef.current = null
     if (videoRef.current) videoRef.current.srcObject = null
     setTorchOn(false)
-    setTorchOk(false)
   }
 
   useEffect(() => {
@@ -479,7 +476,6 @@ export function EscanearYPagar({
       throw new DOMException('Aborted', 'AbortError')
     }
     streamRef.current = stream
-    setTorchOk(tieneLinterna(stream))
     try {
       return await detectQrUntil(video, signal)
     } finally {
@@ -488,7 +484,6 @@ export function EscanearYPagar({
         if (streamRef.current === stream) streamRef.current = null
         if (videoRef.current) videoRef.current.srcObject = null
         setTorchOn(false)
-        setTorchOk(false)
       }
     }
   }
@@ -520,12 +515,14 @@ export function EscanearYPagar({
   }
 
   async function toggleTorch() {
+    const desdeVideo = videoRef.current?.srcObject
+    const stream = streamRef.current ?? (desdeVideo instanceof MediaStream ? desdeVideo : null)
     const next = !torchOn
     try {
-      await setLinterna(streamRef.current, next)
+      await setLinterna(stream, next)
       setTorchOn(next)
     } catch {
-      setTorchOk(false)
+      toast.error('No se pudo prender la linterna')
     }
   }
 
@@ -534,12 +531,6 @@ export function EscanearYPagar({
     setVista('cobrar')
     setScanning(false)
     setError('')
-  }
-
-  function volverACamara() {
-    setVista('camara')
-    setError('')
-    void escanearQr()
   }
 
   function cancelarScan() {
@@ -755,20 +746,17 @@ export function EscanearYPagar({
           <QrScannerFullscreen
             videoRef={videoRef}
             error={error}
-            torchOk={torchOk}
             torchOn={torchOn}
             closing={closing}
             vista={vista}
             cobrar={<MiCodigoQr variante="overlay" />}
             onClose={cancelarScan}
             onMostrarQr={mostrarMiQr}
-            onVolverACamara={volverACamara}
             onClosed={() => {
               apagarCamara()
               if (closingRef.current) onCerrarScan?.()
             }}
             onToggleTorch={() => { void toggleTorch() }}
-            onPickPhoto={() => fotoRef.current?.click()}
           />,
           document.body,
         )}
@@ -784,20 +772,17 @@ export function EscanearYPagar({
           <QrScannerFullscreen
             videoRef={videoRef}
             error={error}
-            torchOk={torchOk}
             torchOn={torchOn}
             closing={closing}
             vista={vista}
             cobrar={<MiCodigoQr variante="overlay" />}
             onClose={cancelarScan}
             onMostrarQr={mostrarMiQr}
-            onVolverACamara={volverACamara}
             onClosed={() => {
               apagarCamara()
               if (closingRef.current) onCerrarScan?.()
             }}
             onToggleTorch={() => { void toggleTorch() }}
-            onPickPhoto={() => fotoRef.current?.click()}
           />,
           document.body,
         )}

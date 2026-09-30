@@ -6,7 +6,31 @@ import {
   huellaActiva,
 } from '../lib/biometria'
 
-const RELOCK_MS = 2_000
+const GRACIA_MS = 30_000
+// localStorage: al salir, Android suele matar el WebView y sessionStorage no llega al regreso.
+const ACTIVO_KEY = 'monix_activo_en'
+
+function guardarMarca() {
+  try {
+    localStorage.setItem(ACTIVO_KEY, String(Date.now()))
+  } catch {
+    /* modo privado */
+  }
+}
+
+function marcarActivo() {
+  if (typeof document !== 'undefined' && document.hidden) return
+  guardarMarca()
+}
+
+function dentroDeGracia() {
+  try {
+    const t = Number(localStorage.getItem(ACTIVO_KEY) || 0)
+    return t > 0 && Date.now() - t < GRACIA_MS
+  } catch {
+    return false
+  }
+}
 
 export function useBiometriaLock(user: User | null) {
   const sesionAbierta = useRef(false)
@@ -14,7 +38,7 @@ export function useBiometriaLock(user: User | null) {
 
   const [locked, setLocked] = useState(() => {
     if (!user) return false
-    if (sessionStorage.getItem('monix_just_authed') === '1') {
+    if (sessionStorage.getItem('monix_just_authed') === '1' || dentroDeGracia()) {
       sesionAbierta.current = true
       return false
     }
@@ -28,6 +52,7 @@ export function useBiometriaLock(user: User | null) {
 
   const unlock = useCallback(() => {
     sesionAbierta.current = true
+    marcarActivo()
     setLocked(false)
   }, [])
 
@@ -37,8 +62,9 @@ export function useBiometriaLock(user: User | null) {
       setLocked(false)
       return
     }
-    if (consumoIngresoConClave()) {
+    if (consumoIngresoConClave() || dentroDeGracia()) {
       sesionAbierta.current = true
+      marcarActivo()
       setLocked(false)
       return
     }
@@ -52,28 +78,40 @@ export function useBiometriaLock(user: User | null) {
 
   useEffect(() => {
     if (!user) return
-    let hiddenAt = 0
+
+    function alSalir() {
+      if (lockedRef.current) return
+      guardarMarca()
+    }
+
+    function alVolver() {
+      if (!user || document.hidden) return
+      if (!shouldLock(user.id) || dentroDeGracia()) return
+      sesionAbierta.current = false
+      setLocked(true)
+    }
 
     function onVis() {
-      if (!user) return
-      if (document.hidden) {
-        if (lockedRef.current) {
-          hiddenAt = 0
-          return
-        }
-        hiddenAt = Date.now()
-        return
-      }
-      if (hiddenAt && Date.now() - hiddenAt >= RELOCK_MS && shouldLock(user.id)) {
-        sesionAbierta.current = false
-        setLocked(true)
-      }
-      hiddenAt = 0
+      if (document.hidden) alSalir()
+      else alVolver()
     }
 
     document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
+    window.addEventListener('pagehide', alSalir)
+    window.addEventListener('pageshow', alVolver)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('pagehide', alSalir)
+      window.removeEventListener('pageshow', alVolver)
+    }
   }, [user, shouldLock])
+
+  useEffect(() => {
+    if (!user || locked) return
+    marcarActivo()
+    const id = window.setInterval(marcarActivo, 5_000)
+    return () => window.clearInterval(id)
+  }, [user, locked])
 
   return {
     locked,

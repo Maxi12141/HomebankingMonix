@@ -439,7 +439,7 @@ export const TOPICS: Topic[] = [
     keywords: ['huella', 'biometria', 'fingerprint', 'biometrica', 'face'],
     extra: ['lock', 'desbloqueo', 'dedo'],
     answers: () => [
-      'En Perfil activás el desbloqueo con huella (o biometría del celular). Al volver a la app te pide validar; si falla, usás la contraseña.',
+      'En Perfil activás el desbloqueo con huella (o biometría del celular). Si volvés antes de 30 segundos no te la pide; pasado eso, validás de nuevo. Si falla, usás la contraseña.',
       'La huella no reemplaza el login: protege la sesión ya abierta en este dispositivo. Se prende y se apaga desde Perfil.',
     ],
   },
