@@ -162,16 +162,21 @@ export function TransferPage() {
     : null
 
   useEffect(() => {
-    const state = location.state as { cbu?: string; fromCerca?: boolean; banco?: string } | null
+    const state = location.state as { cbu?: string; monto?: number; fromCerca?: boolean; fromQr?: boolean; banco?: string } | null
     if (state?.cbu) {
       setDestino(state.cbu)
       buscarDestinatario(state.cbu)
+      if (typeof state.monto === 'number' && state.monto > 0) {
+        setMonto(String(state.monto))
+      }
       if (state.fromCerca) {
         toast.success(
           state.banco
             ? `Persona de ${state.banco} identificada al acercar el celular`
             : 'Persona identificada al acercar el celular',
         )
+      } else if (state.fromQr) {
+        toast.success('Destinatario identificado desde el QR')
       }
     }
   }, [])
