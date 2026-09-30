@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "ar.monix.banco.app-mergeReleaseResources-2:/values-land/values-land.xml",
+            "map": [
+                {
+                    "source": "/tmp/cursor-sandbox-cache/48be361157c01a8c70a651e53be878a8/gradle/caches/8.11.1/transforms/3c7457cdb6fb77b982c7077db2ad9499/transformed/appcompat-1.7.0/res/values-land/values-land.xml",
+                    "from": {
+                        "startLines": "2,3,4",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,125,196",
+                        "endColumns": "69,70,67",
+                        "endOffsets": "120,191,259"
+                    }
+                }
+            ]
+        }
+    ]
+}
