@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useThemeStore } from '../stores/themeStore'
 import { Button } from '../components/ui/Button'
 import { PasswordInput } from '../components/ui/PasswordInput'
+import { PasswordStrengthMeter } from '../components/ui/PasswordStrengthMeter'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
 
@@ -91,6 +92,7 @@ export function ResetPasswordPage() {
                 minLength={6}
                 autoFocus
               />
+              <PasswordStrengthMeter password={password} />
               <PasswordInput
                 label="Repetí la contraseña nueva"
                 placeholder="Mínimo 6 caracteres"

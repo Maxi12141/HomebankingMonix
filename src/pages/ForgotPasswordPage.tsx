@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { MailCheck } from 'lucide-react'
@@ -9,16 +9,51 @@ import { Input } from '../components/ui/Input'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
 
+// Genérico (no por email, evita enumeración), persistido para sobrevivir un reload; sin captcha real disponible.
+const COOLDOWN_MS = 30_000
+const COOLDOWN_KEY = 'monix_forgot_cooldown_hasta'
+
+function leerCooldown(): number | null {
+  try {
+    const hasta = Number(localStorage.getItem(COOLDOWN_KEY) ?? 0)
+    return hasta > Date.now() ? hasta : null
+  } catch {
+    return null
+  }
+}
+
 export function ForgotPasswordPage() {
   const { theme } = useThemeStore()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [error, setError] = useState('')
+  const [bloqueadoHasta, setBloqueadoHasta] = useState<number | null>(leerCooldown)
+  const [segundosRestantes, setSegundosRestantes] = useState(0)
+
+  useEffect(() => {
+    if (!bloqueadoHasta) {
+      setSegundosRestantes(0)
+      return
+    }
+    const tick = () => {
+      const restante = Math.ceil((bloqueadoHasta - Date.now()) / 1000)
+      if (restante <= 0) {
+        setSegundosRestantes(0)
+        setBloqueadoHasta(null)
+      } else {
+        setSegundosRestantes(restante)
+      }
+    }
+    tick()
+    const id = window.setInterval(tick, 1000)
+    return () => window.clearInterval(id)
+  }, [bloqueadoHasta])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    if (bloqueadoHasta && Date.now() < bloqueadoHasta) return
     setLoading(true)
     try {
       const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
@@ -27,6 +62,9 @@ export function ForgotPasswordPage() {
       if (err) throw err
       // No confirmamos si el email existe o no en la respuesta: evita que alguien use este
       // formulario para averiguar qué emails están registrados en Monix.
+      const hasta = Date.now() + COOLDOWN_MS
+      localStorage.setItem(COOLDOWN_KEY, String(hasta))
+      setBloqueadoHasta(hasta)
       setEnviado(true)
     } catch {
       setError('No pudimos enviar el mail. Probá de nuevo en un momento.')
@@ -93,7 +131,12 @@ export function ForgotPasswordPage() {
                     {error}
                   </p>
                 )}
-                <Button type="submit" loading={loading} className="w-full mt-2">
+                {segundosRestantes > 0 && (
+                  <p className="text-xs text-center font-body text-slate-secondary">
+                    Ya pediste un link. Podés pedir otro en {segundosRestantes}s.
+                  </p>
+                )}
+                <Button type="submit" loading={loading} disabled={segundosRestantes > 0} className="w-full mt-2">
                   Enviar link de recuperación
                 </Button>
               </form>
