@@ -37,7 +37,7 @@ export function CercaPage() {
               {cerca.buscando ? 'Buscando personas cerca…' : 'Bluetooth apagado'}
             </p>
             <p className="font-body text-xs text-slate-secondary mt-1 max-w-sm mb-4">
-              Los dos tienen que tocar Activar. Vas a ver el alias y el banco. El CBU aparece recién cuando transferís.
+              Chrome va a pedir Bluetooth. Los dos tienen que tocarlo: ves el alias y podés transferir o guardar el contacto.
             </p>
             {cerca.buscando ? (
               <Button variant="secondary" type="button" onClick={() => { void cerca.stopBusqueda() }}>

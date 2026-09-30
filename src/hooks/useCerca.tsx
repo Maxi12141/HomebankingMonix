@@ -186,22 +186,21 @@ function useCercaRuntime() {
   const startBusqueda = useCallback(async (opts?: { silent?: boolean }) => {
     setError('')
     setBuscando(true)
-    if (!opts?.silent) {
-      setVisible(true)
-      coordsRef.current = await leerUbicacion()
-    }
     try {
       await monixRadio.startScan()
+      if (!opts?.silent) {
+        setVisible(true)
+        coordsRef.current = await leerUbicacion()
+      }
       await monixRadio.startNfcListen().catch((err) => {
-        if (isAbortError(err)) return
-        if (caps.nfc && !opts?.silent) {
-          const msg = err instanceof Error ? err.message : 'No se pudo activar el NFC'
-          setError(msg)
-        }
+        if (isAbortError(err) || !caps.nfc) return
       })
       await refrescarVisibles()
     } catch (err) {
-      if (isAbortError(err)) return
+      if (isAbortError(err)) {
+        await refrescarVisibles()
+        return
+      }
       if (opts?.silent) {
         await refrescarVisibles()
         return

@@ -54,11 +54,17 @@ async function getPlugin(): Promise<MonixPlugin | null> {
   return registerPlugin<MonixPlugin>('MonixRadio')
 }
 
+export const MONIX_CERCA_UUID = '6e6f6e69-7801-4c0c-8000-00000000c0ca'
+
+function hasWebBluetooth() {
+  return typeof navigator !== 'undefined' && Boolean(navigator.bluetooth)
+}
+
 export function radioCapabilities(): RadioCapabilities {
   return {
     native: isNative(),
     nfc: hasNdef() || isNative(),
-    ble: isNative(),
+    ble: isNative() || hasWebBluetooth(),
   }
 }
 
@@ -233,12 +239,38 @@ export function isAbortError(err: unknown): boolean {
   return name === 'AbortError' || /signal is aborted/i.test(message)
 }
 
+type BluetoothAdvert = {
+  rssi?: number
+  serviceData?: Map<string, DataView>
+  device?: { name?: string }
+}
+
+function hexFromBytes(view: DataView) {
+  return [...new Uint8Array(view.buffer, view.byteOffset, view.byteLength)]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function tokenDesdeAdvertencia(event: BluetoothAdvert): string | null {
+  const data = event.serviceData?.get(MONIX_CERCA_UUID)
+    ?? event.serviceData?.get(MONIX_CERCA_UUID.toUpperCase())
+  if (data) {
+    const hex = hexFromBytes(data)
+    if (/^[0-9a-f]{32,64}$/.test(hex)) return hex
+  }
+  const nombre = event.device?.name ?? ''
+  const match = nombre.match(/[0-9a-f]{32,64}/i)
+  return match ? match[0].toLowerCase() : null
+}
+
 export class MonixRadio {
   private nearbyHandlers = new Set<NearbyHandler>()
   private nfcHandlers = new Set<NfcHandler>()
   private ndef: NDEFReader | null = null
   private scanAbort: AbortController | null = null
   private webNfcActive = false
+  private webBleScan: { stop: () => void } | null = null
+  private webBleUnsub: (() => void) | null = null
   private pluginUnsubs: Array<{ remove: () => Promise<void> }> = []
   private advertising = false
 
@@ -311,18 +343,72 @@ export class MonixRadio {
       return
     }
 
-    if (hasNdef()) await this.startWebNfcListen()
+    await this.startWebBluetoothScan()
   }
 
   async stopScan() {
     const plugin = await getPlugin()
     if (plugin) await plugin.stopScan()
+    this.webBleUnsub?.()
+    this.webBleUnsub = null
+    try { this.webBleScan?.stop() } catch { /* ya parado */ }
+    this.webBleScan = null
     this.webNfcActive = false
     this.scanAbort?.abort()
     this.scanAbort = null
     this.ndef = null
     await Promise.all(this.pluginUnsubs.map((u) => u.remove()))
     this.pluginUnsubs = []
+  }
+
+  private onAdvertenciaWeb = (event: Event) => {
+    const ev = event as unknown as BluetoothAdvert
+    const token = tokenDesdeAdvertencia(ev)
+    if (token) this.emitNearby({ token, rssi: ev.rssi, payload: token })
+  }
+
+  private async startWebBluetoothScan() {
+    const bt = navigator.bluetooth as (Bluetooth & {
+      requestLEScan?: (opts: Record<string, unknown>) => Promise<{ stop: () => void }>
+    }) | undefined
+    if (!bt) {
+      throw new Error('Este navegador no expone Bluetooth. Usá Chrome en Android, con Bluetooth prendido.')
+    }
+
+    const available = await bt.getAvailability?.().catch(() => true)
+    if (available === false) {
+      throw new Error('Bluetooth está apagado. Prendelo y volvé a tocar Activar.')
+    }
+
+    bt.addEventListener('advertisementreceived', this.onAdvertenciaWeb)
+    this.webBleUnsub = () => bt.removeEventListener('advertisementreceived', this.onAdvertenciaWeb)
+
+    try {
+      if (typeof bt.requestLEScan === 'function') {
+        this.webBleScan = await bt.requestLEScan({
+          filters: [{ services: [MONIX_CERCA_UUID] }],
+          keepRepeatedDevices: true,
+        })
+        return
+      }
+
+      const device = await bt.requestDevice({
+        filters: [{ services: [MONIX_CERCA_UUID] }],
+        optionalServices: [MONIX_CERCA_UUID],
+      })
+      const watchable = device as BluetoothDevice & {
+        watchAdvertisements?: (opts?: { signal?: AbortSignal }) => Promise<void>
+      }
+      this.scanAbort = new AbortController()
+      if (watchable.watchAdvertisements) {
+        watchable.addEventListener('advertisementreceived', this.onAdvertenciaWeb)
+        await watchable.watchAdvertisements({ signal: this.scanAbort.signal })
+      }
+    } catch (err) {
+      const name = err && typeof err === 'object' && 'name' in err ? String(err.name) : ''
+      if (isAbortError(err) || name === 'NotFoundError' || name === 'NotAllowedError') return
+      throw err
+    }
   }
 
   async startNfcListen() {
