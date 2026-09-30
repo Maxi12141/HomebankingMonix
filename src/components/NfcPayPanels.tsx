@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { CheckCircle, QrCode, ScanLine } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
@@ -11,6 +12,7 @@ import { QrBox } from './QrBox'
 import { QrScannerFullscreen } from './QrScannerFullscreen'
 import { formatMonto } from '../utils/cuenta'
 import { encodeCobroQr, encodeCuentaQr, parseRadioPayload } from '../lib/tokens'
+import { MONIX_BANK_CODE, esJwtQr, firmarQrPropio, verificarJwtQr, type QrJwtClaims } from '../lib/qrJwt'
 import {
   detectQrUntil,
   engancharCamara,
@@ -35,7 +37,31 @@ import {
   type DestinoQr,
 } from '../services/nfcPago'
 
-async function aplicarQr(raw: string, cargarCobro: (id: string) => Promise<void>, cargarCuenta: (id: string) => Promise<void>) {
+async function aplicarQr(
+  raw: string,
+  cargarCobro: (id: string) => Promise<void>,
+  cargarCuenta: (id: string) => Promise<void>,
+  cargarDestinoJwt: (claims: QrJwtClaims) => Promise<void>,
+) {
+  // QR interbancario firmado (docs/qr-interbancario-jwt.md): se prueba antes
+  // que los formatos internos, para que también funcione con QRs de otros
+  // bancos de la cátedra. Si claims.cid apunta a un cobro propio, se sigue
+  // exactamente el camino de siempre (con seguimiento en tiempo real); si no,
+  // se resuelve como una transferencia común por CBU (misma lógica que ya usa
+  // Monix Cerca para prellenar Transferir).
+  if (esJwtQr(raw.trim())) {
+    const resultado = await verificarJwtQr(raw)
+    if (resultado) {
+      const { claims } = resultado
+      if (claims.iss === MONIX_BANK_CODE && claims.cid) {
+        await cargarCobro(claims.cid)
+        return
+      }
+      await cargarDestinoJwt(claims)
+      return
+    }
+  }
+
   const parsed = parseRadioPayload(raw)
   if (parsed?.kind === 'cobro') {
     await cargarCobro(parsed.value)
@@ -60,7 +86,27 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   const [monto, setMonto] = useState('')
   const [cobro, setCobro] = useState<CobroNfc | null>(null)
   const [error, setError] = useState('')
+  const [jwtQr, setJwtQr] = useState('')
   const cobroIdRef = useRef<string | null>(null)
+
+  // QR interbancario firmado (docs/qr-interbancario-jwt.md): se pide a la
+  // Edge Function apenas hay cuenta/cobro para mostrar. Si falla (sin red, la
+  // función no está desplegada en otro entorno, etc.) qrValue más abajo cae
+  // solo al formato interno de siempre — nunca se rompe el QR por esto.
+  useEffect(() => {
+    let vivo = true
+    if (!cuenta?.cbu) { setJwtQr(''); return }
+    void firmarQrPropio({
+      cbu: cuenta.cbu,
+      alias: cuenta.alias,
+      monto: cobro?.monto,
+      moneda: cobro?.moneda ?? cuenta.moneda,
+      cid: cobro?.id,
+    })
+      .then((jwt) => { if (vivo) setJwtQr(jwt) })
+      .catch(() => { if (vivo) setJwtQr('') })
+    return () => { vivo = false }
+  }, [cuenta?.cbu, cuenta?.alias, cuenta?.moneda, cobro?.id, cobro?.monto, cobro?.moneda])
 
   useEffect(() => {
     if (!cobro || cobro.estado !== 'pendiente') return
@@ -171,11 +217,11 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
     )
   }
 
-  const qrValue = cobro
+  const qrValue = jwtQr || (cobro
     ? encodeCobroQr(cobro.id)
     : cuenta?.id
       ? encodeCuentaQr(cuenta.id)
-      : ''
+      : '')
 
   if (variante === 'overlay') {
     return (
@@ -257,6 +303,7 @@ export function EscanearYPagar({
   onCerrarScan?: () => void
   overlay?: boolean
 }) {
+  const navigate = useNavigate()
   const { refreshCuenta } = useCuenta()
   const [cobro, setCobro] = useState<CobroNfc | null>(null)
   const [destino, setDestino] = useState<DestinoQr | null>(null)
@@ -325,6 +372,17 @@ export function EscanearYPagar({
     }
   }
 
+  // QR interbancario sin cobro propio asociado (de otro banco, o un QR de
+  // cuenta simple de Monix). No hay una fila de `cuentas` local a la que
+  // apuntar como con resolverQrCuenta — se resuelve como cualquier CBU
+  // tipeado a mano, con el mismo camino que ya usa Monix Cerca.
+  async function cargarDestinoJwt(claims: QrJwtClaims) {
+    apagarCamara()
+    navigate('/transferir', {
+      state: { cbu: claims.cbu, monto: claims.monto, fromQr: true },
+    })
+  }
+
   async function leerQrDeCamara(video: HTMLVideoElement, signal: AbortSignal) {
     const pending = useQrScanStore.getState().takeStreamPromise()
     const stream = pending ? await pending : await startQrCamera(video)
@@ -358,7 +416,7 @@ export function EscanearYPagar({
       const video = await waitForVideo(() => videoRef.current, controller.signal)
       const raw = await leerQrDeCamara(video, controller.signal)
       if (closingRef.current) return
-      await aplicarQr(raw, cargarCobro, cargarCuenta)
+      await aplicarQr(raw, cargarCobro, cargarCuenta, cargarDestinoJwt)
       if (scanAbortRef.current === controller) setScanning(false)
     } catch (err) {
       if (scanAbortRef.current !== controller) return
@@ -414,7 +472,7 @@ export function EscanearYPagar({
     setLoading(true)
     try {
       const raw = await leerQrDeArchivo(file)
-      await aplicarQr(raw, cargarCobro, cargarCuenta)
+      await aplicarQr(raw, cargarCobro, cargarCuenta, cargarDestinoJwt)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo leer la foto')
     } finally {
