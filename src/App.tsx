@@ -34,7 +34,6 @@ import { PagarPage } from './pages/PagarPage'
 import { MercadoMonixPage } from './pages/MercadoMonixPage'
 import { PromosPage } from './pages/PromosPage'
 import { CashbackPage } from './pages/CashbackPage'
-import { FinanciacionPage } from './pages/FinanciacionPage'
 import { PrestamosPage } from './pages/PrestamosPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
@@ -82,7 +81,6 @@ function AppRoutes() {
       <Route path="/reservas" element={<RequireAuth><ReservasPage /></RequireAuth>} />
       <Route path="/promos" element={<RequireAuth><PromosPage /></RequireAuth>} />
       <Route path="/cashback" element={<RequireAuth><CashbackPage /></RequireAuth>} />
-      <Route path="/financiacion" element={<RequireAuth><FinanciacionPage /></RequireAuth>} />
       <Route path="/prestamos" element={<RequireAuth><PrestamosPage /></RequireAuth>} />
       <Route path="/mercado-monix" element={<RequireAuth><MercadoMonixPage /></RequireAuth>} />
       <Route path="/pagar" element={<RequireAuth><PagarPage /></RequireAuth>} />

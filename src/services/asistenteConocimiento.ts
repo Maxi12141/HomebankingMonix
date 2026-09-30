@@ -344,18 +344,6 @@ export const TOPICS: Topic[] = [
     ],
   },
   {
-    id: 'financiacion',
-    href: '/financiacion',
-    hrefLabel: 'Simular cuotas',
-    phrases: ['pagar en cuotas', 'sin interes', 'financiar compra', 'plan de cuotas'],
-    keywords: ['cuota', 'cuotas', 'financiar', 'financiacion', 'plan'],
-    extra: ['tasa', 'mensual'],
-    answers: () => [
-      'Planes de financiación: 3 cuotas sin interés hasta $50.000; 6 cuotas al 2,5% mensual (hasta $250.000); 12 cuotas al 3,2% mensual (hasta $800.000). Simulás la cuota en Financiación.',
-      'No es un préstamo personal: es para financiar un monto. El préstamo (plata en tu caja, con TNA según BCRA) está en Préstamos.',
-    ],
-  },
-  {
     id: 'mercado',
     href: '/mercado-monix',
     hrefLabel: 'Entrar a mercadoMONIX',
