@@ -56,10 +56,13 @@ export function PrestamosPage() {
     () => calcularOferta(situacion ?? 1, persona?.sueldo_acreditado ?? false),
     [situacion, persona?.sueldo_acreditado],
   )
-  const plazos = useMemo(
-    () => PLAZOS_CANDIDATOS.filter((p) => p <= oferta.cuotasMax),
-    [oferta.cuotasMax],
-  )
+  // Si la oferta no tiene plazos (situación 5, "irrecuperable") se muestran los
+  // candidatos completos igual: el simulador queda visible siempre, sólo el
+  // botón de solicitar se bloquea por `solicitarBloqueadoPor`.
+  const plazos = useMemo(() => {
+    const filtrados = PLAZOS_CANDIDATOS.filter((p) => p <= oferta.cuotasMax)
+    return filtrados.length ? filtrados : PLAZOS_CANDIDATOS
+  }, [oferta.cuotasMax])
 
   useEffect(() => {
     if (plazos.length && !plazos.includes(cuotasSel)) setCuotasSel(plazos[plazos.length - 1])
@@ -77,16 +80,22 @@ export function PrestamosPage() {
   const topeCuota = ingresoDeclarado != null ? ingresoDeclarado * oferta.ratioIngreso : null
   const superaRatio = topeCuota != null && cuota > topeCuota
 
+  // El simulador (arriba) queda siempre visible y usable; esto sólo bloquea
+  // el botón final de "Solicitar préstamo" y explica por qué.
+  const solicitarBloqueadoPor = !situacionLista
+    ? 'Estamos verificando tu situación crediticia. Esperá un momento para poder solicitarlo.'
+    : situacionError
+      ? 'No pudimos verificar tu situación crediticia. Reintentá en un momento para poder solicitarlo.'
+      : !nivel.disponible
+        ? 'Por ahora no podemos ofrecerte un préstamo.'
+        : null
+
   async function solicitar() {
     if (!persona || !cuenta) return
     setError('')
 
-    if (!situacionLista || situacionError) {
-      setError('Todavía no pudimos verificar tu situación crediticia. Probá de nuevo en un momento.')
-      return
-    }
-    if (!nivel.disponible) {
-      setError('Por ahora no podemos ofrecerte un préstamo.')
+    if (solicitarBloqueadoPor) {
+      setError(solicitarBloqueadoPor)
       return
     }
     if (!okMonto) {
@@ -156,25 +165,25 @@ export function PrestamosPage() {
           </p>
         </div>
 
-        {!situacionLista ? (
-          <Card className="p-6 mb-6 animate-pulse">
-            <p className="font-body text-sm text-slate-secondary">Consultando tu situación crediticia…</p>
-          </Card>
-        ) : situacionError ? (
-          <Card className="p-6 mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <ShieldAlert size={20} className="text-red-500 dark:text-red-400" />
-              <p className="font-display text-base font-semibold text-navy dark:text-white">
-                No pudimos verificar tu situación crediticia
-              </p>
-            </div>
+        {situacionError && (
+          <Card className="p-4 mb-4 flex items-center gap-3">
+            <ShieldAlert size={18} className="text-red-500 dark:text-red-400 shrink-0" />
             <p className="font-body text-sm text-slate-secondary">
-              Volvé a intentar en un momento.
+              No pudimos verificar tu situación crediticia. Podés seguir simulando mientras tanto.
             </p>
           </Card>
-        ) : (
-          <>
-        {ingresoDeclarado == null && nivel.disponible && (
+        )}
+
+        {situacionLista && !nivel.disponible && (
+          <Card className="p-4 mb-4 flex items-center gap-3">
+            <ShieldAlert size={18} className="text-red-500 dark:text-red-400 shrink-0" />
+            <p className="font-body text-sm text-slate-secondary">
+              Por ahora no podemos ofrecerte un préstamo. Igual podés simular cuánto pagarías.
+            </p>
+          </Card>
+        )}
+
+        {ingresoDeclarado == null && situacionLista && nivel.disponible && (
           <p className="font-body text-xs text-slate-secondary mb-4 flex items-center gap-1.5">
             <Info size={13} className="shrink-0" />
             <Link to="/perfil" className="text-mint hover:text-mint-hover transition-colors">
@@ -184,19 +193,7 @@ export function PrestamosPage() {
           </p>
         )}
 
-        {!nivel.disponible ? (
-          <Card className="p-6 mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <ShieldAlert size={20} className="text-red-500 dark:text-red-400" />
-              <p className="font-display text-base font-semibold text-navy dark:text-white">
-                No podés acceder a un préstamo por ahora
-              </p>
-            </div>
-            <p className="font-body text-sm text-slate-secondary">
-              Por ahora no podemos ofrecerte un préstamo. Volvé a intentar más adelante.
-            </p>
-          </Card>
-        ) : (
+        {/* Simulador: siempre visible y usable, se pueda o no pedir el préstamo todavía */}
           <Card className="p-6 mb-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="rounded-xl bg-mint/15 text-mint p-2.5">
@@ -206,6 +203,7 @@ export function PrestamosPage() {
                 <p className="font-display text-base font-semibold text-navy dark:text-white">Simulador</p>
                 <p className="font-body text-xs text-slate-secondary">
                   TNA {oferta.tna.toFixed(1)}% · hasta {formatARS(oferta.montoMax)} · hasta {oferta.cuotasMax} cuotas
+                  {!situacionLista && ' (estimado)'}
                 </p>
               </div>
             </div>
@@ -286,19 +284,19 @@ export function PrestamosPage() {
             {error && (
               <p className="font-body text-xs text-red-500 dark:text-red-400 mt-3">{error}</p>
             )}
+            {solicitarBloqueadoPor && !error && (
+              <p className="font-body text-xs text-slate-secondary mt-3">{solicitarBloqueadoPor}</p>
+            )}
 
             <Button
               className="w-full mt-5"
               onClick={solicitar}
               loading={solicitando}
-              disabled={!okMonto || montoNum <= 0}
+              disabled={!okMonto || montoNum <= 0 || !!solicitarBloqueadoPor}
             >
               Solicitar préstamo
             </Button>
           </Card>
-        )}
-          </>
-        )}
 
         {/* Mis préstamos */}
         {(activos.length > 0 || pagados.length > 0) && (
