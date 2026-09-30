@@ -231,7 +231,7 @@ export const TOPICS: Topic[] = [
     extra: ['ble', 'fondo', 'visible', 'token'],
     weak: ['personas'],
     answers: () => [
-      'Monix Cerca filtra por alias, CBU, nombre o banco. Si los dos activan Visible, se ven aunque no tengas NFC. También podés escribir el alias/CBU de otro banco y guardarlo en contactos.',
+      'En Monix Cerca tocá Activar Bluetooth: ves a quien está cerca con su alias y el banco, y podés transferir o guardarlo. Galicia u otro banco no mandan el alias por Bluetooth; eso solo funciona si esa persona también tiene Monix Cerca activo.',
       'Activá “Visible aunque cierre la app” para que te encuentren en segundo plano (mejor con la APK). El código que se publica rota y no es tu CBU.',
       'Si estás al lado de alguien con Monix, Cerca es más rápido que dictar el alias. En el navegador suele hacer falta NFC (Chrome Android); Bluetooth de fondo pide la app instalada.',
     ],

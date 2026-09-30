@@ -13,6 +13,7 @@ import {
   abrirDestinoCerca,
   abrirDestinoCercaCuenta,
   desactivarPresencia,
+  leerUbicacion,
   listarVisibles,
   presenciaPropia,
   resolverPersonaRed,
@@ -30,6 +31,7 @@ interface CercaState {
   setVisible: (next: boolean) => Promise<void>
   buscando: boolean
   startBusqueda: (opts?: { silent?: boolean }) => Promise<void>
+  stopBusqueda: () => Promise<void>
   nearby: PersonaCerca[]
   filtro: string
   setFiltro: (q: string) => void
@@ -59,6 +61,7 @@ function useCercaRuntime() {
   const [filtro, setFiltro] = useState('')
   const tokenRef = useRef<string>(randomToken())
   const seenRef = useRef<Map<string, number>>(new Map())
+  const coordsRef = useRef<{ lat: number; lng: number } | null>(null)
   const caps = radioCapabilities()
 
   const mergePersona = useCallback((found: PersonaCerca) => {
@@ -70,7 +73,7 @@ function useCercaRuntime() {
 
   const refrescarVisibles = useCallback(async () => {
     try {
-      const visibles = await listarVisibles()
+      const visibles = await listarVisibles(coordsRef.current)
       setNearby((prev) => {
         const radio = prev.filter((p) => !p.cuentaId || visibles.some((v) => v.cuentaId === p.cuentaId))
         const keys = new Set(radio.map((p) => p.cuentaId ?? p.token))
@@ -88,7 +91,8 @@ function useCercaRuntime() {
     if (!session?.access_token) return
     const token = randomToken()
     tokenRef.current = token
-    await activarPresencia(cuenta.id, token)
+    if (!coordsRef.current) coordsRef.current = await leerUbicacion()
+    await activarPresencia(cuenta.id, token, coordsRef.current)
     await monixRadio.startAdvertising({
       token,
       cuentaId: cuenta.id,
@@ -182,6 +186,10 @@ function useCercaRuntime() {
   const startBusqueda = useCallback(async (opts?: { silent?: boolean }) => {
     setError('')
     setBuscando(true)
+    if (!opts?.silent) {
+      setVisible(true)
+      coordsRef.current = await leerUbicacion()
+    }
     try {
       await monixRadio.startScan()
       await monixRadio.startNfcListen().catch((err) => {
@@ -209,14 +217,6 @@ function useCercaRuntime() {
     setBuscando(false)
     await monixRadio.stopScan().catch(() => undefined)
   }, [])
-
-  useEffect(() => {
-    if (!user) return
-    startBusqueda({ silent: true }).catch(() => undefined)
-    return () => {
-      stopBusqueda().catch(() => undefined)
-    }
-  }, [user, startBusqueda, stopBusqueda])
 
   useEffect(() => {
     if (!user || !buscando) return
@@ -279,6 +279,7 @@ function useCercaRuntime() {
     setVisible: setVisibleSafe,
     buscando,
     startBusqueda,
+    stopBusqueda,
     nearby,
     filtro,
     setFiltro,
@@ -343,6 +344,7 @@ export function CercaProvider({ children }: { children: ReactNode }) {
     setVisible: runtime.setVisible,
     buscando: runtime.buscando,
     startBusqueda: runtime.startBusqueda,
+    stopBusqueda: runtime.stopBusqueda,
     nearby: runtime.nearby,
     filtro: runtime.filtro,
     setFiltro: runtime.setFiltro,
