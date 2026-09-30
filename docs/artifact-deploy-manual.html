@@ -1,0 +1,366 @@
+<title>Manual de Despliegue</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --bg: #F7F8FA;
+    --surface: #FFFFFF;
+    --surface-2: #EEF1F5;
+    --text: #001A3D;
+    --text-secondary: #5B6478;
+    --mint: #0AA37E;
+    --mint-strong: #078F6E;
+    --mint-chip: #E3FBF3;
+    --border: #E3E7EE;
+    --code-fg: #0D2B52;
+    --code-bg: #EAF9F3;
+    --code-border: #B9EBD9;
+    --term-bg: #071B33;
+    --term-header: #0D2B52;
+    --term-text: #CFE9FF;
+    --danger: #C4453B;
+    --danger-bg: #FDECEA;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #001A3D; --surface: #0D2B52; --surface-2: #0A2245;
+      --text: #F4F7FB; --text-secondary: #9FB0C9;
+      --mint: #26FFC1; --mint-strong: #26FFC1; --mint-chip: rgba(38,255,193,0.12);
+      --border: rgba(255,255,255,0.1);
+      --code-fg: #7CFFDD; --code-bg: rgba(38,255,193,0.08); --code-border: rgba(38,255,193,0.28);
+      --term-bg: #04101F; --term-header: #08192E; --term-text: #BFE0FF;
+      --danger: #FF8A80; --danger-bg: rgba(255,138,128,0.12);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #001A3D; --surface: #0D2B52; --surface-2: #0A2245;
+    --text: #F4F7FB; --text-secondary: #9FB0C9;
+    --mint: #26FFC1; --mint-strong: #26FFC1; --mint-chip: rgba(38,255,193,0.12);
+    --border: rgba(255,255,255,0.1);
+    --code-fg: #7CFFDD; --code-bg: rgba(38,255,193,0.08); --code-border: rgba(38,255,193,0.28);
+    --term-bg: #04101F; --term-header: #08192E; --term-text: #BFE0FF;
+    --danger: #FF8A80; --danger-bg: rgba(255,138,128,0.12);
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; padding: 0 20px calc(56px + env(safe-area-inset-bottom, 0px)); max-width: 800px; margin: 0 auto; line-height: 1.6; }
+  h1, h2, h3, .disp { font-family: 'Plus Jakarta Sans', sans-serif; text-wrap: balance; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 22px 0 18px; border-bottom: 1px solid var(--border); margin-bottom: 26px; }
+  .logo-light, .logo-dark { height: 22px; width: auto; display: block; }
+  .logo-dark { display: none; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .logo-light { display: none; }
+    :root:not([data-theme="light"]) .logo-dark { display: block; }
+  }
+  :root[data-theme="dark"] .logo-light { display: none; }
+  :root[data-theme="dark"] .logo-dark { display: block; }
+  .topbar .date { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+  header.intro { margin-bottom: 24px; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mint-strong); background: var(--mint-chip); padding: 4px 10px; border-radius: 999px; margin-bottom: 14px; }
+  h1 { font-size: 32px; font-weight: 800; margin: 0 0 10px; line-height: 1.12; }
+  header.intro p { color: var(--text-secondary); font-size: 14.5px; margin: 0 0 8px; max-width: 62ch; }
+
+  /* Tabla de contenidos */
+  nav.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 20px; margin-bottom: 28px; }
+  nav.toc p { margin: 0 0 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
+  nav.toc ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; }
+  nav.toc a { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--text); text-decoration: none; padding: 5px 0; }
+  nav.toc a:hover { color: var(--mint-strong); }
+  nav.toc a .n { width: 19px; height: 19px; border-radius: 6px; background: var(--mint-chip); color: var(--mint-strong); font-size: 10.5px; font-family: 'Inter', sans-serif; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  @media (max-width: 480px) { nav.toc ol { grid-template-columns: 1fr; } }
+
+  section { scroll-margin-top: 16px; }
+  h2 { font-size: 19px; font-weight: 700; margin: 40px 0 14px; display: flex; align-items: center; gap: 10px; padding-top: 4px; }
+  section:first-of-type h2 { margin-top: 0; }
+  h2 .num { font-size: 12px; font-weight: 700; color: var(--mint-strong); background: var(--mint-chip); width: 24px; height: 24px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  h3 { font-size: 14.5px; font-weight: 700; margin: 20px 0 8px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px 22px; margin-bottom: 16px; }
+  .card > *:first-child { margin-top: 0; }
+  .card > *:last-child { margin-bottom: 0; }
+
+  pre.mermaid { background: transparent; margin: 0; overflow-x: auto; text-align: center; }
+  .diagram-caption { font-size: 12.5px; color: var(--text-secondary); margin-top: 12px; line-height: 1.55; }
+
+  ul.plain { margin: 0; padding-left: 19px; font-size: 13.5px; color: var(--text-secondary); }
+  ul.plain li { margin-bottom: 9px; }
+  ul.plain:last-child li:last-child { margin-bottom: 0; }
+  ul.plain strong, p strong { color: var(--text); }
+
+  /* Código: siempre se destaca distinto del texto normal */
+  code, kbd { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  :not(pre) > code { font-size: 12px; font-weight: 600; color: var(--code-fg); background: var(--code-bg); border: 1px solid var(--code-border); padding: 1.5px 7px; border-radius: 6px; white-space: nowrap; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.3px; }
+  th { text-align: left; color: var(--text-secondary); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 12px 10px 0; border-bottom: 2px solid var(--border); }
+  td { padding: 11px 12px 11px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child, th:first-child { padding-left: 0; }
+  .table-wrap { overflow-x: auto; }
+
+  /* Bloque de terminal: ventana con header de puntitos, bien diferenciado */
+  .term { border-radius: 12px; overflow: hidden; margin: 14px 0; background: var(--term-bg); box-shadow: 0 1px 0 var(--border); }
+  .term .term-head { display: flex; align-items: center; gap: 6px; padding: 9px 12px; background: var(--term-header); }
+  .term .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.18); }
+  .term .term-label { margin-left: 6px; font-family: 'Inter', sans-serif; font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(255,255,255,0.4); }
+  .term pre { margin: 0; padding: 13px 16px; color: var(--term-text); font-size: 12.5px; line-height: 1.7; overflow-x: auto; }
+  .term .cm { opacity: 0.5; }
+
+  .callout { display: flex; gap: 10px; border-radius: 14px; padding: 13px 16px; font-size: 13.5px; line-height: 1.55; }
+  .callout.danger { background: var(--danger-bg); color: var(--danger); }
+  .callout.danger b { color: inherit; }
+  .callout .ico { flex-shrink: 0; font-size: 15px; line-height: 1.4; }
+
+  .checklist { display: flex; flex-direction: column; gap: 2px; }
+  .checklist label { display: flex; align-items: center; gap: 10px; padding: 9px 4px; font-size: 13.5px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .checklist label:last-child { border-bottom: none; }
+  .checklist input { width: 17px; height: 17px; accent-color: var(--mint-strong); flex-shrink: 0; }
+  .checklist input:checked + span { opacity: 0.55; text-decoration: line-through; }
+
+  footer { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-secondary); text-align: center; line-height: 1.7; }
+</style>
+
+<div class="topbar">
+  <img class="logo-light" alt="Monix" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjg1IiBoZWlnaHQ9IjcxIiB2aWV3Qm94PSIwIDAgMjg1LjE0NzA3IDcxLjMyMDU0MiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMzAuMTEwMTUsLTY0LjMyMTAwNSkiPjxwYXRoIHN0eWxlPSJmaWxsOiMwMDFhM2QiIGQ9Im0gLTEzLjk0MjIxMiw3My4zMzE0NTcgdiAtNi4zNSBoIDcuNDA4MzMyMyA3LjQwODMzMzIzIHYgNi4zNSA2LjM1IGggLTcuNDA4MzMzMjMgLTcuNDA4MzMzMjMgeiIvPjxwYXRoIHN0eWxlPSJmaWxsOiMwMDFhM2QiIGQ9Im0gLTE4MS4zMzYzLDEwNy4xOTgxMiBjIDEuNTcyMTgsLTIuODc4NjggMTAuNDc2ODgsLTE4Ljk3MDc0MyAxMi4yMjUyMiwtMjIuMDkyNzEzIDMuMzA0MzQsLTUuOTAwNDUgNS4zNjcyNSwtOS41OTkwNSA4LjUyMjMyLC0xNS4yNzk2OCBsIDMuMDQ5MjQsLTUuNDkwMTEgaCAxMC41NDc2MSAxMC41NDc2MSBsIDAuMDMxNSw3LjIwOTkgYyAwLjAxNzMsMy45NjU0NCAwLjA0NzEsNy40OTEwNCAwLjA2NjEsNy44MzQ2NiAwLjAzMTMsMC41NjMzMiAtMC4xNjA0OSwwLjY3NDE3IC0xLjk0OTY5LDEuMTI3MSAtNy4xNjg5MSwxLjgxNDc4IC0xNi4yOTE3MSw1LjY3NDE0IC0yMi45MzYzMSw5LjcwMzExIC03LjQxMjIyLDQuNDk0NDEgLTEzLjIxNTYzLDkuNDgzOTEgLTE5LjYxMjQyLDE2Ljg2MTg1MyBsIC0xLjE0MTQ0LDEuMzE2NTF6Ii8+PHBhdGggc3R5bGU9ImZpbGw6IzAwMWEzZCIgZD0ibSAtMTkwLjQxOTMsMTM0LjIyMTUgYyAwLC0wLjEyNTc4IDAuNDY1MTgsLTEuNDY1MjQgMS4wMzM3MywtMi45NzY1NiA0LjI1OTI4LC0xMS4zMjE5OSA5Ljk1NTU5LC0yMC40MTA5MiAxNy44NjgwMSwtMjguNTA5ODcgOC45MTA1NywtOS4xMjA2MjMgMTguNjU2OTMsLTE1LjE4MDIwMyAzMS4wNzgyMiwtMTkuMzIyMTgzIDEuODA0NTYsLTAuNjAxNzQgMy4zNDI0NSwtMS4wMzI2NCAzLjQxNzU0LC0wLjk1NzU0IDAuMDc1MSwwLjA3NTEgMC4wMjQ2LDAuMTM2NTIgLTAuMTEyMSwwLjEzNjUyIC0wLjUyMjk2LDAgLTYuMDc5NzgsMy4yNjA1OSAtOC42NTQ3NSw1LjA3ODM3IC05Ljg1ODE5LDYuOTU5MzMgLTE2Ljg2OTMyLDE0Ljk1MDI1MyAtMjIuNDcyNzYsMjUuNjEzMzAzIC0yLjAwNzk4LDMuODIxMDggLTMuNDU2NjEsNy4xODE0MyAtNC43OTA1NCwxMS4xMTI1IC0xLjAyNzk5LDMuMDI5NDYgLTIuNTUwNjgsOC43MjYzMyAtMi41NTA2OCw5LjU0Mjg4IDAsMC40OTMxNSAtMC4yNjI3NSwwLjUxMTI5IC03LjQwODM0LDAuNTExMjkgLTQuMDc0NTgsMCAtNy40MDgzMywtMC4xMDI5MiAtNy40MDgzMywtMC4yMjg3MXoiLz48cGF0aCBzdHlsZT0iZmlsbDojMDAxYTNkIiBkPSJtIDQuODQzMjAzNCwxMzQuNTU2NjQgYyAwLC0wLjE3MzIxIDAuNDI1MDQ1NiwtMC43ODYzOSA4LjYwMjE4MTYsLTEyLjQwOTU2IDMuMDcxMzA0LC00LjM2NTYyIDYuMjUzNzM0LC04Ljg5NjcgNy4wNzIwNjUsLTEwLjA2OTA1IGwgMS40ODc4NzYsLTIuMTMxNTYgLTQuODIwMjMsLTYuODY0MjggQyA3LjgwMjM2MzUsODkuNzIwNjU3IDUuMTA3Nzg2Nyw4NS44MzU4MDcgNS4xMDc3ODY3LDg1LjY2OTk5NyBjIDAsLTAuMDkyMiAzLjQ1MjQzNzUsLTAuMTY3NzEgNy42NzIwODMzLC0wLjE2NzcxIGggNy42NzIwODIgbCAyLjcyMzYzNiw0LjE2NzE5IGMgMS40OTgsMi4yOTE5NSAzLjU5NDkwMSw1LjUwNjY0IDQuNjU5Nzc5LDcuMTQzNzUgMS4wNjQ4NzksMS42MzcxMSAyLjAyMzk1MSwyLjk3NjU2IDIuMTMxMjcyLDIuOTc2NTYgMC4xMDczMjEsMCAyLjMyNjgxMSwtMy4yMTE3MyA0LjkzMjIwMSwtNy4xMzcxNyBsIDQuNzM3MDcyLC03LjEzNzE3IDcuNjA2NzcsLTAuMDA3IGMgNC4xODM3MjQsLTAuMDA0IDcuNjA2NzcxLDAuMDY5IDcuNjA2NzcxLDAuMTYxMzkgMCwwLjA5MjQgLTMuNjg3MTg5LDUuNDMwNyAtOC4xOTM3NTMsMTEuODYyOTEgLTQuNTA2NTY1LDYuNDMyMjEzIC04LjI2ODc2NywxMS44OTA0MTMgLTguMzYwNDUsMTIuMTI5MzMzIC0wLjE3NDk4MiwwLjQ1NiAwLjM2NTEsMS4yNTk5MiAxMC45MzkyNjcsMTYuMjgzMjkgMy4xMDkzMzQsNC40MTc2MiA1LjcxNjk2NCw4LjE5Nzg1IDUuNzk0NzM0LDguNDAwNTIgMC4xMTg4NTMsMC4zMDk3MiAtMS4wODc1NzMsMC4zNjg0OCAtNy41NjU2OTgsMC4zNjg0OCBoIC03LjcwNzA5OCBsIC00Ljc4MTQwNiwtNy4yMDk5IGMgLTIuNjI5Nzc0LC0zLjk2NTQ0IC00Ljg3NDgwNSwtNy4yNDQ3NCAtNC45ODg5NTgsLTcuMjg3MzQgLTAuMTE0MTUzLC0wLjA0MjYgLTIuMzk0OTU1LDMuMTk3IC01LjA2ODQ0OCw3LjE5OTA5IGwgLTQuODYwODk3LDcuMjc2NTMgLTcuNjA2NzcxLDAuMDEwOCBjIC00LjE4MzcyNDgsMC4wMDYgLTcuNjA2NzcxNiwtMC4wNjA0IC03LjYwNjc3MTYsLTAuMTQ3MzR6Ii8+PHBhdGggc3R5bGU9ImZpbGw6IzAwMWEzZCIgZD0iTSAtMTMuNDEzMDQ1LDExMC4xMDg1NCBWIDg1LjUwMjI4NyBoIDYuODc5MTY1MyA2Ljg3OTE2NjUzIHYgMjQuNjA2MjUzIDI0LjYwNjI1IGggLTYuODc5MTY2NTMgLTYuODc5MTY1M3oiLz48cGF0aCBzdHlsZT0iZmlsbDojMDAxYTNkIiBkPSJNIC02OS4yNDAxMjgsMTEwLjEwODU0IFYgODUuNTAyMjg3IGggNi44NzkxNjcgNi44NzkxNjcgbCAwLjAxMDg1LDMuMTA4ODUgMC4wMTA4NSwzLjEwODg2IGMgMy44NDQ0MjEsLTQuMjA5MzkgOC4xNjg3MDksLTYuMDM5MjcgMTQuMjEwNTAzLC02LjAxMzM1IDkuMTI0MzYsMC4wMzkxIDE1LjQwNTcxOCw0LjY0OTY5IDE3LjU4NjYwMiwxMi45MDg2OCAwLjg2NTI5NSwzLjI3Njg3MyAxLjA5MzE2OSw4LjU1ODQ2MyAxLjAxMDI2NSwyMy40MTU2MzMgbCAtMC4wNzYwMywxMy42MjYwNCAtNi45NDUzMTMsMC4wNzA1IC02Ljk0NTMxMiwwLjA3MDUgdiAtMTQuNTQzNDYgYyAwLC05Ljc1MDU5IC0wLjA5Nzk0LC0xNS4wMDU1MSAtMC4yOTcxODIsLTE1Ljk0NTU0IC0wLjY0MjA0MywtMy4wMjkxMiAtMi4xODgyMjYsLTUuMTMwNzYzIC00LjY3NDQ5NSwtNi4zNTM3ODMgLTEuNjcyOTExLC0wLjgyMjkzIC0xLjkyMTc4OSwtMC44NjkxNCAtNC42ODE0MzYsLTAuODY5MTQgLTIuNjU0NDE5LDAgLTMuMDYyMTUxLDAuMDY4MiAtNC41Njc1NzMsMC43NjM0NCAtMi44OTIwMzYsMS4zMzU3IC00Ljc2NzQ3LDMuOTkzMzYzIC01LjM0MjU5NSw3LjU3MDk0MyAtMC4xNjY1NjEsMS4wMzYxIC0wLjI3NzI2Niw3LjIxNTY1IC0wLjI3ODQ3LDE1LjU0NDI3IGwgLTAuMDAyLDEzLjgyNDQ4IGggLTYuODc5MTY3IC02Ljg3OTE2N3oiLz48cGF0aCBzdHlsZT0iZmlsbDojMDAxYTNkIiBkPSJNIC0xNTMuMTEzMDUsMTE2LjIzNTA3IFYgOTcuNzQ3OTE3IGwgMy4yNDExNCwtMy4xNTA1NiBjIDEuNzgyNjMsLTEuNzMyODEgNC4wNzQ1OSwtMy44MTc5NyA1LjA5MzIzLC00LjYzMzY5IDIuMTg5NTQsLTEuNzUzMzUgNy42OTc5MywtNS41MTk3MSA4LjA3MjcyLC01LjUxOTcxIDAuMTcwMjYsMCAwLjI3ODE2LDguNTQ4NTIgMC4zMDg5MSwyNC40NzM5NTMgMC4wMjYsMTMuNDYwNjggMC4wNTU4LDI0Ljc0MTg1IDAuMDY2MSwyNS4wNjkyOCBsIDAuMDE4OSwwLjU5NTMxIC04LjQwMDUyLDAuMDY5OSAtOC40MDA1MiwwLjA2OTl6Ii8+PHBhdGggc3R5bGU9ImZpbGw6IzAwMWEzZCIgZD0ibSAtMjMwLjEwODczLDEzNC41MjAwNyBjIC0wLjAwMSwtMC4xMTExOSAtMC4wMDIsLTE1LjkxODQxIC0wLjAwMSwtMzUuMTI3MTYzIGwgMC4wMDA4MiwtMzQuOTI0OTkgMTAuNTk1MDIsLTAuMDY5MiAxMC41OTUwMSwtMC4wNjkyIDAuNDAzNTMsMC43MzA2MSBjIDAuMjIxOTUsMC40MDE4NCAxLjQxNTQzLDIuNTc2MDggMi42NTIxOSw0LjgzMTY2IDEuMjM2NzYsMi4yNTU1NyAyLjg3OTA5LDUuMjMyMTMgMy42NDk2Myw2LjYxNDU4IDUuOTEzNDUsMTAuNjA5NiAxOC4xMzg0MywzMi43NzA0ODMgMTguNDI2NDYsMzMuNDAyNjQzIDAuMjQ5MDgsMC41NDY2NyAwLjA3ODEsMC45MjE2NiAtMS40MjM5LDMuMTIyMzQgLTIuNTA1MDIsMy42NzAzNSAtNS4yNjk0OCw4LjY0OTY4IC02LjgxNjA4LDEyLjI3NzExIC0wLjc0NzcxLDEuNzUzNjkgLTEuNDM2ODgsMy4yNzI3OSAtMS41MzE0OCwzLjM3NTc2IC0wLjA5NDYsMC4xMDI5OCAtNC41MTY4OCwtOC40Mzc4NCAtOS44MjcyOCwtMTguOTc5NTkgLTUuMzEwMzksLTEwLjU0MTc1MyAtOS43NDMxOSwtMTkuMTY4NzMzIC05Ljg1MDY2LC0xOS4xNzEwODMgLTAuMTA3NDcsLTAuMDAyIC0wLjE5NTMxLDkuOTA3NjkzIC0wLjE5NTIxLDIyLjAyMjMwMyBsIDAuMDAwMTgsMjIuMDI2NTYgLTguMzM3NiwwLjA2OTkgYyAtNC41ODU2OCwwLjAzODQgLTguMzM4NDcsLTAuMDIxMSAtOC4zMzk1MywtMC4xMzIyOXoiLz48cGF0aCBpZD0icGF0aDIiIHN0eWxlPSJmaWxsOiMwMDFhM2QiIGQ9Im0gLTEwMC45MjA0Niw4NC41Njc0NSBjIC0xLjUzMjkzLC0wLjA4NzQzIC0zLjA5MTIyLC0wLjA1NTc2IC00LjY2MDcsMC4xMDMzNTIgLTEyLjE1NTQxLDEuMjMyMzQgLTIxLjMxNjExLDguOTE1MDE4IC0yMy43NDg0MiwxOS45MTcxMjggLTAuNzk1MDYsMy41OTYzMSAtMC42MTExOCw5LjM5MTY1IDAuNDA1NjYsMTIuNzgzNzIgMy4wMjgzLDEwLjEwMjA0IDEyLjAwMTksMTcuMTY1MzMgMjMuMDM4OTEsMTguMTM0ODEgMTIuNDc1MDE0LDEuMDk1NzkgMjMuMTg4NDM2LC00LjUzNTM1IDI3Ljk0NjYxMSwtMTQuNjg5MDMgMS43NTc2MTQsLTMuNzUwNjUgMi4xNjA3NjIsLTUuNzA3NzkgMi4xNzgxNjIsLTEwLjU3NjYxIDAuMDE1NjYsLTQuMzgwNzYgLTAuMTkxNTgzLC01LjY5Mjk0IC0xLjQzMzUwNCwtOS4wNzQzOCAtMy41MDA5NjIsLTkuNTMyMjU2IC0xMi45OTYxOTUsLTE1Ljk4Njk3MSAtMjMuNzI2NzE5LC0xNi41OTg5OSB6IG0gLTIuNjE0MzEsMTIuMDk4NDg2IGMgNC41ODA5OTYsLTAuMTc1MzUgNi45NjA0MTQsMC42NjI4NSA5LjkwNzkyMywzLjQ5MDc0NCAyLjYyODA5NywyLjUyMTQ0IDMuODM0OTYxLDUuMDQ3OTEgNC4xNjgyMjEsOC43MjU1NiAwLjYwNDM4NSw2LjY2OTYyIC0zLjQxMDQ2NywxMi43Mjc0MyAtOS41MTIwOCwxNC4zNTIxIC0xLjQ5ODc5NCwwLjM5OTA4IC01LjgyNTQ5NCwwLjQ0NjcyIC03LjM3NjI5NCwwLjA4MTEgLTQuMjM5MTEsLTAuOTk5MzQgLTguNDEyNTYsLTUuMzIxMzkgLTkuNDM4NywtOS43NzQ2IC0wLjM5MzEyLC0xLjcwNjE0IC0wLjM0MTE2LC01LjQ0OTI3IDAuMDk4NywtNy4xMDE4OSAxLjAyMjY5LC0zLjg0MjQgMy40MzI3MywtNi44MTgwMDYgNi45MjM2MSwtOC41NDc3OTYgMi4xNTYyMywtMS4wNjg0NiAyLjM1NzgxLC0xLjExNTM2OCA1LjIyODYyLC0xLjIyNTI0OHoiLz48cGF0aCBzdHlsZT0iZmlsbDojMjZmZmMxIiBkPSJtIDMyMS45MTU0NCw1MjIuODAzNiBjIC01LjIxNjQ4LC0wLjQ2OTg0IC05LjQ4NDUxLC0xLjg0ODQ2IC05LjQ4NDUxLC0zLjA2MzYgMCwtNS4wNjcwOCAyMi44NTIzMyw1MC4xMTU0NSAzNC40NDM2Myw2Ny44OTgwOCAxNC44MjY5LDIyLjc0NjQ4IDQ3LjA0MjI3LDU2Ljc3Mjc1IDcwLjQ4NTI5LDc0LjQ0NzQzIDE3LjExNzY0LDEyLjkwNTcxIDU2LjQyNzk2LDM0LjYxMDI1IDYwLjMyOTI5LDMzLjMwOTgxIDEuMTg2NTYsMC4zOTU1MiAtNC44NTg2OSw2LjA2OTgxIC0xMy40MzM5LDEyLjYwOTUzIC0zMS45NzgzNiwyNC4zODc2OSAtNjIuNjQyODIsNjMuMDc1MjQgLTgwLjA5MzI5LDEwMS4wNDg5OSAtOC41MjkzNSwxOC41NjA2NCAtMTIuMjk1MiwyOS4xMzM2NCAtMTkuMTg0NSw1My44NjI0NCBsIC0zLjU3NDkyLDEyLjgzMTk5IC0xNS4wMDEyOSwtMC4zODk4OSBjIC04LjI1MDcxLC0wLjIxNDQ0IC0xOS4yNjkzMiwtMC43NzQzIC0yNC40ODU4LC0xLjI0NDE0IHoiIHRyYW5zZm9ybT0ibWF0cml4KDAuMjY0NTgzMzMsMCwwLDAuMjY0NTgzMzMsLTI3MS45OTE2NywtNC43NjI0OTg0KSIvPjwvZz48L3N2Zz4=">
+  <img class="logo-dark" alt="Monix" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjg1IiBoZWlnaHQ9IjcxIiB2aWV3Qm94PSIwIDAgMjg1LjE0Njk0IDcxLjMxMjExMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzMC45NjE0NjcsLTEwNC41Mzg4NykiPjxwYXRoIHN0eWxlPSJmaWxsOiNmZmZmZmYiIGQ9Im0gMTg1LjIwNjMzLDExMy41NDA4MSB2IC02LjM1IGggNy40MDgzNCA3LjQwODMzIHYgNi4zNSA2LjM1IGggLTcuNDA4MzMgLTcuNDA4MzR6Ii8+PHBhdGggc3R5bGU9ImZpbGw6I2ZmZmZmZiIgZD0ibSAxNy44MTIyNTksMTQ3LjQwNzQ4IGMgMS41NzIxNzQsLTIuODc4NjkgMTAuNDc2ODcxLC0xOC45NzA3NCAxMi4yMjUyMTcsLTIyLjA5MjcxIDMuMzA0MzM4LC01LjkwMDQ1IDUuMzY3MjQ5LC05LjU5OTA1IDguNTIyMzE4LC0xNS4yNzk2OSBsIDMuMDQ5MjQ1LC01LjQ5MDEgaCAxMC41NDc2MDcgMTAuNTQ3NjA3IGwgMC4wMzE0Nyw3LjIwOTkgYyAwLjAxNzMxLDMuOTY1NDQgMC4wNDcwNyw3LjQ5MTA0IDAuMDY2MTQsNy44MzQ2NiAwLjAzMTI3LDAuNTYzMzEgLTAuMTYwNDk2LDAuNjc0MTcgLTEuOTQ5Njk4LDEuMTI3MSAtNy4xNjg5MDIsMS44MTQ3OCAtMTYuMjkxNzAzLDUuNjc0MTQgLTIyLjkzNjMwOCw5LjcwMzExIC03LjQxMjIxNSw0LjQ5NDQgLTEzLjIxNTYyNSw5LjQ4MzkxIC0xOS42MTI0MTgsMTYuODYxODQgbCAtMS4xNDE0MzUsMS4zMTY1MXoiLz48cGF0aCBzdHlsZT0iZmlsbDojZmZmZmZmIiBkPSJtIDguNzI5MjU0MywxNzQuNDMwODYgYyAwLC0wLjEyNTc5IDAuNDY1MTc4LC0xLjQ2NTI0IDEuMDMzNzMsLTIuOTc2NTYgNC4yNTkyNzc3LC0xMS4zMjIgOS45NTU1ODc3LC0yMC40MTA5MiAxNy44NjgwMTA3LC0yOC41MDk4NyA4LjkxMDU2Niw5LjEyMDYyIDE4LjY1NjkzMSwtMTUuMTgwMiAzMS4wNzgyMjMsLTE5LjMyMjE4IDEuODA0NTUzLC0wLjYwMTc0IDMuMzQyNDQ0LC0xLjAzMjY0IDMuNDE3NTM0LC0wLjk1NzU1IDAuMDc1MDksMC4wNzUxIDAuMDI0NjUsMC4xMzY1MyAtMC4xMTIwOTQsMC4xMzY1MyAtMC41MjI5NjUsMCAtNi4wNzk3ODgsMy4yNjA1OSAtOC42NTQ3NTYsNS4wNzgzNyAtOS44NTgxOTIsNi45NTkzMiAtMTYuODY5MzE5LDE0Ljk1MDI1IC0yMi40NzI3NTksMjUuNjEzMyAtMi4wMDc5NzksMy44MjEwNyAtMy40NTY2MDksNy4xODE0MyAtNC43OTA1MzgsMTEuMTEyNSAtMS4wMjc5ODYsMy4wMjk0NSAtMi41NTA2ODUsOC43MjYzMyAtMi41NTA2ODUsOS41NDI4OCAwLDAuNDkzMTUgLTAuMjYyNzUsMC41MTEyOCAtNy40MDgzMzMsMC41MTEyOCAtNC4wNzQ1ODMsMCAtNy40MDgzMzI3LC0wLjEwMjkxIC03LjQwODMzMjcsLTAuMjI4N3oiLz48cGF0aCBzdHlsZT0iZmlsbDojZmZmZmZmIiBkPSJtIDIwMy45OTE3NSwxNzQuNzY1OTkgYyAwLC0wLjE3MzIxIDAuNDI1MDUsLTAuNzg2MzggOC42MDIxOCwtMTIuNDA5NTUgMy4wNzEzLC00LjM2NTYzIDYuMjUzNzMsLTguODk2NyA3LjA3MjA3LC0xMC4wNjkwNiBsIDEuNDg3ODcsLTIuMTMxNTYgLTQuODIwMjMsLTYuODY0MjcgYyAtOS4zODI3MywtMTMuMzYxNTQgLTEyLjA3NzMxLC0xNy4yNDYzOCAtMTIuMDc3MzEsLTE3LjQxMjE5IDAsLTAuMDkyMiAzLjQ1MjQ0LC0wLjE2NzcxIDcuNjcyMDksLTAuMTY3NzEgaCA3LjY3MjA4IGwgMi43MjM2Myw0LjE2NzE4IGMgMS40OTgsMi4yOTE5NiAzLjU5NDksNS41MDY2NCA0LjY1OTc4LDcuMTQzNzUgMS4wNjQ4OCwxLjYzNzExIDIuMDIzOTUsMi45NzY1NyAyLjEzMTI3LDIuOTc2NTcgMC4xMDczMiwwIDIuMzI2ODIsLTMuMjExNzMgNC45MzIyLC03LjEzNzE3IGwgNC43MzcwOCwtNy4xMzcxNyA3LjYwNjc3LC0wLjAwNyBjIDQuMTgzNzIsLTAuMDA0IDcuNjA2NzcsMC4wNjkgNy42MDY3NywwLjE2MTM5IDAsMC4wOTI0IC0zLjY4NzE5LDUuNDMwNjkgLTguMTkzNzYsMTEuODYyOSAtNC41MDY1Niw2LjQzMjIyIC04LjI2ODc2LDExLjg5MDQxIC04LjM2MDQ0LDEyLjEyOTM0IC0wLjE3NDk5LDAuNDU1OTkgMC4zNjUwOSwxLjI1OTkxIDEwLjkzOTI2LDE2LjI4MzI4IDMuMTA5MzQsNC40MTc2MiA1LjcxNjk3LDguMTk3ODYgNS43OTQ3NCw4LjQwMDUyIDAuMTE4ODUsMC4zMDk3MyAtMS4wODc1OCwwLjM2ODQ5IC03LjU2NTcsMC4zNjg0OSBoIC03LjcwNzEgbCAtNC43ODE0MSwtNy4yMDk5IGMgLTIuNjI5NzcsLTMuOTY1NDQgLTQuODc0OCwtNy4yNDQ3NSAtNC45ODg5NSwtNy4yODczNCAtMC4xMTQxNiwtMC4wNDI2IC0yLjM5NDk2LDMuMTk2OTkgLTUuMDY4NDUsNy4xOTkwOSBsIC00Ljg2MDksNy4yNzY1MyAtNy42MDY3NywwLjAxMDggYyAtNC4xODM3MiwwLjAwNiAtNy42MDY3NywtMC4wNjA0IC03LjYwNjc3LC0wLjE0NzM1eiIvPjxwYXRoIHN0eWxlPSJmaWxsOiNmZmZmZmYiIGQ9Ik0gMTg1LjczNTUsMTUwLjMxNzkgdiAtMjQuNjA2MjUgaCA2Ljg3OTE3IDYuODc5MTYgdiAyNC42MDYyNSAyNC42MDYyNSBoIC02Ljg3OTE2IC02Ljg3OTE3eiIvPjxwYXRoIHN0eWxlPSJmaWxsOiNmZmZmZmYiIGQ9Ik0gMTI5LjkwODQyLDE1MC4zMTc5IHYgLTI0LjYwNjI1IGggNi44NzkxNiA2Ljg3OTE3IGwgMC4wMTA5LDMuMTA4ODUgMC4wMTA4LDMuMTA4ODUgYyAzLjg0NDQyLC00LjIwOTM5IDguMTY4NzEsLTYuMDM5MjcgMTQuMjEwNSwtNi4wMTMzNiA5LjEyNDM2LDAuMDM5MSAxNS40MDU3Miw0LjY0OTY5IDE3LjU4NjYsMTIuOTA4NjkgMC44NjUzLDMuMjc2ODcgMS4wOTMxNyw4LjU1ODQ2IDEuMDEwMjcsMjMuNDE1NjIgbCAtMC4wNzYsMTMuNjI2MDQgLTYuOTQ1MzIsMC4wNzA1IC02Ljk0NTMxLDAuMDcwNSB2IC0xNC41NDM0NiBjIDAsLTkuNzUwNiAtMC4wOTc5LC0xNS4wMDU1MiAtMC4yOTcxOCwtMTUuOTQ1NTQgLTAuNjQyMDQsLTMuMDI5MTIgLTIuMTg4MjMsLTUuMTMwNzYgLTQuNjc0NSwtNi4zNTM3OSAtMS42NzI5MSwtMC44MjI5MiAtMS45MjE3OSwtMC44NjkxMyAtNC42ODE0MywtMC44NjkxMyAtMi42NTQ0MiwwIC0zLjA2MjE1LDAuMDY4MiAtNC41Njc1OCwwLjc2MzQ0IC0yLjg5MjAzLDEuMzM1NyAtNC43Njc0Nyw2Ljk5MzM2IC01LjM0MjU5LDcuNTcwOTQgLTAuMTY2NTYsMS4wMzYwOSAtMC4yNzcyNyw3LjIxNTY1IC0wLjI3ODQ3LDE1LjU0NDI3IGwgLTAuMDAyLDEzLjgyNDQ4IGggLTYuODc5MTcgLTYuODc5MTZ6Ii8+PHBhdGggc3R5bGU9ImZpbGw6I2ZmZmZmZiIgZD0ibSA0Ni4wMzU1MDMsMTU2LjQ0NDQzIHYgLTE4LjQ4NzE1IGwgMy4yNDExNDYsLTMuMTUwNTYgYyAxLjc4MjYzLC0xLjczMjgxIDQuMDc0NTgzLC0zLjgxNzk3IDUuMDkzMjI5LC00LjYzMzY5IDIuMTg5NTM1LC0xLjc1MzM1IDcuNjk3OTI5LC01LjUxOTcyIDguMDcyNzE1LC01LjUxOTcyIDAuMTcwMjY0LDAgMC4yNzgxNjMsOC41NDg1MyAwLjMwODkwNywyNC40NzM5NiAwLjAyNTk5LDEzLjQ2MDY4IDAuMDU1NzUsMjQuNzQxODUgMC4wNjYxNSwyNS4wNjkyNyBsIDAuMDE4OSwwLjU5NTMxIC04LjQwMDUyLDAuMDY5OSAtOC40MDA1MjEsMC4wNjk5eiIvPjxwYXRoIHN0eWxlPSJmaWxsOiNmZmZmZmYiIGQ9Im0gLTMwLjk2MDE3MywxNzQuNzI5NDIgYyAtMC4wMDExLC0wLjExMTE4IC0wLjAwMTYsLTE1LjkxODQgLTAuMDAxMSwtMzUuMTI3MTUgbCAwLjAwMDgyNCwtMzQuOTI1IDEwLjU5NTAxNSwtMC4wNjkyIDEwLjU5NTAxNDksLTAuMDY5MiAwLjQwMzUzMDcsMC43MzA2MSBjIDAuMjIxOTQxOCwwLjQwMTg0IDEuNDE1NDI2MiwyLjU3NjA5IDIuNjUyMTg3NSw0LjgzMTY2IDEuMjM2NzYxMywyLjI1NTU3IDIuODc5MDkyMiw1LjIzMjE0IDMuNjQ5NjI0Miw2LjYxNDU4IDUuOTEzNDUzLDEwLjYwOTYxIDE4LjEzODQzMjcsMzIuNzcwNDggMTguNDI2NDYyNywzMy40MDI2NCAwLjI0OTA4MywwLjU0NjY4IDAuMDc4MDgsMC45MjE2NyAtMS40MjM4OTYsMy4xMjIzNSAtMi41MDUwMiwzLjY3MDM0IC01LjI2OTQ3OTcsOC42NDk2OCAtNi44MTYwODE3LDEyLjI3NzExIC0wLjc0NzcxLDEuNzUzNjkgLTEuNDM2ODc1LDMuMjcyNzggLTEuNTMxNDgsMy4zNzU3NiAtMC4wOTQ2LDAuMTAyOTggLTQuNTE2ODc4LC04LjQzNzg0IC05LjgyNzI3NiwtMTguOTc5NTkgLTUuMzEwMzk3OSwtMTAuNTQxNzUgLTkuNzQzMTk2MywtMTkuMTY4NzQgLTkuODUwNjYzMywtMTkuMTcxMDkgLTAuMTA3NDY3LC0wLjAwMiAtMC4xOTUzMTIsOS45MDc2OSAtMC4xOTUyMTIsMjIuMDIyMyBsIDAuMDAwMTg0LDIyLjAyNjU2IC04LjMzNzYwMSwwLjA2OTkgYyAtNC41ODU2ODEsMC4wMzg0IC04LjMzODQ2OSwtMC4wMjExIC04LjMzOTUyOSwtMC4xMzIzeiIvPjxwYXRoIGlkPSJwYXRoMiIgc3R5bGU9ImZpbGw6I2ZmZmZmZiIgZD0ibSA5OC4yMjgxMTMsMTI0Ljc3Njg4IGMgLTEuNTMyOTMxLC0wLjA4NzQgLTMuMDkxMjI3LC0wLjA1NTggLTQuNjYwNjk4LDAuMTAzMzUgLTEyLjE1NTQxNywxLjIzMjM0IC0yMS4zMTYxMTcsOC45MTUwMiAtMjMuNzQ4NDIxLDE5LjkxNzEzIC0wLjc5NTA1OCwzLjU5NjMxIC0wLjYxMTE4Myw5LjM5MTY1IDAuNDA1NjYsMTIuNzgzNzIgMy4wMjgyOTYsMTAuMTAyMDUgMTIuMDAxODg0LDE3LjE2NTMzIDIzLjAzODkwNCwxOC4xMzQ4MSAxMi40NzUwMDIsMS4wOTU3OSAyMy4xODg0MzIsLTQuNTM1MzUgMjcuOTQ2NjEyLC0xNC42ODkwMyAxLjc1NzYxLC0zLjc1MDY1IDIuMTYwNzYsLTUuNzA3OCAyLjE3ODE2LC0xMC41NzY2MSAwLjAxNTcsLTQuMzgwNzcgLTAuMTkxNTgsLTUuNjkyOTQgLTEuNDMzNSwtOS4wNzQzOCAtMy41MDA5NiwtOS41MzIyNiAtMTIuOTk2MiwtMTUuOTg2OTcgLTIzLjcyNjcxNywtMTYuNTk4OTkgeiBtIC0yLjYxNDMxMSwxMi4wOTg0OSBjIDQuNTgwOTg4LC0wLjE3NTM0IDYuOTYwNDA4LDAuNjYyODUgOS45MDc5MTgsMy40OTA3NCAyLjYyODA5LDIuNTIxNDUgMy44MzQ5Nyw1LjA0NzQgNC4xNjgyMyw4LjcyNTA1IDAuNjA0MzgsNi42Njk2MiAtMy40MTA0OCwxMi43Mjc5NCAtOS41MTIwOSwxNC4zNTI2MSAtMS40OTg3ODQsMC4zOTkwNyAtNS44MjU0ODksMC40NDY3MiAtNy4zNzYyODksMC4wODExIC00LjIzOTExLC0wLjk5OTM1IC04LjQxMjU1OCwtNS4zMjEzNyAtOS40Mzg3MDEsLTkuNzc0NTkgLTAuMzkzMTQyLC0xLjcwNjE0IC0wLjM0MTE1NywtNS40NDkyOCAwLjA5ODcsLTcuMTAxOSAxLjAyMjY5MiwtMy44NDI0IDMuNDMyNzM5LC02LjgxOCA2LjkyMzYwOSwtOC41NDc4IDIuMTU2MjMsLTEuMDY4NDUgMi4zNTc4MjEsLTEuMTE1MzUgNS4yMjg2MjEsLTEuMjI1MjR6IiovPjxwYXRoIHN0eWxlPSJmaWxsOiMyNmZmYzEiIGQ9Im0gMzYuNjUzMzk5LDY1Mi4yNzI2MyBjIDAuODA3MTUsLTMuNDE1NTYgNy4zNjAyNzQsLTE4LjMwMTYxIDE0LjU2MjQ5OCwtMzMuMDgwMTIgMjYuMDM2NTczLC01My40MjUzOCA2NS4wMjg3MTMsLTk2LjE1NTg2IDExMy45MjYxNjMsLTEyNC44NDg3IDE3LjE2NjY1LC0xMC4wNzMzMyA0OC44NTMxLC0yNC40NTI4NCA1MC40MjM0NiwtMjIuODgyNDggMC40ODMxMSwwLjQ4MzEgLTYuMDMyNzgsNS42MDA1NSAtMTQuNDc5NzUsMTEuMzcyMTEgLTUyLjE5OTYyLDM1LjY2NjQyIC05MS4zOTcwMiw5MS45MTAyNiAtMTA4LjMxMzk3MiwxNTUuNDE4MzEgbCAtNS4wNTI4NywxOC45NjkwMiAtMjYuMjY2NTM3LDAuNjMwOTkgLTI2LjI2NjUzNywwLjYzMDk4eiIgdHJhbnNmb3JtPSJzY2FsZSgwLjI2NDU4MzMzKSIvPjwvZz48L3N2Zz4=">
+  <span class="date">Actualizado 30/09/2026</span>
+</div>
+
+<header class="intro">
+  <span class="eyebrow">● Guía de despliegue</span>
+  <h1>Manual de Despliegue</h1>
+  <p>Cómo levantar, desplegar y mantener Monix en producción, de punta a punta. Pensado para cualquiera del equipo — o el profesor — que necesite entender el circuito sin reconstruir el contexto desde cero.</p>
+  <p>Monix es 100% web: un mismo build se despliega una sola vez y se instala como PWA en desktop, iOS y Android. No hay build nativo ni distribución por APK. La versión con todo el detalle vive en <code>docs/manual-despliegue.md</code> del repo.</p>
+</header>
+
+<nav class="toc">
+  <p>En este manual</p>
+  <ol>
+    <li><a href="#arquitectura"><span class="n">1</span> Arquitectura</a></li>
+    <li><a href="#local"><span class="n">2</span> Puesta en marcha local</a></li>
+    <li><a href="#variables"><span class="n">3</span> Variables de entorno</a></li>
+    <li><a href="#vercel"><span class="n">4</span> Frontend en Vercel</a></li>
+    <li><a href="#supabase"><span class="n">5</span> Backend en Supabase</a></li>
+    <li><a href="#pwa"><span class="n">6</span> PWA</a></li>
+    <li><a href="#seguridad"><span class="n">7</span> Seguridad</a></li>
+    <li><a href="#monitoreo"><span class="n">8</span> Monitoreo y logs</a></li>
+    <li><a href="#checklist"><span class="n">9</span> Checklist de release</a></li>
+    <li><a href="#troubleshooting"><span class="n">10</span> Troubleshooting</a></li>
+  </ol>
+</nav>
+
+<section id="arquitectura">
+  <h2><span class="num">1</span> Arquitectura</h2>
+  <div class="card">
+    <pre class="mermaid">
+flowchart LR
+  U["Usuario · desktop / iOS / Android"] -->|HTTPS, instala la PWA| V["Vercel · estático + PWA"]
+  V -->|REST / Realtime| S[("Supabase · Postgres + Auth + RLS")]
+  V -->|invoke| EF["Edge Functions · Deno"]
+  V -->|proxy /bc-api| BC["Banco Central · API de la cátedra"]
+    </pre>
+    <p class="diagram-caption">Un solo frontend sirve a los tres sistemas operativos. El Banco Central es la API externa compartida por la cátedra — nunca se llama directo desde el navegador, siempre vía el proxy <code>/bc-api</code>.</p>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Pieza</th><th>Qué es</th><th>Dónde vive</th></tr>
+      <tr><td>Frontend</td><td>React + TypeScript + Vite, PWA con Workbox</td><td><code>src/</code></td></tr>
+      <tr><td>Hosting</td><td>Vercel, deploy automático al pushear a <code>main</code></td><td>proyecto Vercel ↔ GitHub</td></tr>
+      <tr><td>Backend</td><td>Supabase: Postgres + RLS, Auth, Realtime, Edge Functions</td><td><code>src/lib/supabaseClient.ts</code></td></tr>
+      <tr><td>API externa</td><td>Banco Central de la cátedra (interbancario simulado)</td><td><code>centralbank.brocoly.cc</code> vía <code>/bc-api</code></td></tr>
+    </table>
+  </div>
+  <div class="callout" style="background:var(--surface-2); color:var(--text-secondary); margin-top:16px;">
+    <span class="ico">ⓘ</span>
+    <div>Un solo entorno: no hay staging, <code>main</code> <b>es</b> producción. Para algo riesgoso (una migración destructiva) conviene crear una rama de base de datos temporal en Supabase antes de tocar la real.</div>
+  </div>
+</section>
+
+<section id="local">
+  <h2><span class="num">2</span> Puesta en marcha en local</h2>
+  <div class="card">
+    <div class="term">
+      <div class="term-head"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="term-label">terminal</span></div>
+      <pre>git clone https://github.com/Maxi12141/HomebankingMonix.git
+cd HomebankingMonix
+npm install
+cp .env.example .env.local   <span class="cm">## completar con los valores reales, ver §3</span>
+npm run dev                  <span class="cm">## http://localhost:5173</span></pre>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Comando</th><th>Para qué</th></tr>
+        <tr><td><code>npm run dev</code></td><td>Servidor de desarrollo con hot reload</td></tr>
+        <tr><td><code>npm run build</code></td><td><code>tsc && vite build</code> — build de producción en <code>dist/</code></td></tr>
+        <tr><td><code>npm run preview</code></td><td>Sirve el build real localmente antes de pushear</td></tr>
+      </table>
+    </div>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin:14px 0 0;">No hay suite de tests automatizada ni CI (no existe <code>.github/workflows</code>). La única red de seguridad antes de un deploy es que <code>tsc</code> falle si hay un error de tipos, y el checklist de §9 — por eso ese checklist importa tanto.</p>
+  </div>
+</section>
+
+<section id="variables">
+  <h2><span class="num">3</span> Variables de entorno</h2>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <tr><th>Variable</th><th>Para qué</th><th>De dónde sale</th></tr>
+        <tr><td><code>VITE_SUPABASE_URL</code></td><td>URL del proyecto</td><td>Dashboard Supabase → API</td></tr>
+        <tr><td><code>VITE_SUPABASE_ANON_KEY</code></td><td>Clave pública del cliente</td><td>Idem (nunca la <code>service_role</code>)</td></tr>
+        <tr><td><code>VITE_BC_URL</code></td><td>Base del Banco Central</td><td><code>/bc-api</code> (proxy)</td></tr>
+        <tr><td><code>VITE_BC_API_KEY</code></td><td>Auth contra el Banco Central</td><td>La entrega el profesor</td></tr>
+        <tr><td><code>VITE_BC_ENV</code></td><td>Ambiente (<code>test</code>/<code>prod</code>)</td><td>Normalmente <code>test</code></td></tr>
+      </table>
+    </div>
+    <p style="font-size:13px; color:var(--text-secondary); margin-top:14px;">Cargarlas también en Vercel → Project Settings → Environment Variables: <code>.env.local</code> no llega al build de producción (está en <code>.gitignore</code> — si una clave se commitea por error, se rota, no alcanza con borrar el commit). Los secrets de Edge Functions van aparte (§5).</p>
+  </div>
+</section>
+
+<section id="vercel">
+  <h2><span class="num">4</span> Frontend en Vercel</h2>
+  <div class="card">
+    <pre class="mermaid">
+flowchart LR
+  A["git push a main"] --> B["Vercel: npm run build"]
+  B --> C{"¿tsc ok?"}
+  C -->|no| X["Deploy rechazado"]
+  C -->|sí| D["vite build → dist/"]
+  D --> E["Producción"]
+  E -.rollback.-> F["Promote a un deploy anterior"]
+    </pre>
+    <p class="diagram-caption"><code>npm run build</code> corre <code>tsc && vite build</code> — un error de tipos frena el deploy a propósito, antes de que suba nada roto.</p>
+    <h3>Lo que <code>vercel.json</code> hace y no es opcional</h3>
+    <ul class="plain">
+      <li>Reescribe <code>/bc-api/:path*</code> → <code>centralbank.brocoly.cc/api/:path*</code>. Sin esto el Banco Central no responde en producción aunque funcione en local.</li>
+      <li>Fuerza <code>Cache-Control: no-cache</code> en <code>index.html</code> — si no, el service worker deja a la gente pegada en una versión vieja indefinidamente.</li>
+      <li><code>Permissions-Policy</code> habilitando cámara/micrófono/NFC/WebAuthn — sin esto el navegador bloquea esos permisos aunque el usuario los acepte.</li>
+    </ul>
+    <h3>Rollback</h3>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin:0;">Vercel → Deployments → elegir uno anterior bueno → <b>"Promote to Production"</b>. Inmediato, no requiere tocar git (igual conviene revertir el commit para que <code>main</code> no mienta).</p>
+  </div>
+</section>
+
+<section id="supabase">
+  <h2><span class="num">5</span> Backend en Supabase</h2>
+  <div class="card">
+    <h3>Migraciones</h3>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin:0 0 14px;">Archivos sueltos en <code>supabase/*.sql</code>, se aplican a mano (SQL Editor de Supabase Studio, o MCP <code>apply_migration</code>). Orden: <code>policies.sql</code> primero (RLS), <code>transferencia_atomica.sql</code> al final.</p>
+    <h3>Edge Functions</h3>
+    <div class="term">
+      <div class="term-head"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="term-label">terminal</span></div>
+      <pre>npx supabase functions deploy firmar-qr <span class="cm">--project-ref &lt;ref&gt;</span></pre>
+    </div>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin:0 0 18px;">Supabase <b>no agrega CORS solo</b>: toda función nueva necesita manejar <code>OPTIONS</code> y devolver <code>Access-Control-Allow-Origin</code> a mano. Secrets en Dashboard → Edge Functions → Secrets.</p>
+    <h3>Auth — en un proyecto Supabase nuevo</h3>
+    <ul class="plain">
+      <li><b>"Confirm email" debe estar desactivado</b> (Authentication → Settings): el registro llama a <code>signUp()</code> esperando que el usuario quede logueado al toque. Con la confirmación activa, queda sin sesión y el alta se ve "rota".</li>
+      <li><b>Redirect URLs</b>: agregar <code>&lt;url-de-producción&gt;/restablecer-contrasena</code> (y el de <code>localhost:5173</code>) en Authentication → URL Configuration, o el link de "olvidé mi contraseña" se rechaza.</li>
+      <li>La plantilla de mail con la identidad de Monix vive en <code>docs/email-recuperar-contrasena.html</code> — pegarla en Authentication → Email Templates → Reset Password.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="pwa">
+  <h2><span class="num">6</span> PWA — instalación en desktop, iOS y Android</h2>
+  <div class="card">
+    <ul class="plain">
+      <li>Manifest e iconos generados por <code>vite-plugin-pwa</code>, assets en <code>public/</code>.</li>
+      <li>Registro manual en <code>main.tsx</code> (no automático) para controlar el aviso de actualización con toast propio (<code>registrarPwa.tsx</code>).</li>
+      <li>El botón "Instalar" (<code>usePwaInstall.ts</code> + <code>pwaInstallPrompt.ts</code>) depende de que el navegador dispare <code>beforeinstallprompt</code> — requiere HTTPS real y que el manifest + service worker pasen los criterios de instalabilidad de Chrome.</li>
+      <li>Verificar instalabilidad: DevTools → Application → Manifest / Service Workers, o Lighthouse → PWA.</li>
+    </ul>
+    <h3>Compatibilidad real del botón "Instalar"</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Navegador</th><th>Comportamiento</th></tr>
+        <tr><td>Chrome / Edge (Android y desktop)</td><td>Dispara <code>beforeinstallprompt</code>, instalación con un tap</td></tr>
+        <tr><td>Safari (iOS y macOS)</td><td>Nunca dispara el evento — paso manual (Compartir → Agregar a Inicio)</td></tr>
+        <tr><td>Firefox (cualquier plataforma)</td><td>No soporta el evento — el botón cae a "no disponible"</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="seguridad">
+  <h2><span class="num">7</span> Seguridad — qué no romper</h2>
+  <div class="card">
+    <ul class="plain">
+      <li><b>RLS siempre activo</b> en toda tabla nueva. Una tabla sin política es una tabla que cualquier usuario autenticado puede leer/escribir entera.</li>
+      <li><b><code>service_role</code> nunca va al frontend.</b> Sólo <code>anon</code> (protegida por RLS) sale en <code>VITE_SUPABASE_ANON_KEY</code>. Si hace falta saltar RLS a propósito, sólo dentro de una Edge Function.</li>
+      <li><code>Permissions-Policy</code> en <code>vercel.json</code> es lo que permite pedir cámara/NFC/WebAuthn — no sacarla al tocar ese archivo.</li>
+      <li><b>Rate limiting es sólo del lado del cliente</b> (backoff progresivo en <code>LoginPage.tsx</code>) — no hay límite real del lado del servidor. Limitación conocida, no un bug a arreglar.</li>
+      <li>Nunca commitear <code>.env.local</code> ni ninguna clave — si igual pasa, rotarla, no alcanza con borrar el commit.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="monitoreo">
+  <h2><span class="num">8</span> Monitoreo y logs</h2>
+  <div class="card">
+    <p style="font-size:13.5px; color:var(--text-secondary); margin:0 0 14px;">No hay error tracking integrado (Sentry o similar) — el diagnóstico en producción es manual:</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Qué pasó</th><th>Dónde mirar</th></tr>
+        <tr><td>El build falló en Vercel</td><td>Vercel → Deployments → el deploy en rojo → Build Logs</td></tr>
+        <tr><td>Algo falla ya desplegado (runtime)</td><td>Consola del navegador — es una SPA estática, sin logs de servidor propios</td></tr>
+        <tr><td>Una Edge Function falla</td><td>Supabase Dashboard → Edge Functions → Logs</td></tr>
+        <tr><td>Dudas sobre RLS/datos</td><td>Supabase Dashboard → Table/SQL Editor</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="checklist">
+  <h2><span class="num">9</span> Checklist antes de una release</h2>
+  <div class="card checklist" id="checklistBox">
+    <label><input type="checkbox" data-k="registro"><span>Registro completa el wizard y llega al dashboard</span></label>
+    <label><input type="checkbox" data-k="login"><span>Login con contraseña y con huella (celular)</span></label>
+    <label><input type="checkbox" data-k="transfer"><span>Transferencia interna y externa se acreditan</span></label>
+    <label><input type="checkbox" data-k="qr"><span>QR propio e interbancario se pagan bien</span></label>
+    <label><input type="checkbox" data-k="prestamos"><span>Simulador de Préstamos calcula y permite solicitar</span></label>
+    <label><input type="checkbox" data-k="instalar"><span>Botón "Instalar app" funciona en Chrome/Android</span></label>
+    <label><input type="checkbox" data-k="pwa"><span>La PWA instalada detecta versión nueva sola</span></label>
+  </div>
+</section>
+
+<section id="troubleshooting">
+  <h2><span class="num">10</span> Troubleshooting rápido</h2>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <tr><th>Síntoma</th><th>Causa típica</th></tr>
+        <tr><td>Banco Central da 404/CORS en prod</td><td>Falta el rewrite <code>/bc-api</code> en <code>vercel.json</code></td></tr>
+        <tr><td>Edge Function nueva bloqueada por CORS</td><td>Falta manejar <code>OPTIONS</code> + header en la función</td></tr>
+        <tr><td>PWA instalada queda vieja</td><td>Revisar <code>registrarPwa.tsx</code> y headers <code>no-cache</code></td></tr>
+        <tr><td>"Instalar" siempre dice no disponible</td><td>Evento <code>beforeinstallprompt</code> perdido — ver <code>pwaInstallPrompt.ts</code></td></tr>
+        <tr><td>Usuario nuevo se registra pero queda sin sesión</td><td>Falta desactivar "Confirm email" en Supabase (§5)</td></tr>
+        <tr><td>El link de "olvidé mi contraseña" no funciona</td><td>Falta la Redirect URL permitida en Supabase (§5)</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Versión completa: <code>docs/manual-despliegue.md</code> · Pendientes del proyecto: <code>docs/auditoria-completa-2026-09-21.md</code>
+</footer>
+
+<script>
+  (function () {
+    try {
+      var boxes = document.querySelectorAll('#checklistBox input[type="checkbox"]');
+      var saved = JSON.parse(localStorage.getItem('monix-deploy-checklist') || '{}');
+      boxes.forEach(function (b) {
+        if (saved[b.dataset.k]) b.checked = true;
+        b.addEventListener('change', function () {
+          try {
+            var s = JSON.parse(localStorage.getItem('monix-deploy-checklist') || '{}');
+            s[b.dataset.k] = b.checked;
+            localStorage.setItem('monix-deploy-checklist', JSON.stringify(s));
+          } catch (e) {}
+        });
+      });
+    } catch (e) {}
+  })();
+</script>

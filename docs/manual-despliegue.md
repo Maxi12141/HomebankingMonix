@@ -2,37 +2,46 @@
 
 **Fecha:** 2026-09-30
 
-Guía de referencia para levantar, desplegar y mantener Monix en producción. Pensada para cualquiera del equipo (o el profesor) que necesite entender cómo se pone en marcha el sistema sin tener que reconstruir el contexto desde cero. No documenta el negocio de la app (para eso están los demás `.md` de `docs/`), sólo el circuito de despliegue.
+Guía de referencia para levantar, desplegar y mantener Monix en producción. Pensada para cualquiera del equipo (o el profesor) que necesite entender cómo se pone en marcha el sistema sin reconstruir el contexto desde cero. No documenta el negocio de la app (para eso están los demás `.md` de `docs/`), sólo el circuito de despliegue.
 
-> Se buscó como referencia la documentación pública de Brocoly (producto de Binamics, la empresa del profesor en Villa María) para ver early qué convenciones de manual maneja la cátedra. No hay documentación técnica pública de ese producto (es un SaaS comercial de WhatsApp + IA, sin manuales de despliegue expuestos), así que esta guía sigue una estructura estándar de la industria: arquitectura → requisitos → variables de entorno → cada componente que se despliega → checklist post-deploy → troubleshooting.
+Monix es 100% web: un mismo build de Vite se despliega una sola vez y se instala como PWA en desktop, iOS y Android. No hay build nativo ni distribución por APK.
 
-## 1. Arquitectura en 1 minuto
+## 1. Arquitectura
 
 ```mermaid
 flowchart LR
-  U[Usuario] -->|HTTPS| V[Vercel<br/>estático + PWA]
-  U -->|APK instalada| A[App Android<br/>Capacitor + plugin monix-radio]
+  U[Usuario<br/>desktop / iOS / Android] -->|HTTPS, instala la PWA| V[Vercel<br/>estático + PWA]
   V -->|REST/Realtime| S[(Supabase<br/>Postgres + Auth + RLS)]
   V -->|invoke| EF[Supabase Edge Functions<br/>Deno]
   V -->|/bc-api proxy| BC[Banco Central<br/>API compartida de la cátedra]
-  A -->|mismo bundle| S
 ```
 
 | Pieza | Qué es | Dónde vive |
 | --- | --- | --- |
 | Frontend | React + TypeScript + Vite, PWA con Workbox | este repo, `src/` |
-| Hosting web | Vercel (deploy automático al pushear a `main`) | proyecto Vercel enlazado al repo de GitHub |
+| Hosting | Vercel (deploy automático al pushear a `main`) | proyecto Vercel enlazado al repo de GitHub |
 | Backend | Supabase: Postgres con RLS, Auth, Realtime, Edge Functions | proyecto Supabase (ver `src/lib/supabaseClient.ts`) |
-| API externa | "Banco Central" de la cátedra, simula el sistema interbancario real | `https://centralbank.brocoly.cc`, se accede vía el proxy `/bc-api` (nunca directo desde el navegador) |
-| App nativa | Wrapper Android de Capacitor + plugin propio `monix-radio` (BLE/NFC/HCE para Monix Cerca y la tarjeta) | `plugins/monix-radio/` (fuente) + `android/` (generado, no se commitea) |
+| API externa | "Banco Central" de la cátedra, simula el sistema interbancario real | `https://centralbank.brocoly.cc`, vía el proxy `/bc-api` (nunca directo desde el navegador) |
 
-## 2. Requisitos previos
+Un solo entorno: no hay staging, `main` **es** producción. Para probar algo riesgoso (una migración destructiva, por ejemplo) conviene crear una rama de base de datos temporal en Supabase (`mcp__supabase__create_branch` si se trabaja con un agente, o desde el Dashboard) en vez de probar directo contra la base real.
 
-- Node.js 20+ y npm.
-- Acceso al proyecto de Supabase (o uno nuevo, ver §5).
-- El repo conectado a un proyecto de Vercel (Framework Preset: Vite).
-- Para compilar el APK: Android Studio (SDK + JDK 17) y un dispositivo o emulador con Android 12+ (los permisos de Bluetooth que usa Monix Cerca cambian de forma importante a partir de esa versión).
-- La API key del Banco Central de la cátedra (la entrega el profesor por curso/comisión).
+## 2. Puesta en marcha en local
+
+```bash
+git clone https://github.com/Maxi12141/HomebankingMonix.git
+cd HomebankingMonix
+npm install
+cp .env.example .env.local   # completar con los valores reales, ver §3
+npm run dev                  # http://localhost:5173
+```
+
+| Comando | Para qué |
+| --- | --- |
+| `npm run dev` | Servidor de desarrollo con hot reload |
+| `npm run build` | `tsc && vite build` — build de producción en `dist/` |
+| `npm run preview` | Sirve el resultado de `npm run build` localmente, para probar el build real antes de pushear |
+
+No hay suite de tests automatizada ni CI configurado (no existe `.github/workflows`) — la única red de seguridad antes de un deploy es que `tsc` falle si hay un error de tipos, y el checklist manual de §9. Por eso ese checklist importa: hoy es la única verificación real de que una release no rompió nada.
 
 ## 3. Variables de entorno
 
@@ -46,7 +55,7 @@ Están documentadas en `.env.example` — copiarlo a `.env.local` para desarroll
 | `VITE_BC_API_KEY` | Autenticación contra el Banco Central de la cátedra | la entrega el profesor |
 | `VITE_BC_ENV` | Ambiente del Banco Central (`test`/`prod`) | normalmente `test` |
 
-**En Vercel** estas mismas variables se cargan en Project Settings → Environment Variables (no alcanza con tenerlas sólo en `.env.local`, eso no viaja al build de Vercel).
+**En Vercel** estas mismas variables se cargan en Project Settings → Environment Variables (no alcanza con tenerlas sólo en `.env.local`, eso no viaja al build de Vercel). `.env.local` está en `.gitignore` — si alguna vez se commitea una clave por error, se rota desde el Dashboard correspondiente, no alcanza con borrarla del commit.
 
 Aparte de estas, hay secrets que viven **sólo del lado de Supabase Edge Functions**, nunca en el frontend — ver §5.3.
 
@@ -58,8 +67,8 @@ Aparte de estas, hay secrets que viven **sólo del lado de Supabase Edge Functio
 4. `vercel.json` hace tres cosas que **no son opcionales**, si se reescribe hay que preservarlas:
    - Reescribe `/bc-api/:path*` hacia `https://centralbank.brocoly.cc/api/:path*` — sin esto, el banco central no responde en producción aunque funcione en local (el proxy de `vite.config.ts` sólo corre en `npm run dev`).
    - Fuerza `Cache-Control: no-cache` en `/` y `/index.html` — el service worker de la PWA necesita que el shell HTML siempre se pida fresco, sino la gente queda pegada en una versión vieja de la app indefinidamente.
-   - `Permissions-Policy` habilitando cámara/micrófono/bluetooth/NFC/WebAuthn — sin esto el navegador bloquea esos permisos aunque el usuario los acepte (afecta escaneo de QR, Monix Cerca, huella y pago con NFC).
-5. Verificar el deploy: abrir la preview/production URL y correr el checklist de §8 antes de dar por buena una release.
+   - `Permissions-Policy` habilitando cámara/micrófono/NFC/WebAuthn — sin esto el navegador bloquea esos permisos aunque el usuario los acepte (afecta escaneo de QR, huella y pago con tarjeta).
+5. Verificar el deploy: abrir la preview/production URL y correr el checklist de §9 antes de dar por buena una release.
 6. **Rollback**: en el dashboard de Vercel, pestaña Deployments, elegir un deploy anterior que haya sido bueno y "Promote to Production". Es inmediato y no requiere revertir nada en git (aunque revertir el commit igual es buena práctica para que `main` no mienta sobre qué está en producción).
 
 ## 5. Backend (Supabase)
@@ -71,7 +80,7 @@ Las migraciones viven como archivos sueltos en `supabase/*.sql` (no hay todavía
 - Desde Supabase Studio → SQL Editor, pegar y correr el archivo, o
 - Con el MCP de Supabase (`mcp__supabase__apply_migration`) si se está trabajando con un agente que tenga esa conexión.
 
-Orden recomendado en un proyecto nuevo: `policies.sql` primero (RLS), después el resto según el orden en que se fueron creando las features (`cuentas_moneda.sql`, `personas_credito.sql`, `personas_situacion_crediticia.sql`, `cerca_nfc.sql`, `cerca_listar_visibles.sql`, `reservas.sql`, `depositar.sql`, `prestamos.sql`, `transferencia_atomica.sql` al final, porque reemplaza funciones que dependen de las tablas anteriores).
+Orden recomendado en un proyecto nuevo: `policies.sql` primero (RLS), después el resto según el orden en que se fueron creando las features (`cuentas_moneda.sql`, `personas_credito.sql`, `personas_situacion_crediticia.sql`, `reservas.sql`, `depositar.sql`, `prestamos.sql`, `transferencia_atomica.sql` al final, porque reemplaza funciones que dependen de las tablas anteriores).
 
 ### 5.2 Row Level Security
 
@@ -91,27 +100,49 @@ npx supabase functions deploy <nombre> --project-ref <ref>
 
 **Secrets**: se configuran en Dashboard → Edge Functions → Secrets (`Deno.env.get('NOMBRE')` del lado de la función). Ejemplo pendiente: `QR_JWT_PRIVATE_KEY` — hoy `firmar-qr` tiene un fallback embebido en el código porque no hubo forma de setear el secret desde un entorno no interactivo; migrarlo es sólo cargar el secret en el Dashboard, la función ya lo prioriza si existe.
 
-## 6. App Android (Capacitor)
+### 5.4 Configuración de Auth (importante en un proyecto Supabase nuevo)
 
-```bash
-npm run cap:add     # sólo la primera vez: genera android/ (gitignored)
-npm run cap:sync     # build web + cap sync + reaplica parches nativos
-npm run apk:debug    # arma un APK debug (android/app/build/outputs/apk/debug)
-```
+Si se levanta este proyecto contra un Supabase nuevo (no el que ya está en uso), dos cosas de **Authentication → Settings / URL Configuration** rompen el flujo si no se tocan:
 
-- `android/` se regenera con `cap add`/`cap sync` y **no se commitea** — el plugin propio vive aparte, en `plugins/monix-radio/`, y sí está en el repo.
-- `scripts/ensure-android-perms.mjs` corre automáticamente después de `cap sync`: Capacitor pisa `MainActivity.java` y el manifest en cada sync, así que este script vuelve a inyectar los permisos y el comportamiento custom de `MainActivity` (configuración de WebView, edge-to-edge, etc.). Si se agregan permisos nuevos de Android, hay que sumarlos ahí, no directo en `android/`, porque se pierden en el próximo `cap sync`.
-- Para un **release firmado** (Play Store o distribución directa) hace falta generar un keystore propio y configurar `signingConfig` en `android/app/build.gradle` — no hay uno generado todavía en este proyecto; seguir la guía oficial de Capacitor/Android para firmar un `.aab` o `.apk` de release cuando llegue el momento.
-- El plugin `monix-radio` declara permisos de Bluetooth (`BLUETOOTH_SCAN`, `BLUETOOTH_ADVERTISE`, `BLUETOOTH_CONNECT`) y NFC — Android 12+ los trata distinto a versiones previas, tenerlo en cuenta al testear Monix Cerca en dispositivos reales.
+- **"Confirm email" debe estar desactivado** (o el flujo de registro adaptado): `RegisterPage.tsx` llama a `supabase.auth.signUp()` esperando que el usuario quede logueado al toque (dispara `onAuthStateChange` de inmediato). Si la confirmación por mail está activa, el usuario queda sin sesión hasta que confirma, y el alta se ve "rota".
+- **Redirect URLs**: agregar `<url-de-producción>/restablecer-contrasena` (y el equivalente de `localhost:5173` para desarrollo) a la lista de URLs permitidas — si no está, el link de "olvidé mi contraseña" (`ForgotPasswordPage.tsx`) redirige a un lugar no autorizado y Supabase lo rechaza.
+- La plantilla de mail de recuperación de contraseña con la identidad de Monix vive en `docs/email-recuperar-contrasena.html` — pegarla en Authentication → Email Templates → Reset Password.
 
-## 7. PWA
+## 6. PWA — el único camino de instalación (desktop, iOS y Android)
 
 - Manifest e iconos generados por `vite-plugin-pwa` (`vite.config.ts`), assets en `public/` (`pwa-64x64.png`, `pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png`).
-- `registerType: 'prompt'` con registro manual en `src/main.tsx` (no automático) para poder controlar el aviso de actualización con el mismo patrón de toast que usa el resto de la app (`src/native/registrarPwa.tsx`), y para no registrar el service worker dentro de la APK de Capacitor (ahí ya está "instalada", no tiene sentido).
+- `registerType: 'prompt'` con registro manual en `src/main.tsx` (no automático) para poder controlar el aviso de actualización con el mismo patrón de toast que usa el resto de la app (`src/native/registrarPwa.tsx`).
 - El botón de instalar (`src/hooks/usePwaInstall.ts` + `src/lib/pwaInstallPrompt.ts`) depende de que el navegador dispare `beforeinstallprompt` — eso requiere HTTPS real (Vercel ya lo da) y que el manifest + service worker pasen los criterios de instalabilidad de Chrome.
 - Para verificar que una build es instalable: Chrome DevTools → Application → Manifest (sin errores) y → Service Workers (activo y controlando la página), o correr Lighthouse → PWA.
 
-## 8. Checklist post-despliegue (smoke test)
+**Compatibilidad real del botón "Instalar":**
+
+| Navegador | Comportamiento |
+| --- | --- |
+| Chrome / Edge (Android y desktop) | Dispara `beforeinstallprompt`, instalación con un tap |
+| Safari (iOS y macOS) | Nunca dispara el evento — se indica el paso manual (Compartir → Agregar a Inicio) |
+| Firefox (cualquier plataforma) | No soporta `beforeinstallprompt` — el botón cae a "no disponible", no hay forma de instalar con un tap |
+
+## 7. Seguridad — qué no romper
+
+- **RLS siempre activo** en toda tabla nueva (`policies.sql` es el lugar). Una tabla sin política es un tabla que cualquier usuario autenticado puede leer/escribir entera.
+- **`service_role` nunca va al frontend.** Sólo `anon` (pública, protegida por RLS) sale en `VITE_SUPABASE_ANON_KEY`. Si `service_role` se necesita en algún momento (para saltar RLS a propósito), sólo dentro de una Edge Function.
+- **`Permissions-Policy`** en `vercel.json` es lo que permite pedir cámara/NFC/WebAuthn — no sacarla al tocar ese archivo.
+- **Rate limiting es sólo del lado del cliente** (backoff progresivo en `LoginPage.tsx` tras intentos fallidos) — no hay límite real del lado del servidor. Es una limitación conocida, no un bug a arreglar acá.
+- Nunca commitear `.env.local` ni ninguna clave — está en `.gitignore`, y si igual pasa, rotar la clave, no sólo borrar el commit.
+
+## 8. Monitoreo y logs
+
+No hay un servicio de error tracking integrado (Sentry o similar) — hoy el diagnóstico en producción es manual:
+
+| Qué pasó | Dónde mirar |
+| --- | --- |
+| El build falló en Vercel | Vercel → Deployments → el deploy en rojo → Build Logs |
+| Algo falla ya desplegado (runtime) | Consola del navegador (F12) — es una SPA estática, no hay logs de servidor del lado del frontend |
+| Una Edge Function falla | Supabase Dashboard → Edge Functions → Logs, o `mcp__supabase__query_logs` si se trabaja con un agente |
+| Dudas sobre RLS/datos | Supabase Dashboard → Table Editor / SQL Editor, o `mcp__supabase__get_advisors` para chequeos de seguridad automáticos |
+
+## 9. Checklist post-despliegue (smoke test)
 
 Antes de dar una release por buena, probar en la URL de producción (no sólo en local):
 
@@ -123,7 +154,7 @@ Antes de dar una release por buena, probar en la URL de producción (no sólo en
 - [ ] El botón "Instalar app" funciona en Chrome/Android (no cae siempre a "no disponible").
 - [ ] Abrir la app instalada como PWA y confirmar que detecta una versión nueva sin necesidad de desinstalar/reinstalar.
 
-## 9. Troubleshooting conocido
+## 10. Troubleshooting conocido
 
 | Síntoma | Causa típica | Dónde mirar |
 | --- | --- | --- |
@@ -131,12 +162,9 @@ Antes de dar una release por buena, probar en la URL de producción (no sólo en
 | Una Edge Function nueva falla con "blocked by CORS policy" | Falta manejar `OPTIONS` + `Access-Control-Allow-Origin` en la función | código de la función en Supabase, ver ejemplo en `docs/qr-interbancario-jwt.md` |
 | La PWA instalada queda en una versión vieja | El service worker no fuerza el chequeo de actualización seguido, o el HTML quedó cacheado | `src/native/registrarPwa.tsx`, headers `no-cache` de `vercel.json` |
 | El botón de instalar siempre dice "no disponible" en Chrome | El evento `beforeinstallprompt` se perdió porque nadie lo escuchaba a tiempo (splash screen inicial) | `src/lib/pwaInstallPrompt.ts` — debe importarse eager desde `main.tsx` |
-| Después de `cap sync`, se perdió un permiso o un cambio en `MainActivity` | Capacitor regenera esos archivos en cada sync | agregar el cambio en `scripts/ensure-android-perms.mjs`, no en `android/` directamente |
+| Un usuario nuevo se registra pero queda sin sesión / "colgado" | Falta desactivar "Confirm email" en un proyecto Supabase nuevo (ver §5.4) | Supabase Dashboard → Authentication → Settings |
+| El link de "olvidé mi contraseña" no funciona | La URL de redirect no está en la lista permitida (ver §5.4) | Supabase Dashboard → Authentication → URL Configuration |
 
-## 10. Pendientes / mejoras futuras
+---
 
-- Commitear el código de las Edge Functions bajo `supabase/functions/` en vez de dejarlo sólo en el dashboard de Supabase.
-- Migrar `QR_JWT_PRIVATE_KEY` (y cualquier otro secret embebido) a un secret real de Supabase.
-- Automatizar la aplicación de migraciones SQL (hoy es 100% manual).
-- No hay CI configurado (`.github/workflows` no existe) — ni siquiera corre `tsc`/lint en cada PR más allá de lo que haga Vercel al buildear.
-- Generar y documentar el keystore de release para Android cuando se necesite distribuir un APK/AAB firmado.
+Los pendientes de todo el proyecto (no sólo de despliegue) se llevan en `docs/auditoria-completa-2026-09-21.md`.

@@ -312,4 +312,14 @@ Confirmado con `list_migrations` (ambas registradas) y `get_advisors(security)` 
 
 ## Nota sobre lo ya conocido
 
-No se repiten acá (ya estaban anotados antes de esta auditoría): el fix del timeout de `writeNfc` en Kotlin pendiente de probar en dispositivo real, y la duplicación deliberada de `FinanciacionPage` vs `PrestamosPage` (decisión ya tomada, no un bug).
+No se repiten acá (ya estaban anotados antes de esta auditoría): el fix del timeout de `writeNfc` en Kotlin pendiente de probar en dispositivo real. La duplicación de `FinanciacionPage` vs `PrestamosPage` dejó de aplicar: `FinanciacionPage` se borró (29 sep 2026), Monix se queda sólo con `PrestamosPage`.
+
+## Decisión (30 sep 2026): se elimina Monix Cerca y Bluetooth, Android queda 100% PWA
+
+El usuario decidió no usar más Capacitor para nada — Android se distribuye exclusivamente como PWA instalada (igual que desktop/iOS), y **Monix Cerca (BLE) y sus funcionalidades de Bluetooth se van a eliminar por completo** del proyecto. Esto vuelve **obsoletos** (ya no "pendientes de arreglar") los 5 bugs nativos de BLE/NFC de Cerca listados en "Todo lo que queda por arreglar" más arriba — no tiene sentido arreglarlos si la feature se borra.
+
+**Pendiente real que queda de esta decisión** (no hecho todavía, sólo se actualizó documentación — `docs/manual-despliegue.md`):
+
+- Borrar del código: pantallas/hooks de Monix Cerca (`CercaPage`, `hooks/useCerca.tsx`, `CercaProvider` en `App.tsx`), el wrapper de Capacitor (`capacitor.config.ts`, scripts `cap:add`/`cap:sync`/`apk:debug` en `package.json`), y el plugin nativo `plugins/monix-radio/` completo.
+- **Definir qué pasa con el pago de tarjeta por NFC (HCE)**: usa el mismo plugin `monix-radio` que Cerca, pero es una feature de NFC, no de Bluetooth — el usuario habló puntualmente de "Monix Cerca y sus funcionalidades bluetooth", no mencionó la tarjeta. No asumir que también se borra sin confirmar; el usuario dijo que tiene una consulta aparte sobre qué es viable hacer con Web Bluetooth/NFC dentro de una PWA antes de decidir esto.
+- Revisar referencias cruzadas a Cerca que quedarían rotas: el conocimiento de Moni (`asistenteConocimiento.ts`) y cualquier link de navegación/menú hacia `/cerca`.
