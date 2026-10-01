@@ -16,6 +16,8 @@ export interface QrJwtClaims {
   moneda: 'ARS' | 'USD'
   exp?: number
   iat?: number
+  // Id único del QR: se devuelve en el aviso de lectura (spec, sección 12).
+  jti?: string
   // Id de un cobro interno (cobros_nfc) — sólo Monix lo escribe y sólo Monix
   // lo entiende; cualquier otro banco lo ignora sin problema.
   cid?: string
@@ -43,6 +45,47 @@ const BANCOS_CONOCIDOS: BancoConocido[] = [
     },
   },
 ]
+
+interface BancoAviso {
+  nombre: string
+  // Endpoint del banco emisor para el aviso de lectura (spec, sección 12).
+  // Sin avisoUrl, ese banco no recibe avisos y simplemente no se manda nada.
+  avisoUrl?: string
+}
+
+// A diferencia de BANCOS_CONOCIDOS (claves, opcionales), esta tabla va por
+// bankCode (`iss`): para avisar alcanza con saber a qué URL mandar el POST.
+// Sumar una fila por banco de la cátedra cuando pase su avisoUrl.
+export const BANCOS_AVISO: Record<number, BancoAviso> = {
+  [MONIX_BANK_CODE]: {
+    nombre: 'Monix',
+    avisoUrl: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/qr-lectura`,
+  },
+}
+
+export function nombreBanco(bankCode: number): string {
+  return BANCOS_AVISO[bankCode]?.nombre ?? `Banco ${bankCode}`
+}
+
+/**
+ * Le avisa al banco que emitió el QR que lo acabamos de leer. Nunca tira ni
+ * frena el pago: si el banco no tiene avisoUrl, no responde o falla, se ignora.
+ */
+export function avisarLectura(token: string, claims: QrJwtClaims, nombreLector: string | null) {
+  const url = BANCOS_AVISO[claims.iss]?.avisoUrl
+  if (!url) return
+  void fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      qr: token.trim(),
+      banco: MONIX_BANK_CODE,
+      ...(nombreLector ? { nombre: nombreLector } : {}),
+    }),
+    keepalive: true,
+    signal: AbortSignal.timeout(4000),
+  }).catch(() => undefined)
+}
 
 export function esJwtQr(raw: string): boolean {
   return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(raw.trim())

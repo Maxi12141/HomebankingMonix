@@ -12,7 +12,17 @@ import { QrBox } from './QrBox'
 import { QrScannerFullscreen } from './QrScannerFullscreen'
 import { formatMonto } from '../utils/cuenta'
 import { encodeCobroQr, encodeCuentaQr, parseRadioPayload } from '../lib/tokens'
-import { MONIX_BANK_CODE, esJwtQr, firmarQrPropio, verificarJwtQr, type QrJwtClaims } from '../lib/qrJwt'
+import { decodeJwt } from 'jose'
+import {
+  MONIX_BANK_CODE,
+  avisarLectura,
+  esJwtQr,
+  firmarQrPropio,
+  nombreBanco,
+  verificarJwtQr,
+  type QrJwtClaims,
+} from '../lib/qrJwt'
+import { useAuthStore } from '../store/authStore'
 import {
   detectQrUntil,
   engancharCamara,
@@ -54,6 +64,10 @@ async function aplicarQr(
     const resultado = await verificarJwtQr(raw)
     if (resultado) {
       const { claims } = resultado
+      // Aviso de lectura (spec, sección 12): el banco emisor le avisa a su
+      // usuario que escaneamos su QR. Fire-and-forget, no frena el pago.
+      const persona = useAuthStore.getState().persona
+      avisarLectura(raw, claims, persona ? `${persona.nombre} ${persona.apellido.charAt(0)}.`.trim() : null)
       if (claims.iss === MONIX_BANK_CODE && claims.cid) {
         await cargarCobro(claims.cid)
         return
@@ -125,6 +139,8 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   // cuando el usuario cambió de moneda no debe pisar el QR nuevo.
   const generacionRef = useRef(0)
   const claveQr = `${cuenta?.cbu ?? ''}|${cobro?.id ?? ''}`
+  const userId = useAuthStore((st) => st.user?.id)
+  const [lectura, setLectura] = useState<{ jti: string | null; texto: string } | null>(null)
 
   // QR interbancario firmado (docs/qr-interbancario-jwt.md): se pide a la
   // Edge Function apenas hay cuenta/cobro para mostrar. Si falla (sin red, la
@@ -147,6 +163,42 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       .catch(() => { if (vivo) setFirmaFallida(clave) })
     return () => { vivo = false }
   }, [cuenta?.cbu, cuenta?.alias, cuenta?.moneda, cobro?.id, cobro?.monto, cobro?.moneda])
+
+  useEffect(() => { setLectura(null) }, [claveQr])
+
+  // Aviso de lectura: la Edge Function qr-lectura inserta una fila cada vez
+  // que un banco (Monix u otro) nos avisa que escaneó un QR nuestro.
+  useEffect(() => {
+    if (!userId) return
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    try {
+      channel = supabase
+        .channel(`qr-lecturas-${userId}-${Math.random().toString(36).slice(2, 8)}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'qr_lecturas',
+          filter: `persona_id=eq.${userId}`,
+        }, (payload) => {
+          const fila = payload.new as { jti: string | null; banco_lector: number; nombre_lector: string | null }
+          const quien = fila.nombre_lector ?? 'Alguien'
+          const banco = fila.banco_lector === MONIX_BANK_CODE ? '' : ` desde ${nombreBanco(fila.banco_lector)}`
+          const texto = `${quien} escaneó tu QR${banco}`
+          setLectura({ jti: fila.jti, texto })
+          toast(texto, { icon: '👀' })
+        })
+        .subscribe()
+    } catch (err) {
+      console.error('No se pudo escuchar las lecturas del QR:', err)
+      return
+    }
+    return () => {
+      const ch = channel
+      window.setTimeout(() => {
+        if (ch) void supabase.removeChannel(ch)
+      }, 400)
+    }
+  }, [userId])
 
   useEffect(() => {
     if (!cobro || cobro.estado !== 'pendiente') return
@@ -287,6 +339,17 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   const montoPendiente = montoValido ? cobro?.monto !== montoNum : !!cobro
   const cargandoQr = !!cuenta?.cbu && (!qrValue || montoPendiente)
   const qrMostrado = qrValue || jwtFirmado?.jwt || ''
+  // La línea bajo el QR sólo vale para el QR que se está mostrando ahora; si
+  // cambió (moneda, monto), el toast ya avisó y la línea desaparece. Con jti
+  // se compara exacto; sin jti (QR firmado antes de sumarlo) vale la última
+  // lectura, que igual se limpia al cambiar de QR (efecto de abajo).
+  let jtiActual: string | null = null
+  try {
+    jtiActual = jwtQr ? ((decodeJwt(jwtQr).jti as string | undefined) ?? null) : null
+  } catch {
+    jtiActual = null
+  }
+  const lecturaActual = lectura && (!lectura.jti || !jtiActual || lectura.jti === jtiActual) ? lectura.texto : null
 
   if (variante === 'overlay') {
     return (
@@ -324,6 +387,9 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         <QrConCarga value={qrMostrado} cargando={cargandoQr} />
         {cuenta?.alias && (
           <p className="font-body text-sm text-white/70 text-center mt-3">@{cuenta.alias}</p>
+        )}
+        {lecturaActual && (
+          <p className="font-body text-sm text-mint text-center mt-1" role="status">{lecturaActual}</p>
         )}
         {cobro && (
           <p className="font-display text-xl font-bold text-mint text-center mt-2">
@@ -385,6 +451,9 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         <p className="font-body text-xs text-slate-secondary text-center mt-3">
           @{cuenta.alias}
         </p>
+      )}
+      {lecturaActual && (
+        <p className="font-body text-sm text-mint text-center mt-1" role="status">{lecturaActual}</p>
       )}
       {cobro && (
         <p className="font-display text-xl font-bold text-mint text-center mt-2">

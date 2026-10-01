@@ -137,3 +137,54 @@ Orden de intentos al escanear, para no romper nada:
 - Confirmar los nombres exactos de los claims de la sección 2 (si alguien usa otros nombres, no hay interoperabilidad).
 - Formato de intercambio de clave pública: JWK (recomendado, lo entiende `jose` directo).
 - Duración de `exp`: sugerido 10 minutos, pero no es crítico que coincida entre bancos — cada uno valida el suyo.
+
+## 12. Aviso de lectura (v1, sin firma)
+
+**Fecha:** 2026-10-01
+
+Cuando un banco lee un QR de otro banco, le avisa al banco emisor para que este le muestre a su usuario "Juan P. escaneó tu QR". No mueve plata ni cambia nada del pago: es sólo un aviso.
+
+### Contrato
+
+Cada banco expone **un endpoint público** (sin login) y lo comparte con los demás:
+
+`POST <avisoUrl>` · `Content-Type: application/json`
+
+```json
+{ "qr": "<el JWT completo que se leyó>", "banco": 7, "nombre": "Juan P." }
+```
+
+| Campo | Tipo | Obligatorio | Descripción |
+| --- | --- | --- | --- |
+| `qr` | string | sí | El JWT tal cual se leyó del QR, sin modificar |
+| `banco` | number | sí | `bankCode` del banco **que leyó** |
+| `nombre` | string | no | Nombre corto de quien leyó (sugerido: nombre + inicial del apellido, máx. 40 caracteres) |
+
+Respuestas: `202 {"ok":true,"avisado":true|false}` si se aceptó · `400` si falta algo · `401` si `qr` no tiene la firma del banco emisor o venció.
+
+### Reglas
+
+**Banco que lee el QR:**
+1. Después de decodificar un QR JWT, buscar `iss` en su tabla local `bankCode → avisoUrl`. Si no está, no hacer nada.
+2. Hacer el POST *fire-and-forget*: timeout corto (4 s), ignorar errores, **nunca** frenar ni condicionar el pago por esto.
+3. Se puede llamar desde el frontend (el endpoint responde CORS `*`) o desde el backend.
+
+**Banco emisor (el que recibe el aviso):**
+1. Verificar `qr` con **su propia** clave pública (ES256) y que `iss` sea su `bankCode`. Aceptar hasta ~2 min después de `exp`.
+2. Con el `cbu` de los claims, buscar al dueño de la cuenta y avisarle (realtime, push, lo que use cada uno).
+3. Ignorar avisos repetidos del mismo QR y mismo banco en una ventana corta (30 s): la cámara puede leer el mismo código varias veces.
+4. Responder CORS (`Access-Control-Allow-Origin: *` y `OPTIONS`).
+
+**Recomendado:** agregar el claim `jti` (id único, p. ej. `crypto.randomUUID()`) al firmar los QR, para saber qué QR exacto se leyó. Es opcional: el aviso funciona igual sin él.
+
+### Por qué sin firma (v1)
+
+No requiere intercambiar claves: el emisor sólo usa la suya. El `qr` firmado prueba que el QR existe y no venció. Lo único que no se puede verificar es *quién* leyó (`banco`/`nombre`): alguien podría mandar un aviso falso, pero no mueve plata, sólo muestra un mensaje. Si más adelante se quiere blindar, se agrega un JWT firmado por el banco lector sin cambiar el resto.
+
+### Tabla de avisoUrl
+
+| Banco | bankCode | avisoUrl |
+| --- | --- | --- |
+| Monix | 3 | `https://jrsismsrdqvhwmegfslz.supabase.co/functions/v1/qr-lectura` |
+| _(completar)_ | | |
+| _(completar)_ | | |
