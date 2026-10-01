@@ -148,15 +148,19 @@ export function stopMediaStream(stream: MediaStream | null) {
 export function tieneLinterna(stream: MediaStream | null) {
   const track = stream?.getVideoTracks()[0]
   if (!track?.getCapabilities) return false
-  return Boolean((track.getCapabilities() as { torch?: boolean }).torch)
+  const caps = track.getCapabilities() as MediaTrackCapabilities & { torch?: boolean }
+  return 'torch' in caps || Boolean(caps.torch)
 }
 
 export async function setLinterna(stream: MediaStream | null, on: boolean) {
   const track = stream?.getVideoTracks()[0]
-  if (!track) return
-  await track.applyConstraints({
-    advanced: [{ torch: on } as MediaTrackConstraintSet],
-  })
+  if (!track) throw new Error('La cámara no está lista')
+  const conTorch = { advanced: [{ torch: on } as MediaTrackConstraintSet] }
+  try {
+    await track.applyConstraints(conTorch)
+  } catch {
+    await track.applyConstraints({ torch: on } as MediaTrackConstraints)
+  }
 }
 
 export async function startQrCamera(video: HTMLVideoElement): Promise<MediaStream> {

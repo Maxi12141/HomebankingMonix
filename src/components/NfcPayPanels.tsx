@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle, QrCode, ScanLine } from 'lucide-react'
+import { CheckCircle, QrCode, ScanLine, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useCuenta } from '../hooks/useCuenta'
@@ -21,11 +21,12 @@ import {
   setLinterna,
   startQrCamera,
   stopMediaStream,
-  tieneLinterna,
   waitForVideo,
 } from '../lib/scanQr'
 import { isAbortError } from '../native/monixRadio'
 import { useQrScanStore } from '../stores/qrScanStore'
+import { useContactos } from '../hooks/useContactos'
+import { buscarDestinatarioBC } from '../services/bancoCentral'
 import {
   cancelarCobroNfc,
   crearCobroNfc,
@@ -371,6 +372,67 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   )
 }
 
+function BotonAgendar({
+  nombre,
+  apellido,
+  alias,
+}: {
+  nombre: string
+  apellido: string
+  alias: string | null
+}) {
+  const { guardar, isGuardado } = useContactos()
+  const [cbu, setCbu] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const guardado = cbu != null && isGuardado(cbu)
+
+  async function agendar() {
+    const limpio = alias?.trim().replace(/^@/, '')
+    if (!limpio) {
+      toast.error('Este QR no trae alias para agendar')
+      return
+    }
+    setLoading(true)
+    try {
+      const bc = await buscarDestinatarioBC(limpio, false)
+      const yaEstaba = isGuardado(bc.cbu)
+      guardar({
+        nombre: bc.nombre || nombre,
+        apellido: bc.apellido || apellido,
+        cbu: bc.cbu,
+        alias: bc.alias ?? limpio,
+        apodo: null,
+      })
+      setCbu(bc.cbu)
+      toast.success(yaEstaba ? 'Ya estaba en tu agenda' : 'Contacto agendado')
+    } catch {
+      toast.error('No se pudo agendar el contacto')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!alias) return null
+  if (guardado) {
+    return <p className="font-body text-sm text-mint text-center mt-3">En tu agenda</p>
+  }
+  return (
+    <Button
+      variant="secondary"
+      className="w-full mt-2"
+      type="button"
+      loading={loading}
+      loadingLabel="Agendando..."
+      onClick={() => { void agendar() }}
+    >
+      <span className="inline-flex items-center justify-center gap-2">
+        <UserPlus size={16} />
+        Agendar contacto
+      </span>
+    </Button>
+  )
+}
+
 export function EscanearYPagar({
   cobroIdInicial,
   onCerrarScan,
@@ -387,11 +449,16 @@ export function EscanearYPagar({
   const [montoLibre, setMontoLibre] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [pagado, setPagado] = useState<{ nombre: string; monto: number; moneda: 'ARS' | 'USD' } | null>(null)
+  const [pagado, setPagado] = useState<{
+    nombre: string
+    apellido: string
+    alias: string | null
+    monto: number
+    moneda: 'ARS' | 'USD'
+  } | null>(null)
   const [scanning, setScanning] = useState(!cobroIdInicial)
   const [closing, setClosing] = useState(false)
   const [vista, setVista] = useState<'camara' | 'cobrar'>('camara')
-  const [torchOk, setTorchOk] = useState(false)
   const [torchOn, setTorchOn] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fotoRef = useRef<HTMLInputElement>(null)
@@ -406,7 +473,6 @@ export function EscanearYPagar({
     streamRef.current = null
     if (videoRef.current) videoRef.current.srcObject = null
     setTorchOn(false)
-    setTorchOk(false)
   }
 
   useEffect(() => {
@@ -435,11 +501,25 @@ export function EscanearYPagar({
     }
   }
 
+  function irA(path: string, state?: object) {
+    apagarCamara()
+    closingRef.current = true
+    useQrScanStore.getState().close()
+    onCerrarScan?.()
+    navigate(path, state ? { state } : undefined)
+  }
+
   async function cargarCuenta(id: string) {
     setLoading(true)
     setError('')
     try {
-      setDestino(await resolverQrCuenta(id))
+      const row = await resolverQrCuenta(id)
+      const alias = row.alias?.trim().replace(/^@/, '')
+      if (alias) {
+        irA('/transferir', { cbu: alias, fromQr: true, elegirMonto: true })
+        return
+      }
+      setDestino(row)
       setCobro(null)
       setMontoLibre('')
     } catch (err) {
@@ -449,14 +529,18 @@ export function EscanearYPagar({
     }
   }
 
-  // QR interbancario sin cobro propio asociado (de otro banco, o un QR de
-  // cuenta simple de Monix). No hay una fila de `cuentas` local a la que
-  // apuntar como con resolverQrCuenta — se resuelve como cualquier CBU
-  // tipeado a mano, con el mismo camino que ya usa Monix Cerca.
   async function cargarDestinoJwt(claims: QrJwtClaims) {
-    apagarCamara()
-    navigate('/transferir', {
-      state: { cbu: claims.cbu, monto: claims.monto, fromQr: true },
+    const tieneMonto = typeof claims.monto === 'number' && claims.monto > 0
+    const clave = (claims.cbu || claims.alias || '').trim()
+    if (!clave) {
+      setError('Ese QR no trae alias ni CBU')
+      return
+    }
+    irA('/transferir', {
+      cbu: clave,
+      monto: tieneMonto ? claims.monto : undefined,
+      fromQr: true,
+      elegirMonto: !tieneMonto,
     })
   }
 
@@ -469,7 +553,6 @@ export function EscanearYPagar({
       throw new DOMException('Aborted', 'AbortError')
     }
     streamRef.current = stream
-    setTorchOk(tieneLinterna(stream))
     try {
       return await detectQrUntil(video, signal)
     } finally {
@@ -478,7 +561,6 @@ export function EscanearYPagar({
         if (streamRef.current === stream) streamRef.current = null
         if (videoRef.current) videoRef.current.srcObject = null
         setTorchOn(false)
-        setTorchOk(false)
       }
     }
   }
@@ -510,12 +592,14 @@ export function EscanearYPagar({
   }
 
   async function toggleTorch() {
+    const desdeVideo = videoRef.current?.srcObject
+    const stream = streamRef.current ?? (desdeVideo instanceof MediaStream ? desdeVideo : null)
     const next = !torchOn
     try {
-      await setLinterna(streamRef.current, next)
+      await setLinterna(stream, next)
       setTorchOn(next)
     } catch {
-      setTorchOk(false)
+      toast.error('No se pudo prender la linterna')
     }
   }
 
@@ -526,17 +610,7 @@ export function EscanearYPagar({
     setError('')
   }
 
-  function volverACamara() {
-    setVista('camara')
-    setError('')
-    void escanearQr()
-  }
-
   function cancelarScan() {
-    if (vista === 'camara' && overlay) {
-      mostrarMiQr()
-      return
-    }
     closingRef.current = true
     setClosing(true)
     scanAbortRef.current?.abort()
@@ -566,7 +640,9 @@ export function EscanearYPagar({
       const fresh = await obtenerCobroNfc(cobro.id)
       await refreshCuenta()
       setPagado({
-        nombre: `${fresh.comercio_nombre} ${fresh.comercio_apellido}`.trim(),
+        nombre: fresh.comercio_nombre,
+        apellido: fresh.comercio_apellido,
+        alias: fresh.comercio_alias,
         monto: fresh.monto,
         moneda: fresh.moneda,
       })
@@ -591,7 +667,9 @@ export function EscanearYPagar({
       await pagarQrCuenta(destino.cuenta_id, n, '')
       await refreshCuenta()
       setPagado({
-        nombre: `${destino.nombre} ${destino.apellido}`.trim(),
+        nombre: destino.nombre,
+        apellido: destino.apellido,
+        alias: destino.alias,
         monto: n,
         moneda: destino.moneda,
       })
@@ -623,16 +701,30 @@ export function EscanearYPagar({
     )
   }
 
+  function accionesPostPago(nombre: string, apellido: string, alias: string | null) {
+    return (
+      <div className="mt-6 flex flex-col">
+        <Button className="w-full" type="button" onClick={() => irA('/dashboard')}>
+          Volver al inicio
+        </Button>
+        <Button variant="secondary" className="w-full mt-2" type="button" onClick={() => irA('/transferir')}>
+          Realizar otra transferencia
+        </Button>
+        <BotonAgendar nombre={nombre} apellido={apellido} alias={alias} />
+      </div>
+    )
+  }
+
   if (pagado) {
     return caja(
       <Card className="p-8 text-center">
         <CheckCircle size={48} className="text-mint mx-auto mb-3" />
         <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Pago exitoso</h2>
-        <p className="font-body text-sm text-slate-secondary mt-1">Le pagaste a {pagado.nombre}</p>
+        <p className="font-body text-sm text-slate-secondary mt-1">
+          Le pagaste a {pagado.nombre} {pagado.apellido}
+        </p>
         <p className="font-display text-2xl font-bold text-mint mt-2">{formatMonto(pagado.monto, pagado.moneda)}</p>
-        <Button className="w-full mt-6" type="button" onClick={volver}>
-          Listo
-        </Button>
+        {accionesPostPago(pagado.nombre, pagado.apellido, pagado.alias)}
       </Card>,
     )
   }
@@ -646,7 +738,7 @@ export function EscanearYPagar({
           Le pagaste a {cobro.comercio_nombre} {cobro.comercio_apellido}
         </p>
         <p className="font-display text-2xl font-bold text-mint mt-2">{formatMonto(cobro.monto, cobro.moneda)}</p>
-        <Button className="w-full mt-6" type="button" onClick={volver}>Listo</Button>
+        {accionesPostPago(cobro.comercio_nombre, cobro.comercio_apellido, cobro.comercio_alias)}
       </Card>,
     )
   }
@@ -664,6 +756,11 @@ export function EscanearYPagar({
         <Button className="w-full" type="button" loading={loading} onClick={() => { void pagarCobro() }}>
           Pagar
         </Button>
+        <BotonAgendar
+          nombre={cobro.comercio_nombre}
+          apellido={cobro.comercio_apellido}
+          alias={cobro.comercio_alias}
+        />
         <Button variant="secondary" className="w-full mt-2" type="button" onClick={volver}>
           Cancelar
         </Button>
@@ -694,6 +791,7 @@ export function EscanearYPagar({
         <Button className="w-full mt-4" type="button" loading={loading} onClick={() => { void pagarCuenta() }}>
           Pagar
         </Button>
+        <BotonAgendar nombre={destino.nombre} apellido={destino.apellido} alias={destino.alias} />
         <Button variant="secondary" className="w-full mt-2" type="button" onClick={volver}>
           Cancelar
         </Button>
@@ -725,19 +823,17 @@ export function EscanearYPagar({
           <QrScannerFullscreen
             videoRef={videoRef}
             error={error}
-            torchOk={torchOk}
             torchOn={torchOn}
             closing={closing}
             vista={vista}
             cobrar={<MiCodigoQr variante="overlay" />}
             onClose={cancelarScan}
-            onVolverACamara={volverACamara}
+            onMostrarQr={mostrarMiQr}
             onClosed={() => {
               apagarCamara()
               if (closingRef.current) onCerrarScan?.()
             }}
             onToggleTorch={() => { void toggleTorch() }}
-            onPickPhoto={() => fotoRef.current?.click()}
           />,
           document.body,
         )}
@@ -753,19 +849,17 @@ export function EscanearYPagar({
           <QrScannerFullscreen
             videoRef={videoRef}
             error={error}
-            torchOk={torchOk}
             torchOn={torchOn}
             closing={closing}
             vista={vista}
             cobrar={<MiCodigoQr variante="overlay" />}
             onClose={cancelarScan}
-            onVolverACamara={volverACamara}
+            onMostrarQr={mostrarMiQr}
             onClosed={() => {
               apagarCamara()
               if (closingRef.current) onCerrarScan?.()
             }}
             onToggleTorch={() => { void toggleTorch() }}
-            onPickPhoto={() => fotoRef.current?.click()}
           />,
           document.body,
         )}

@@ -36,7 +36,7 @@ export const SUGERENCIAS = [
   'Pagar con QR',
   'Dólares',
   'Reservas',
-  'Monix Cerca',
+  'Monix Ahora',
   'Cashback',
 ] as const
 
@@ -93,7 +93,7 @@ export const TOPICS: Topic[] = [
     keywords: ['ayuda', 'help', 'opciones', 'menu', 'funciones'],
     extra: ['sabes', 'consultas'],
     answers: () => [
-      'Sé de todo Monix: saldo, CBU/alias, transferir, depositar, historial, QR, NFC, Cerca, dólares, reservas, préstamos, tarjetas, contactos, promos, cashback, financiación, mercadoMONIX, perfil, huella y seguridad. Preguntame concreto.',
+      'Sé de todo Monix: saldo, CBU/alias, transferir, depositar, historial, QR, NFC, Monix Ahora, dólares, reservas, préstamos, tarjetas, contactos, promos, cashback, financiación, mercadoMONIX, perfil, huella y seguridad. Preguntame concreto.',
       'Podés preguntarme cómo hacer algo, cuánto cuesta, límites, tasas o qué pantalla usar. Por ejemplo: “¿cómo pido un préstamo?” o “¿qué TNA tiene Reservas?”.',
       'No hace falta que uses las sugerencias. Escribí en criollo: “quiero mandar plata”, “se me perdió la tarjeta”, “rinde el ahorro?”. Te respondo con el producto de Monix que corresponde.',
     ],
@@ -166,7 +166,7 @@ export const TOPICS: Topic[] = [
     answers: () => [
       'En Transferir buscá por CBU (22 dígitos) o alias, cargá el monto, elegí un motivo y confirmá. Llega al instante, las 24 hs, sin comisión.',
       'Paso a paso: Transferir → CBU o alias → monto → motivo (obligatorio) → mensaje opcional → confirmar. Si ya está en Contactos, lo elegís y listo.',
-      'Las transferencias son inmediatas a cuentas Monix y a otros bancos vía CBU/alias. Si la persona está al lado, Monix Cerca evita pasar el CBU.',
+      'Las transferencias son inmediatas a cuentas Monix y a otros bancos vía CBU/alias. Si la otra persona también tiene Monix y está con vos, Monix Ahora le muestra el cobro en el celular y paga con un toque.',
     ],
   },
   {
@@ -223,17 +223,17 @@ export const TOPICS: Topic[] = [
     ],
   },
   {
-    id: 'cerca',
-    href: '/cerca',
-    hrefLabel: 'Abrir Monix Cerca',
-    phrases: ['monix cerca', 'transferir cerca', 'alguien cerca', 'personas cerca'],
-    keywords: ['cerca', 'bluetooth', 'radio', 'proximidad'],
-    extra: ['ble', 'fondo', 'visible', 'token'],
+    id: 'ahora',
+    href: '/ahora',
+    hrefLabel: 'Abrir Monix Ahora',
+    phrases: ['monix ahora', 'cobrar ahora', 'que me pague', 'monix cerca'],
+    keywords: ['ahora', 'cobro', 'cobrar', 'cerca'],
+    extra: ['alias', 'aceptar', 'toque'],
     weak: ['personas'],
     answers: () => [
-      'En Monix Cerca tocá Activar Bluetooth: ves a quien está cerca con su alias y el banco, y podés transferir o guardarlo. Galicia u otro banco no mandan el alias por Bluetooth; eso solo funciona si esa persona también tiene Monix Cerca activo.',
-      'Activá “Visible aunque cierre la app” para que te encuentren en segundo plano (mejor con la APK). El código que se publica rota y no es tu CBU.',
-      'Si estás al lado de alguien con Monix, Cerca es más rápido que dictar el alias. En el navegador suele hacer falta NFC (Chrome Android); Bluetooth de fondo pide la app instalada.',
+      'En Monix Ahora ponés el alias de otra cuenta Monix y el monto. En el celular de esa persona aparece tu nombre y la cifra: si acepta, se debita en el momento. El cobro dura 3 minutos.',
+      'Sirve cuando están juntos y no querés dictar un CBU. Solo funciona entre cuentas Monix, en pesos. Si no acepta o se vence el tiempo, no se mueve plata.',
+      'Monix Cerca ya no está. El reemplazo es Monix Ahora: el cobro le llega al otro teléfono y lo paga con un toque.',
     ],
   },
   {
@@ -427,7 +427,7 @@ export const TOPICS: Topic[] = [
     keywords: ['huella', 'biometria', 'fingerprint', 'biometrica', 'face'],
     extra: ['lock', 'desbloqueo', 'dedo'],
     answers: () => [
-      'En Perfil activás el desbloqueo con huella (o biometría del celular). Al volver a la app te pide validar; si falla, usás la contraseña.',
+      'En Perfil activás el desbloqueo con huella (o biometría del celular). Si volvés antes de 30 segundos no te la pide; pasado eso, validás de nuevo. Si falla, usás la contraseña.',
       'La huella no reemplaza el login: protege la sesión ya abierta en este dispositivo. Se prende y se apaga desde Perfil.',
     ],
   },
@@ -460,7 +460,7 @@ export const TOPICS: Topic[] = [
     keywords: ['comision', 'comisiones', 'gratis', 'costo', 'costos', 'mantenimiento', 'cargo'],
     extra: ['precio', 'tarifa', 'arancel'],
     answers: () => [
-      'Abrir la cuenta, transferir, depositar, QR, Cerca y el débito no tienen comisión en Monix. El costo aparece en productos con tasa: Reservas rinde (TNA 32%); préstamos y financiación sí tienen interés.',
+      'Abrir la cuenta, transferir, depositar, QR, Monix Ahora y el débito no tienen comisión en Monix. El costo aparece en productos con tasa: Reservas rinde (TNA 32%); préstamos y financiación sí tienen interés.',
       'No hay mantenimiento ni comisión por transferencia. Comprar dólares usa la diferencia compra/venta de la cotización oficial. El préstamo tiene TNA según tu situación BCRA.',
     ],
   },
@@ -502,8 +502,8 @@ export const TOPICS: Topic[] = [
     keywords: ['app', 'apk', 'android', 'ios', 'iphone', 'celular', 'aplicacion'],
     extra: ['nativa', 'capacitor', 'bluetooth'],
     answers: () => [
-      'Monix corre en el navegador y como app Android. En el teléfono tenés NFC, huella y Monix Cerca por Bluetooth de fondo. En iPhone el contactless se resuelve con QR de la tarjeta.',
-      'Si querés Cerca en segundo plano y grabar el sticker NFC, usá la APK. En la web igual transferís, pagás con QR y ves el banco completo.',
+      'Monix corre en el navegador y como app Android. En el teléfono tenés NFC, huella y Monix Ahora. En iPhone el contactless se resuelve con QR de la tarjeta.',
+      'Monix Ahora funciona en la web y en la app: le cobrás a otra cuenta Monix y el pago aparece en su pantalla. Para grabar el sticker NFC hace falta la APK.',
     ],
   },
   {
@@ -555,7 +555,7 @@ export const TOPICS: Topic[] = [
     extra: ['whatsapp', 'mail', 'contacto'],
     answers: () => [
       'Soy Moni, el canal de consultas de la app. Para operaciones: usá Historial, congelá la tarjeta o cambiá la clave en Perfil. No hay sucursal ni línea telefónica de este homebanking.',
-      'Si es un movimiento que no reconocés: Historial + congelar débito. Si es cómo usar un producto, preguntame por el nombre (préstamo, QR, Cerca, etc.).',
+      'Si es un movimiento que no reconocés: Historial + congelar débito. Si es cómo usar un producto, preguntame por el nombre (préstamo, QR, Monix Ahora, etc.).',
     ],
   },
 ]

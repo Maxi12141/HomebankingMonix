@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="backgroundColor">#001A3D</color>
+    <color name="colorPrimary">#001A3D</color>
+    <color name="navigationColor">#001A3D</color>
+    <string name="app_name">Monix</string>
+    <string name="asset_statements"><![CDATA[[{ "relation": ["delegate_permission/common.handle_all_urls"], "target": { "namespace": "web", "site": "https://monix-homebanking.vercel.app" } }]]]></string>
+    <style name="Theme.MonixTwa" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/backgroundColor</item>
+        <item name="android:statusBarColor">@color/colorPrimary</item>
+        <item name="android:navigationBarColor">@color/navigationColor</item>
+    </style>
+</resources>

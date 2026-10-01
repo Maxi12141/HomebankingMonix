@@ -1,0 +1,4 @@
+#Mon Sep 28 18:52:08 ART 2026
+base.0=/home/maxi/Documentos/Programar/Programar/Universidad/React-vite/HomebankingMonix/twa/app/build/intermediates/dex/release/mergeDexRelease/classes.dex
+path.0=classes.dex
+renamed.0=classes.dex

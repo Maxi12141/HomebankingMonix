@@ -297,6 +297,10 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
 
   private var speech: SpeechRecognizer? = null
   private var listening = false
+  private var ultimaFrase = ""
+  private var repetirLibreEn = 0L
+  private val mainHandler = Handler(Looper.getMainLooper())
+  private val reescuchar = Runnable { if (listening) listenAgain() }
 
   @PluginMethod
   fun startVoz(call: PluginCall) {
@@ -328,6 +332,9 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
         return@runOnUiThread
       }
       listening = true
+      ultimaFrase = ""
+      repetirLibreEn = 0L
+      mainHandler.removeCallbacks(reescuchar)
       speech?.destroy()
       speech = SpeechRecognizer.createSpeechRecognizer(act).apply {
         setRecognitionListener(object : RecognitionListener {
@@ -341,17 +348,22 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
           override fun onError(error: Int) {
             if (!listening) return
             if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) return
-            listenAgain()
+            reescucharPronto()
           }
 
           override fun onResults(results: Bundle) {
-            val text = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
-            emitVoz(text, true)
-            if (listening) listenAgain()
+            val text = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().trim()
+            if (text.isNotEmpty() && !fraseRepetida(text)) {
+              ultimaFrase = text
+              repetirLibreEn = System.currentTimeMillis() + 2500
+              emitVoz(text, true)
+            }
+            reescucharPronto()
           }
 
           override fun onPartialResults(partialResults: Bundle) {
-            val text = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+            val text = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().trim()
+            if (text.isEmpty() || fraseRepetida(text)) return
             emitVoz(text, false)
           }
         })
@@ -359,6 +371,16 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
       listenAgain()
       call.resolve()
     }
+  }
+
+  private fun fraseRepetida(text: String): Boolean {
+    return text == ultimaFrase && System.currentTimeMillis() < repetirLibreEn
+  }
+
+  private fun reescucharPronto() {
+    if (!listening) return
+    mainHandler.removeCallbacks(reescuchar)
+    mainHandler.postDelayed(reescuchar, 400)
   }
 
   private fun listenAgain() {
@@ -387,6 +409,9 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
   @PluginMethod
   fun stopVoz(call: PluginCall) {
     listening = false
+    ultimaFrase = ""
+    repetirLibreEn = 0L
+    mainHandler.removeCallbacks(reescuchar)
     activity?.runOnUiThread {
       try {
         speech?.stopListening()

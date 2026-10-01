@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "/tmp/cursor-sandbox-cache/48be361157c01a8c70a651e53be878a8/gradle/daemon/8.11.1/ar.monix.banco.app-release-4:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "/tmp/cursor-sandbox-cache/48be361157c01a8c70a651e53be878a8/gradle/daemon/8.11.1/ar.monix.banco.app-main-5:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/tmp/cursor-sandbox-cache/48be361157c01a8c70a651e53be878a8/gradle/daemon/8.11.1/ar.monix.banco.app-release-4:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "/tmp/cursor-sandbox-cache/48be361157c01a8c70a651e53be878a8/gradle/daemon/8.11.1/ar.monix.banco.app-main-5:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "ar.monix.banco.app-release-4:/xml_filepaths.xml.flat",
+        "source": "ar.monix.banco.app-main-5:/xml/filepaths.xml"
+    },
+    {
+        "merged": "/tmp/cursor-sandbox-cache/48be361157c01a8c70a651e53be878a8/gradle/daemon/8.11.1/ar.monix.banco.app-release-4:/drawable_splash.png.flat",
+        "source": "/tmp/cursor-sandbox-cache/48be361157c01a8c70a651e53be878a8/gradle/daemon/8.11.1/ar.monix.banco.app-main-5:/drawable/splash.png"
+    }
+]

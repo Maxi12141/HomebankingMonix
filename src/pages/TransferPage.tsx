@@ -143,6 +143,7 @@ export function TransferPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [comprobante, setComprobante] = useState<Movimiento | null>(null)
+  const [vinoDeQr, setVinoDeQr] = useState(false)
   const [compartiendo, setCompartiendo] = useState(false)
   // Si el Banco Central ya aceptó el envío, un reintento no debe volver a mandarle la plata.
   const opRef = useRef<{ id: string; enviadoBC: boolean; bcTransaccionId: string | null; destinoCbu: string; monto: number } | null>(null)
@@ -162,13 +163,22 @@ export function TransferPage() {
     : null
 
   useEffect(() => {
-    const state = location.state as { cbu?: string; monto?: number; fromCerca?: boolean; fromQr?: boolean; banco?: string } | null
+    const state = location.state as {
+      cbu?: string
+      monto?: number
+      fromCerca?: boolean
+      fromQr?: boolean
+      elegirMonto?: boolean
+      banco?: string
+    } | null
     if (state?.cbu) {
       setDestino(state.cbu)
-      buscarDestinatario(state.cbu)
-      if (typeof state.monto === 'number' && state.monto > 0) {
-        setMonto(String(state.monto))
-      }
+      if (state.fromQr) setVinoDeQr(true)
+      const tieneMonto = typeof state.monto === 'number' && state.monto > 0
+      if (tieneMonto) setMonto(String(state.monto))
+      void buscarDestinatario(state.cbu).then((dest) => {
+        if (state.fromQr && state.elegirMonto && dest) irADetalle(dest)
+      })
       if (state.fromCerca) {
         toast.success(
           state.banco
@@ -176,14 +186,14 @@ export function TransferPage() {
             : 'Persona identificada al acercar el celular',
         )
       } else if (state.fromQr) {
-        toast.success('Destinatario identificado desde el QR')
+        toast.success(state.elegirMonto ? 'Elegí el monto para transferir' : 'Destinatario identificado desde el QR')
       }
     }
   }, [])
 
-  async function buscarDestinatario(override?: string) {
+  async function buscarDestinatario(override?: string): Promise<Destinatario | null> {
     const input = (override ?? destino).trim()
-    if (!input) return
+    if (!input) return null
     setBuscando(true)
     setBusquedaError('')
     setDestinatario(null)
@@ -200,7 +210,7 @@ export function TransferPage() {
 
       if (cuentaLocal) {
         const p = cuentaLocal.personas as unknown as { nombre: string; apellido: string; dni: string }
-        setDestinatario({
+        const local: Destinatario = {
           nombre: p.nombre,
           apellido: p.apellido,
           dni: p.dni,
@@ -210,17 +220,17 @@ export function TransferPage() {
           banco: 'Monix',
           cuentaId: cuentaLocal.id,
           saldoActual: cuentaLocal.saldo,
-          // Está en nuestra propia tabla `cuentas` — es Monix sí o sí.
           mismoBanco: true,
-        })
-        return
+        }
+        setDestinatario(local)
+        return local
       }
 
       const bc = await buscarDestinatarioBC(input, esCBU)
       const miBanco = cuenta?.cbu ? await obtenerMiBankCode(cuenta.cbu) : null
       const code = bc.bankCode ?? codigoBancoDesdeCbu(bc.cbu)
       const banco = code != null ? await nombreBanco(code) : undefined
-      setDestinatario({
+      const encontrado: Destinatario = {
         nombre: bc.nombre,
         apellido: bc.apellido,
         dni: bc.dni,
@@ -230,7 +240,9 @@ export function TransferPage() {
         banco,
         bankCode: bc.bankCode,
         mismoBanco: miBanco != null && bc.bankCode != null ? bc.bankCode === miBanco : undefined,
-      })
+      }
+      setDestinatario(encontrado)
+      return encontrado
     } catch (err) {
       // 404 real = no existe esa cuenta; cualquier otra falla usa el mensaje genérico de mensajeAmigableBC.
       if (err instanceof BancoCentralError && err.status === 404) {
@@ -238,6 +250,7 @@ export function TransferPage() {
       } else {
         setBusquedaError(mensajeAmigableBC(err))
       }
+      return null
     } finally {
       setBuscando(false)
     }
@@ -263,13 +276,14 @@ export function TransferPage() {
     }
   }
 
-  function irADetalle() {
-    if (!destinatario) return
+  function irADetalle(dest?: Destinatario) {
+    const quien = dest ?? destinatario
+    if (!quien) return
     // Si el destinatario es de la otra moneda, arrancamos el origen en la
     // misma moneda que él para que el caso simple (sin conversión) sea el
     // default — el usuario puede cambiarlo igual en el paso siguiente.
-    if (destinatario.moneda !== monedaOrigen && !(destinatario.moneda === 'USD' && !cuentaUSD)) {
-      setMonedaOrigen(destinatario.moneda)
+    if (quien.moneda !== monedaOrigen && !(quien.moneda === 'USD' && !cuentaUSD)) {
+      setMonedaOrigen(quien.moneda)
     }
     setError('')
     setStep('detalle')
@@ -514,7 +528,7 @@ export function TransferPage() {
                     type="button"
                     className="w-full mt-6 flex items-center justify-center gap-2"
                     disabled={!destinatario}
-                    onClick={irADetalle}
+                    onClick={() => irADetalle()}
                   >
                     Continuar
                     <ArrowRight size={16} />
@@ -555,6 +569,19 @@ export function TransferPage() {
                       )}
                     </div>
                   </div>
+                  {vinoDeQr && !isGuardado(destinatario.cbu) && (
+                    <button
+                      type="button"
+                      onClick={toggleAgenda}
+                      className="mb-6 w-full py-2.5 rounded-xl border border-mint/30 bg-mint/10 text-mint font-body font-medium text-sm hover:bg-mint/20 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <UserPlus size={15} />
+                      Agendar contacto
+                    </button>
+                  )}
+                  {vinoDeQr && isGuardado(destinatario.cbu) && (
+                    <p className="font-body text-sm text-mint mb-6 text-center">En tu agenda</p>
+                  )}
 
                   {cuentaUSD && (
                     <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
@@ -751,6 +778,17 @@ export function TransferPage() {
                       Nuevo saldo: <span className="text-mint font-medium">{saldoFormateado}</span>
                     </p>
                     <div className="flex flex-col gap-3">
+                      {vinoDeQr && (
+                        <>
+                          <Button className="w-full flex items-center justify-center gap-2" onClick={() => navigate('/dashboard')}>
+                            <Home size={16} />
+                            Volver al inicio
+                          </Button>
+                          <Button variant="secondary" className="w-full" onClick={handleReset}>
+                            Realizar otra transferencia
+                          </Button>
+                        </>
+                      )}
                       {comprobante && (
                         <Button
                           variant="secondary"
@@ -761,6 +799,15 @@ export function TransferPage() {
                           {esCelular() ? <Share2 size={16} /> : <Download size={16} />}
                           {esCelular() ? 'Compartir comprobante' : 'Descargar comprobante'}
                         </Button>
+                      )}
+                      {!vinoDeQr && (
+                        <>
+                          <Button className="w-full" onClick={handleReset}>Nueva transferencia</Button>
+                          <Button variant="secondary" className="w-full flex items-center justify-center gap-2" onClick={() => navigate('/dashboard')}>
+                            <Home size={16} />
+                            Volver al inicio
+                          </Button>
+                        </>
                       )}
                       {destinatario && !isGuardado(destinatario.cbu) && (
                         <button
@@ -774,7 +821,7 @@ export function TransferPage() {
                           className="w-full py-2.5 rounded-xl border border-mint/30 bg-mint/10 text-mint font-body font-medium text-sm hover:bg-mint/20 transition-colors flex items-center justify-center gap-2"
                         >
                           <UserPlus size={15} />
-                          Agregar a contactos
+                          {vinoDeQr ? 'Agendar contacto' : 'Agregar a contactos'}
                         </button>
                       )}
                       {destinatario && isGuardado(destinatario.cbu) && (
@@ -782,11 +829,6 @@ export function TransferPage() {
                           ✓ Guardado en tu agenda
                         </p>
                       )}
-                      <Button className="w-full" onClick={handleReset}>Nueva transferencia</Button>
-                      <Button variant="secondary" className="w-full flex items-center justify-center gap-2" onClick={() => navigate('/dashboard')}>
-                        <Home size={16} />
-                        Volver al inicio
-                      </Button>
                     </div>
                   </motion.div>
                 </Card>
