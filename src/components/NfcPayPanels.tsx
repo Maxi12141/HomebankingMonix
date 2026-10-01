@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle, QrCode, ScanLine, UserPlus } from 'lucide-react'
+import { CheckCircle, Loader2, QrCode, ScanLine, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useCuenta } from '../hooks/useCuenta'
@@ -82,6 +82,29 @@ async function aplicarQr(
   await cargarCobro(raw.replace(/^MONIXPAY:/i, ''))
 }
 
+function QrConCarga({ value, cargando: cargandoDatos }: { value: string; cargando: boolean }) {
+  // QrBox arma la imagen de forma asíncrona y mientras tanto sigue mostrando
+  // la anterior: el spinner se mantiene hasta que la imagen nueva está lista.
+  const [dibujado, setDibujado] = useState('')
+  const cargando = cargandoDatos || (!!value && dibujado !== value)
+  return (
+    <div className="relative w-56 h-56 mx-auto" aria-busy={cargando}>
+      {value ? (
+        <div className={`transition-[filter,opacity] duration-200 ${cargando ? 'blur-md opacity-50' : ''}`}>
+          <QrBox value={value} alt="Tu QR de Monix" onReady={() => setDibujado(value)} />
+        </div>
+      ) : (
+        <div className="w-56 h-56 rounded-xl bg-slate-input dark:bg-white/5" />
+      )}
+      {cargando && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 size={36} className="animate-spin text-mint" aria-label="Generando QR" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'overlay' }) {
   const { cuenta: cuentaArs, cuentas, refreshCuenta } = useCuenta()
   const cuentaUsd = cuentas.find((c) => c.moneda === 'USD')
@@ -95,6 +118,8 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   // Se guarda junto con la clave de lo que firmó: al cambiar de moneda (o de
   // monto) el JWT anterior no se muestra mientras llega el nuevo.
   const [jwtFirmado, setJwtFirmado] = useState<{ clave: string; jwt: string } | null>(null)
+  // Clave cuya firma falló: sólo entonces se cae al formato interno viejo.
+  const [firmaFallida, setFirmaFallida] = useState<string | null>(null)
   const cobroIdRef = useRef<string | null>(null)
   // Sube en cada descarte de cobro: un crearCobroNfc que estaba en vuelo
   // cuando el usuario cambió de moneda no debe pisar el QR nuevo.
@@ -105,6 +130,8 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   // Edge Function apenas hay cuenta/cobro para mostrar. Si falla (sin red, la
   // función no está desplegada en otro entorno, etc.) qrValue más abajo cae
   // solo al formato interno de siempre — nunca se rompe el QR por esto.
+  // Mientras firma NO se muestra ese formato interno (era un QR distinto que
+  // aparecía medio segundo): se ve el anterior desenfocado con un spinner.
   useEffect(() => {
     let vivo = true
     if (!cuenta?.cbu) { setJwtFirmado(null); return }
@@ -117,7 +144,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       cid: cobro?.id,
     })
       .then((jwt) => { if (vivo) setJwtFirmado({ clave, jwt }) })
-      .catch(() => { if (vivo) setJwtFirmado(null) })
+      .catch(() => { if (vivo) setFirmaFallida(clave) })
     return () => { vivo = false }
   }, [cuenta?.cbu, cuenta?.alias, cuenta?.moneda, cobro?.id, cobro?.monto, cobro?.moneda])
 
@@ -247,11 +274,19 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   }
 
   const jwtQr = jwtFirmado?.clave === claveQr ? jwtFirmado.jwt : ''
-  const qrValue = jwtQr || (cobro
+  const fallbackQr = cobro
     ? encodeCobroQr(cobro.id)
     : cuenta?.id
       ? encodeCuentaQr(cuenta.id)
-      : '')
+      : ''
+  const qrValue = jwtQr || (firmaFallida === claveQr ? fallbackQr : '')
+  // El monto tipeado todavía no se convirtió en cobro (debounce + RPC): el QR
+  // visible aún no lo incluye, así que también cuenta como "cargando".
+  const montoNum = parseFloat(monto.trim().replace(',', '.'))
+  const montoValido = !isNaN(montoNum) && montoNum > 0
+  const montoPendiente = montoValido ? cobro?.monto !== montoNum : !!cobro
+  const cargandoQr = !!cuenta?.cbu && (!qrValue || montoPendiente)
+  const qrMostrado = qrValue || jwtFirmado?.jwt || ''
 
   if (variante === 'overlay') {
     return (
@@ -286,7 +321,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
             </button>
           </div>
         )}
-        {qrValue && <QrBox value={qrValue} alt="Tu QR de Monix" />}
+        <QrConCarga value={qrMostrado} cargando={cargandoQr} />
         {cuenta?.alias && (
           <p className="font-body text-sm text-white/70 text-center mt-3">@{cuenta.alias}</p>
         )}
@@ -345,7 +380,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
           </button>
         </div>
       )}
-      {qrValue && <QrBox value={qrValue} alt="Tu QR de Monix" />}
+      <QrConCarga value={qrMostrado} cargando={cargandoQr} />
       {cuenta?.alias && (
         <p className="font-body text-xs text-slate-secondary text-center mt-3">
           @{cuenta.alias}
