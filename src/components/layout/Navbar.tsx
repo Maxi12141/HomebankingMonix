@@ -50,6 +50,7 @@ export function Navbar() {
             <span className="qr-fab-ping absolute h-14 w-14 rounded-full bg-mint/40" />
             <span
               id={QR_FAB_ID}
+              data-qr-fab
               ref={fabRef}
               className={`qr-fab relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-mint text-navy shadow-lg shadow-mint/40 ${
                 qrOpen ? 'ring-2 ring-navy/20 dark:ring-white/30' : ''

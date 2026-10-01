@@ -36,7 +36,7 @@ export const SUGERENCIAS = [
   'Pagar con QR',
   'Dólares',
   'Reservas',
-  'Monix Ahora',
+  'Metas comunes',
   'Cashback',
 ] as const
 
@@ -93,7 +93,7 @@ export const TOPICS: Topic[] = [
     keywords: ['ayuda', 'help', 'opciones', 'menu', 'funciones'],
     extra: ['sabes', 'consultas'],
     answers: () => [
-      'Sé de todo Monix: saldo, CBU/alias, transferir, depositar, historial, QR, NFC, Monix Ahora, dólares, reservas, préstamos, tarjetas, contactos, promos, cashback, financiación, mercadoMONIX, perfil, huella y seguridad. Preguntame concreto.',
+      'Sé de todo Monix: saldo, CBU/alias, transferir, depositar, historial, QR, NFC, metas comunes, dólares, reservas, préstamos, tarjetas, contactos, promos, cashback, financiación, mercadoMONIX, perfil, huella y seguridad. Preguntame concreto.',
       'Podés preguntarme cómo hacer algo, cuánto cuesta, límites, tasas o qué pantalla usar. Por ejemplo: “¿cómo pido un préstamo?” o “¿qué TNA tiene Reservas?”.',
       'No hace falta que uses las sugerencias. Escribí en criollo: “quiero mandar plata”, “se me perdió la tarjeta”, “rinde el ahorro?”. Te respondo con el producto de Monix que corresponde.',
     ],
@@ -166,7 +166,7 @@ export const TOPICS: Topic[] = [
     answers: () => [
       'En Transferir buscá por CBU (22 dígitos) o alias, cargá el monto, elegí un motivo y confirmá. Llega al instante, las 24 hs, sin comisión.',
       'Paso a paso: Transferir → CBU o alias → monto → motivo (obligatorio) → mensaje opcional → confirmar. Si ya está en Contactos, lo elegís y listo.',
-      'Las transferencias son inmediatas a cuentas Monix y a otros bancos vía CBU/alias. Si la otra persona también tiene Monix y está con vos, Monix Ahora le muestra el cobro en el celular y paga con un toque.',
+      'Las transferencias son inmediatas a cuentas Monix y a otros bancos vía CBU/alias. Si juntan para un viaje o un alquiler, usá Metas comunes: la plata queda congelada hasta que la mayoría apruebe el pago.',
     ],
   },
   {
@@ -223,17 +223,16 @@ export const TOPICS: Topic[] = [
     ],
   },
   {
-    id: 'ahora',
-    href: '/ahora',
-    hrefLabel: 'Abrir Monix Ahora',
-    phrases: ['monix ahora', 'cobrar ahora', 'que me pague', 'monix cerca'],
-    keywords: ['ahora', 'cobro', 'cobrar', 'cerca'],
-    extra: ['alias', 'aceptar', 'toque'],
-    weak: ['personas'],
+    id: 'metas',
+    href: '/metas',
+    hrefLabel: 'Abrir Metas comunes',
+    phrases: ['metas comunes', 'fondo grupal', 'ahorro con amigos', 'juntar para un viaje', 'pool de ahorro'],
+    keywords: ['meta', 'metas', 'pool', 'grupal', 'juntar', 'custodia'],
+    extra: ['viaje', 'alquiler', 'regalo', 'mayoria', 'aporte'],
     answers: () => [
-      'En Monix Ahora ponés el alias de otra cuenta Monix y el monto. En el celular de esa persona aparece tu nombre y la cifra: si acepta, se debita en el momento. El cobro dura 3 minutos.',
-      'Sirve cuando están juntos y no querés dictar un CBU. Solo funciona entre cuentas Monix, en pesos. Si no acepta o se vence el tiempo, no se mueve plata.',
-      'Monix Cerca ya no está. El reemplazo es Monix Ahora: el cobro le llega al otro teléfono y lo paga con un toque.',
+      'Metas comunes es un fondo grupal: creás la meta, invitás con un código o un alias Monix y cada uno aporta. La plata rinde la misma TNA que Reservas y nadie la saca solo.',
+      'Para desembolsar, alguien propone pagar un servicio (alias o CBU Monix) o devolver lo juntado. Sale cuando vota a favor más de la mitad de los integrantes.',
+      'Todos ven quién puso cuánto y cuánto rindió el pool. Si el alquiler no es Monix, devuelven entre ustedes y cada uno transfiere.',
     ],
   },
   {
@@ -460,7 +459,7 @@ export const TOPICS: Topic[] = [
     keywords: ['comision', 'comisiones', 'gratis', 'costo', 'costos', 'mantenimiento', 'cargo'],
     extra: ['precio', 'tarifa', 'arancel'],
     answers: () => [
-      'Abrir la cuenta, transferir, depositar, QR, Monix Ahora y el débito no tienen comisión en Monix. El costo aparece en productos con tasa: Reservas rinde (TNA 32%); préstamos y financiación sí tienen interés.',
+      'Abrir la cuenta, transferir, depositar, QR y el débito no tienen comisión en Monix. El costo aparece en productos con tasa: Reservas y Metas comunes rinden (TNA 32%); préstamos y financiación sí tienen interés.',
       'No hay mantenimiento ni comisión por transferencia. Comprar dólares usa la diferencia compra/venta de la cotización oficial. El préstamo tiene TNA según tu situación BCRA.',
     ],
   },
@@ -502,8 +501,8 @@ export const TOPICS: Topic[] = [
     keywords: ['app', 'apk', 'android', 'ios', 'iphone', 'celular', 'aplicacion'],
     extra: ['nativa', 'capacitor', 'bluetooth'],
     answers: () => [
-      'Monix corre en el navegador y como app Android. En el teléfono tenés NFC, huella y Monix Ahora. En iPhone el contactless se resuelve con QR de la tarjeta.',
-      'Monix Ahora funciona en la web y en la app: le cobrás a otra cuenta Monix y el pago aparece en su pantalla. Para grabar el sticker NFC hace falta la APK.',
+      'Monix corre en el navegador y como app Android. En el teléfono tenés NFC, huella y el pago con QR. En iPhone el contactless se resuelve con QR de la tarjeta.',
+      'Para grabar el sticker NFC hace falta la APK. El resto del banco, incluidas las metas comunes, funciona en la web.',
     ],
   },
   {
@@ -544,7 +543,7 @@ export const TOPICS: Topic[] = [
     keywords: ['swift', 'western', 'cheque', 'cheques', 'bolsa', 'acciones', 'uva', 'sucursal', 'internacional'],
     extra: ['exterior', 'internacional', 'broker'],
     answers: () => [
-      'Monix no tiene sucursal, cheques, cuenta corriente, tarjeta de crédito ni transferencias al exterior (SWIFT). Sí: caja de ahorro, débito, transferencias CBU/alias 24 hs, préstamos personales, reservas, QR y dólar oficial.',
+      'Monix no tiene sucursal, cheques, cuenta corriente, tarjeta de crédito ni transferencias al exterior (SWIFT). Sí: caja de ahorro, débito, transferencias CBU/alias 24 hs, préstamos personales, reservas, metas comunes, QR y dólar oficial.',
       'Si buscás crédito, el producto es Préstamos (plata en tu caja) o Financiación (cuotas). La tarjeta Monix es débito. El “plazo fijo” más parecido es Reservas: rendís y podés retirar cuando quieras.',
     ],
   },
@@ -555,7 +554,7 @@ export const TOPICS: Topic[] = [
     extra: ['whatsapp', 'mail', 'contacto'],
     answers: () => [
       'Soy Moni, el canal de consultas de la app. Para operaciones: usá Historial, congelá la tarjeta o cambiá la clave en Perfil. No hay sucursal ni línea telefónica de este homebanking.',
-      'Si es un movimiento que no reconocés: Historial + congelar débito. Si es cómo usar un producto, preguntame por el nombre (préstamo, QR, Monix Ahora, etc.).',
+      'Si es un movimiento que no reconocés: Historial + congelar débito. Si es cómo usar un producto, preguntame por el nombre (préstamo, QR, metas comunes, etc.).',
     ],
   },
 ]

@@ -16,10 +16,11 @@ type QrScanStore = {
 
 export function originFromFab() {
   if (typeof window === 'undefined') return { x: 0, y: 0 }
-  const el = document.getElementById(QR_FAB_ID)
-  if (el) {
-    const r = el.getBoundingClientRect()
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  const nodes = document.querySelectorAll('[data-qr-fab]')
+  for (const node of nodes) {
+    if (!(node instanceof HTMLElement)) continue
+    const r = node.getBoundingClientRect()
+    if (r.width > 0 && r.height > 0) return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
   }
   return { x: window.innerWidth / 2, y: window.innerHeight - 52 }
 }

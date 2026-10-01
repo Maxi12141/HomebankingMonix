@@ -133,7 +133,7 @@ const FALLBACKS_AFUERA = [
 ]
 
 const BANCO_HINT =
-  /saldo|plata|peso|dolar|cuenta|transfer|cbu|cvu|alias|tarjeta|qr|nfc|prestam|reserva|ahorro|depos|pago|pagar|promos|cashback|cuota|financi|mercado|cerca|ahora|huella|clave|sesion|comision|horario|bono|cajero|debito|credito|monix|banco|cotiz|tna|interes/
+  /saldo|plata|peso|dolar|cuenta|transfer|cbu|cvu|alias|tarjeta|qr|nfc|prestam|reserva|ahorro|depos|pago|pagar|promos|cashback|cuota|financi|mercado|meta|huella|clave|sesion|comision|horario|bono|cajero|debito|credito|monix|banco|cotiz|tna|interes/
 
 function vacia(): AsistenteReply {
   return { text: pick(['Escribí tu consulta o tocá una sugerencia.', 'Tirame la duda, aunque sea en criollo.', '¿Saldo, transferir, préstamo, QR? Lo que necesites.'], 'vacia', Date.now() % 9) }

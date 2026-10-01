@@ -202,6 +202,11 @@ export async function getBankName(bankCode: number): Promise<string> {
   return bank.name
 }
 
+export async function listarBancos(): Promise<BCBank[]> {
+  const res = await fetchWithTimeout(`${BASE_URL}/banks`, { headers: HEADERS })
+  return handleResponse<BCBank[]>(res, 'GET /banks')
+}
+
 const nombresBanco = new Map<number, string>()
 
 export function codigoBancoDesdeCbu(cbu: string): number | null {

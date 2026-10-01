@@ -78,17 +78,37 @@ export function mensajeErrorCamara(err: unknown): string {
   return 'No se pudo abrir la cámara en vivo. Tocá “Sacar foto del QR”.'
 }
 
+function esPantallaChica() {
+  return window.matchMedia('(max-width: 767px)').matches
+}
+
+/** Sin permiso el id viene vacío, pero el tipo sigue diciendo si hay una cámara. */
+export async function hayCamaraDeVideo(): Promise<boolean> {
+  if (!navigator.mediaDevices?.enumerateDevices) return false
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    return devices.some((d) => d.kind === 'videoinput')
+  } catch {
+    return false
+  }
+}
+
 /** iOS anula el permiso si getUserMedia no arranca en el mismo toque del botón. */
 export async function pedirStreamCamara(): Promise<MediaStream> {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error('Este navegador no permite la cámara en vivo. Usá “Sacar foto del QR”.')
   }
 
-  const intentos: MediaStreamConstraints[] = [
-    { audio: false, video: { facingMode: { ideal: 'environment' } } },
-    { audio: false, video: { facingMode: 'environment' } },
-    { audio: false, video: true },
-  ]
+  const intentos: MediaStreamConstraints[] = esPantallaChica() || isIosDevice()
+    ? [
+        { audio: false, video: { facingMode: { ideal: 'environment' } } },
+        { audio: false, video: { facingMode: 'user' } },
+        { audio: false, video: true },
+      ]
+    : [
+        { audio: false, video: true },
+        { audio: false, video: { facingMode: 'user' } },
+      ]
 
   let ultimo: unknown
   for (const constraints of intentos) {

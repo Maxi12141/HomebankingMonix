@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router-dom'
-import { LayoutDashboard, ArrowRightLeft, History, User, LogOut, X, PiggyBank, BookUser, CreditCard, Receipt, Landmark, Repeat, Zap, HandCoins, DollarSign, ArrowDown } from 'lucide-react'
+import { LayoutDashboard, ArrowRightLeft, History, User, LogOut, X, PiggyBank, BookUser, CreditCard, Receipt, Landmark, Repeat, HandCoins, DollarSign, ArrowDown, Target } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useThemeStore } from '../../stores/themeStore'
 import { MonixLogoNavbar } from '../MonixLogoNavbar'
@@ -22,7 +22,7 @@ const links = [
   { to: '/cuentas', icon: Landmark, label: 'Cuentas' },
   { to: '/dolares', icon: Repeat, label: 'Compra y Venta USD' },
   { to: '/transferir', icon: ArrowRightLeft, label: 'Transferir' },
-  { to: '/ahora', icon: Zap, label: 'Monix Ahora' },
+  { to: '/metas', icon: Target, label: 'Metas comunes' },
   { to: '/pagar', icon: Receipt, label: 'Pagar' },
   { to: '/depositar', icon: DepositarIcon, label: 'Depositar' },
   { to: '/reservas', icon: PiggyBank, label: 'Reservas' },
