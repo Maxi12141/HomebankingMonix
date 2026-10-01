@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRightLeft, BarChart2, ShieldCheck, ArrowRight, Sun, Moon, CheckCircle2, Apple, Smartphone, Download } from 'lucide-react'
+import { ArrowRightLeft, BarChart2, ShieldCheck, ArrowRight, Sun, Moon, CheckCircle2, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import { MarketTicker } from '../components/MarketTicker'
@@ -389,6 +389,18 @@ export function LandingPage() {
               <Button variant="secondary-light" className="px-8 py-3.5 text-base">Iniciá sesión</Button>
             </Link>
           </motion.div>
+
+          {mostrarInstalar && (
+            <motion.button
+              variants={itemVariants}
+              type="button"
+              onClick={() => { void handleInstalar() }}
+              className="mt-5 inline-flex items-center gap-2 text-mint font-body text-sm font-medium hover:text-mint-hover transition-colors"
+            >
+              <Download size={16} />
+              Instalar app
+            </motion.button>
+          )}
         </motion.div>
       </section>
 
@@ -506,37 +518,6 @@ export function LandingPage() {
           </Link>
         </motion.div>
       </section>
-
-      {/* Instalá la app */}
-      {mostrarInstalar && (
-        <section className="py-20 px-6 bg-white dark:bg-navy transition-colors duration-300">
-          <motion.div
-            className="max-w-xl mx-auto text-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="w-14 h-14 rounded-2xl bg-mint/10 flex items-center justify-center text-mint mx-auto mb-5">
-              <Smartphone size={26} />
-            </div>
-            <h2 className="font-display text-3xl font-bold text-navy dark:text-white mb-3">Descargá nuestra app</h2>
-            <p className="font-body text-slate-secondary text-base mb-8 flex items-center justify-center gap-2">
-              <Apple size={16} />
-              Disponible para iOS y Android
-              <Smartphone size={16} />
-            </p>
-            <Button
-              variant="primary"
-              onClick={() => { void handleInstalar() }}
-              className="px-8 py-3.5 text-base font-semibold inline-flex items-center gap-2"
-            >
-              <Download size={18} />
-              Instalar app
-            </Button>
-          </motion.div>
-        </section>
-      )}
 
       {/* Footer */}
       <footer className="bg-white dark:bg-navy-card border-t border-slate-200 dark:border-white/10 py-6 px-6 transition-colors duration-300">

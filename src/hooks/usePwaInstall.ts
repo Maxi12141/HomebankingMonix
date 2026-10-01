@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
+import {
+  consumirPromptCapturado, getPromptCapturado, getYaInstalada, suscribirPwaInstall,
+} from '../lib/pwaInstallPrompt'
 
 function esStandalone() {
   if (typeof window === 'undefined') return false
@@ -27,43 +25,36 @@ export type ResultadoInstalarPwa = 'instalada' | 'rechazada' | 'manual-ios' | 'n
  * lo soporta), así que ahí sólo se puede indicar el paso manual (Compartir →
  * Agregar a inicio). Nunca se muestra dentro de la APK de Capacitor (ya está
  * instalada) ni si el navegador ya la tiene instalada como PWA.
+ *
+ * El evento en sí se captura fuera de React (ver `lib/pwaInstallPrompt.ts`,
+ * importado bien temprano desde main.tsx) para no perderlo si dispara
+ * mientras todavía se ve la pantalla de carga inicial.
  */
 export function usePwaInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [instalada, setInstalada] = useState(esStandalone())
+  const [, setTick] = useState(0)
+  const [instalada, setInstalada] = useState(() => esStandalone() || getYaInstalada())
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) return
-
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
-    }
-    const onInstalled = () => {
-      setInstalada(true)
-      setDeferredPrompt(null)
-    }
-
-    window.addEventListener('beforeinstallprompt', onBeforeInstall)
-    window.addEventListener('appinstalled', onInstalled)
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstall)
-      window.removeEventListener('appinstalled', onInstalled)
-    }
+    return suscribirPwaInstall(() => {
+      if (getYaInstalada()) setInstalada(true)
+      setTick((n) => n + 1)
+    })
   }, [])
 
   const mostrarBoton = !Capacitor.isNativePlatform() && !instalada
 
   const instalar = useCallback(async (): Promise<ResultadoInstalarPwa> => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
-      setDeferredPrompt(null)
+    const evento = getPromptCapturado()
+    if (evento) {
+      await evento.prompt()
+      const { outcome } = await evento.userChoice
+      consumirPromptCapturado()
       return outcome === 'accepted' ? 'instalada' : 'rechazada'
     }
     if (esIOS()) return 'manual-ios'
     return 'no-disponible'
-  }, [deferredPrompt])
+  }, [])
 
   return { mostrarBoton, instalar }
 }
