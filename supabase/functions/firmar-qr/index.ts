@@ -8,11 +8,9 @@ const MONIX_BANK_CODE = 3
 const KID = "monix-1"
 const EXP_SECONDS = 600 // 10 minutos, según la spec de QR interbancario
 
-// La clave privada NO va en este archivo: el repo es público. Vive en el
-// secret QR_JWT_PRIVATE_KEY (Dashboard → Edge Functions → Secrets). Mientras
-// no esté cargado, la versión desplegada lleva la clave embebida en este
-// mismo lugar (nunca commitearla).
-const FALLBACK_PRIVATE_JWK: JsonWebKey | null = null
+// La clave privada NO va en este archivo (el repo es público): vive sólo en
+// el secret QR_JWT_PRIVATE_KEY (Dashboard → Edge Functions → Secrets), como
+// JWK en JSON de una línea.
 
 // Supabase no agrega CORS solo a una Edge Function propia — sin esto el
 // navegador bloquea la respuesta al preflight OPTIONS antes de que el POST
@@ -58,9 +56,8 @@ Deno.serve(async (req: Request) => {
   const privateJwkRaw = Deno.env.get("QR_JWT_PRIVATE_KEY")
   let privateKey
   try {
-    const jwk = privateJwkRaw ? JSON.parse(privateJwkRaw) : FALLBACK_PRIVATE_JWK
-    if (!jwk) throw new Error("sin clave")
-    privateKey = await importJWK(jwk, "ES256")
+    if (!privateJwkRaw) throw new Error("sin clave")
+    privateKey = await importJWK(JSON.parse(privateJwkRaw), "ES256")
   } catch {
     return jsonResponse({ error: "Clave de firma inválida" }, 500)
   }
