@@ -58,8 +58,7 @@ async function aplicarQr(
   // que los formatos internos, para que también funcione con QRs de otros
   // bancos de la cátedra. Si claims.cid apunta a un cobro propio, se sigue
   // exactamente el camino de siempre (con seguimiento en tiempo real); si no,
-  // se resuelve como una transferencia común por CBU (misma lógica que ya usa
-  // Monix Cerca para prellenar Transferir).
+  // se resuelve como una transferencia común por CBU.
   if (esJwtQr(raw.trim())) {
     const resultado = await verificarJwtQr(raw)
     if (resultado) {
@@ -94,7 +93,7 @@ async function aplicarQr(
     await cargarCuenta(parsed.value)
     return
   }
-  if (parsed?.kind === 'pay' || parsed?.kind === 'id') {
+  if (parsed?.kind === 'pay') {
     throw new Error('Ese código es de la tarjeta. Para pagar con QR usá el código de esta pantalla.')
   }
   if (!parsed) {

@@ -3,16 +3,8 @@ import { Capacitor, registerPlugin } from '@capacitor/core'
 export interface RadioCapabilities {
   native: boolean
   nfc: boolean
-  ble: boolean
 }
 
-export interface NearbyToken {
-  token: string
-  rssi?: number
-  payload?: string
-}
-
-type NearbyHandler = (event: NearbyToken) => void
 type NfcHandler = (payload: string) => void
 
 function hasNdef(): boolean {
@@ -27,10 +19,6 @@ export function isNative(): boolean {
 }
 
 type MonixPlugin = {
-  startCerca: (opts: Record<string, string>) => Promise<void>
-  stopCerca: () => Promise<void>
-  startScan: () => Promise<void>
-  stopScan: () => Promise<void>
   startNfcListen: () => Promise<void>
   stopNfcListen: () => Promise<void>
   writeNfc: (opts: { payload: string }) => Promise<void>
@@ -54,33 +42,10 @@ async function getPlugin(): Promise<MonixPlugin | null> {
   return registerPlugin<MonixPlugin>('MonixRadio')
 }
 
-export const MONIX_CERCA_UUID = '6e6f6e69-7801-4c0c-8000-00000000c0ca'
-
-type WebBluetooth = {
-  getAvailability?: () => Promise<boolean>
-  requestLEScan?: (opts: Record<string, unknown>) => Promise<{ stop: () => void }>
-  requestDevice: (opts: Record<string, unknown>) => Promise<{
-    watchAdvertisements?: (opts?: { signal?: AbortSignal }) => Promise<void>
-    addEventListener: (name: string, fn: (event: Event) => void) => void
-  }>
-  addEventListener: (name: string, fn: (event: Event) => void) => void
-  removeEventListener: (name: string, fn: (event: Event) => void) => void
-}
-
-function webBluetooth(): WebBluetooth | undefined {
-  if (typeof navigator === 'undefined') return undefined
-  return (navigator as Navigator & { bluetooth?: WebBluetooth }).bluetooth
-}
-
-function hasWebBluetooth() {
-  return Boolean(webBluetooth())
-}
-
 export function radioCapabilities(): RadioCapabilities {
   return {
     native: isNative(),
     nfc: hasNdef() || isNative(),
-    ble: isNative() || hasWebBluetooth(),
   }
 }
 
@@ -255,171 +220,31 @@ export function isAbortError(err: unknown): boolean {
   return name === 'AbortError' || /signal is aborted/i.test(message)
 }
 
-type BluetoothAdvert = {
-  rssi?: number
-  serviceData?: Map<string, DataView>
-  device?: { name?: string }
-}
-
-function hexFromBytes(view: DataView) {
-  return [...new Uint8Array(view.buffer, view.byteOffset, view.byteLength)]
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-}
-
-function tokenDesdeAdvertencia(event: BluetoothAdvert): string | null {
-  const data = event.serviceData?.get(MONIX_CERCA_UUID)
-    ?? event.serviceData?.get(MONIX_CERCA_UUID.toUpperCase())
-  if (data) {
-    const hex = hexFromBytes(data)
-    if (/^[0-9a-f]{32,64}$/.test(hex)) return hex
-  }
-  const nombre = event.device?.name ?? ''
-  const match = nombre.match(/[0-9a-f]{32,64}/i)
-  return match ? match[0].toLowerCase() : null
-}
-
 export class MonixRadio {
-  private nearbyHandlers = new Set<NearbyHandler>()
   private nfcHandlers = new Set<NfcHandler>()
   private ndef: NDEFReader | null = null
   private scanAbort: AbortController | null = null
   private webNfcActive = false
-  private webBleScan: { stop: () => void } | null = null
-  private webBleUnsub: (() => void) | null = null
   private pluginUnsubs: Array<{ remove: () => Promise<void> }> = []
-  private advertising = false
-
-  onNearby(handler: NearbyHandler) {
-    this.nearbyHandlers.add(handler)
-    return () => this.nearbyHandlers.delete(handler)
-  }
 
   onNfc(handler: NfcHandler) {
     this.nfcHandlers.add(handler)
     return () => this.nfcHandlers.delete(handler)
   }
 
-  private emitNearby(event: NearbyToken) {
-    this.nearbyHandlers.forEach((h) => h(event))
-  }
-
   private emitNfc(payload: string) {
     this.nfcHandlers.forEach((h) => h(payload))
-    const cbu = payload.replace(/\s+/g, '').match(/\d{22}/)
-    if (cbu) {
-      this.emitNearby({ token: cbu[0], payload })
-      return
-    }
-    const tokenMatch = payload.match(/[0-9a-f]{32,64}/i)
-    if (tokenMatch) this.emitNearby({ token: tokenMatch[0].toLowerCase(), payload })
   }
 
-  async startAdvertising(opts: {
-    token: string
-    accessToken?: string
-    supabaseUrl?: string
-    supabaseKey?: string
-    cuentaId?: string
-  }) {
-    this.advertising = true
+  async stopNfcListen() {
     const plugin = await getPlugin()
-    if (plugin) {
-      const withPerms = plugin as { requestPermissions?: () => Promise<void> }
-      await withPerms.requestPermissions?.()
-      await plugin.startCerca({
-        token: opts.token,
-        accessToken: opts.accessToken ?? '',
-        supabaseUrl: opts.supabaseUrl ?? '',
-        supabaseKey: opts.supabaseKey ?? '',
-        cuentaId: opts.cuentaId ?? '',
-      })
-    }
-  }
-
-  async stopAdvertising() {
-    this.advertising = false
-    const plugin = await getPlugin()
-    if (plugin) await plugin.stopCerca()
-  }
-
-  get isAdvertising() {
-    return this.advertising
-  }
-
-  async startScan() {
-    const plugin = await getPlugin()
-    if (plugin) {
-      const sub = await plugin.addListener('deviceFound', (data) => {
-        const token = String(data.token ?? '')
-        if (token) this.emitNearby({ token, rssi: Number(data.rssi ?? 0) || undefined })
-      })
-      this.pluginUnsubs.push(sub)
-      await plugin.startScan()
-      return
-    }
-
-    await this.startWebBluetoothScan()
-  }
-
-  async stopScan() {
-    const plugin = await getPlugin()
-    if (plugin) await plugin.stopScan()
-    this.webBleUnsub?.()
-    this.webBleUnsub = null
-    try { this.webBleScan?.stop() } catch { /* ya parado */ }
-    this.webBleScan = null
+    if (plugin) await plugin.stopNfcListen()
     this.webNfcActive = false
     this.scanAbort?.abort()
     this.scanAbort = null
     this.ndef = null
     await Promise.all(this.pluginUnsubs.map((u) => u.remove()))
     this.pluginUnsubs = []
-  }
-
-  private onAdvertenciaWeb = (event: Event) => {
-    const ev = event as unknown as BluetoothAdvert
-    const token = tokenDesdeAdvertencia(ev)
-    if (token) this.emitNearby({ token, rssi: ev.rssi, payload: token })
-  }
-
-  private async startWebBluetoothScan() {
-    const bt = webBluetooth()
-    if (!bt) {
-      throw new Error('Este navegador no expone Bluetooth. Usá Chrome en Android, con Bluetooth prendido.')
-    }
-
-    const available = await bt.getAvailability?.().catch(() => true)
-    if (available === false) {
-      throw new Error('Bluetooth está apagado. Prendelo y volvé a tocar Activar.')
-    }
-
-    bt.addEventListener('advertisementreceived', this.onAdvertenciaWeb)
-    this.webBleUnsub = () => bt.removeEventListener('advertisementreceived', this.onAdvertenciaWeb)
-
-    try {
-      if (typeof bt.requestLEScan === 'function') {
-        this.webBleScan = await bt.requestLEScan({
-          filters: [{ services: [MONIX_CERCA_UUID] }],
-          keepRepeatedDevices: true,
-        })
-        return
-      }
-
-      const device = await bt.requestDevice({
-        filters: [{ services: [MONIX_CERCA_UUID] }],
-        optionalServices: [MONIX_CERCA_UUID],
-      })
-      this.scanAbort = new AbortController()
-      if (device.watchAdvertisements) {
-        device.addEventListener('advertisementreceived', this.onAdvertenciaWeb)
-        await device.watchAdvertisements({ signal: this.scanAbort.signal })
-      }
-    } catch (err) {
-      const name = err && typeof err === 'object' && 'name' in err ? String(err.name) : ''
-      if (isAbortError(err) || name === 'NotFoundError' || name === 'NotAllowedError') return
-      throw err
-    }
   }
 
   async startNfcListen() {

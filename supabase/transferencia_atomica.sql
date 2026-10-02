@@ -9,7 +9,7 @@
 --    guardado local fallaba después, no había forma de evitar reenviarla.
 --
 -- Se resuelve con el mismo patrón que ya usa `pagar_qr_cuenta` en
--- cerca_nfc.sql: una función SECURITY DEFINER con FOR UPDATE sobre las
+-- nfc_cobros.sql: una función SECURITY DEFINER con FOR UPDATE sobre las
 -- cuentas involucradas, que hace el débito/crédito y los movimientos en una
 -- sola transacción atómica del lado del servidor. Se agrega además una
 -- columna `operacion_id` para poder pedirle a esta función "aplicá esta

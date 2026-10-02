@@ -1,8 +1,4 @@
 export interface MonixRadioPlugin {
-  startCerca(options: Record<string, string>): Promise<void>
-  stopCerca(): Promise<void>
-  startScan(): Promise<void>
-  stopScan(): Promise<void>
   startNfcListen(): Promise<void>
   stopNfcListen(): Promise<void>
   writeNfc(options: { payload: string }): Promise<void>

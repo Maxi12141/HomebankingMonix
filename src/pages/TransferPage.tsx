@@ -166,10 +166,8 @@ export function TransferPage() {
     const state = location.state as {
       cbu?: string
       monto?: number
-      fromCerca?: boolean
       fromQr?: boolean
       elegirMonto?: boolean
-      banco?: string
     } | null
     if (state?.cbu) {
       setDestino(state.cbu)
@@ -179,13 +177,7 @@ export function TransferPage() {
       void buscarDestinatario(state.cbu).then((dest) => {
         if (state.fromQr && state.elegirMonto && dest) irADetalle(dest)
       })
-      if (state.fromCerca) {
-        toast.success(
-          state.banco
-            ? `Persona de ${state.banco} identificada al acercar el celular`
-            : 'Persona identificada al acercar el celular',
-        )
-      } else if (state.fromQr) {
+      if (state.fromQr) {
         toast.success(state.elegirMonto ? 'Elegí el monto para transferir' : 'Destinatario identificado desde el QR')
       }
     }

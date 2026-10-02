@@ -499,7 +499,7 @@ export const TOPICS: Topic[] = [
     id: 'app',
     phrases: ['hay aplicacion', 'instalar android', 'apk monix', 'funciona en el celular'],
     keywords: ['app', 'apk', 'android', 'ios', 'iphone', 'celular', 'aplicacion'],
-    extra: ['nativa', 'capacitor', 'bluetooth'],
+    extra: ['nativa', 'capacitor'],
     answers: () => [
       'Monix corre en el navegador y como app Android. En el teléfono tenés NFC, huella y el pago con QR. En iPhone el contactless se resuelve con QR de la tarjeta.',
       'Para grabar el sticker NFC hace falta la APK. El resto del banco, incluidas las metas comunes, funciona en la web.',

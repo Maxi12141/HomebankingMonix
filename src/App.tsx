@@ -75,7 +75,6 @@ function AppRoutes() {
       <Route path="/transferir" element={<RequireAuth><TransferPage /></RequireAuth>} />
       <Route path="/metas" element={<RequireAuth><MetasPage /></RequireAuth>} />
       <Route path="/ahora" element={<Navigate to="/metas" replace />} />
-      <Route path="/cerca" element={<Navigate to="/metas" replace />} />
       <Route path="/historial" element={<RequireAuth><HistorialPage /></RequireAuth>} />
       <Route path="/depositar" element={<RequireAuth><DepositPage /></RequireAuth>} />
       <Route path="/tarjeta" element={<RequireAuth><TarjetaPage /></RequireAuth>} />

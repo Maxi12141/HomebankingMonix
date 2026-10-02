@@ -14,7 +14,6 @@ import android.nfc.NdefRecord
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.Ndef
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -45,7 +44,7 @@ import java.io.File
 @CapacitorPlugin(
   name = "MonixRadio",
   permissions = [
-    Permission(strings = [Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NFC, Manifest.permission.POST_NOTIFICATIONS], alias = "radio"),
+    Permission(strings = [Manifest.permission.NFC, Manifest.permission.POST_NOTIFICATIONS], alias = "radio"),
     Permission(strings = [Manifest.permission.CAMERA], alias = "camera"),
     Permission(strings = [Manifest.permission.RECORD_AUDIO], alias = "mic")
   ]
@@ -54,13 +53,6 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
   companion object {
     @Volatile var instance: MonixRadioPlugin? = null
     var hcePayload: String = ""
-
-    fun emitDevice(token: String, rssi: Int) {
-      val data = JSObject()
-      data.put("token", token)
-      data.put("rssi", rssi)
-      instance?.notifyListeners("deviceFound", data)
-    }
   }
 
   override fun load() {
@@ -420,34 +412,6 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
       speech?.destroy()
       speech = null
     }
-    call.resolve()
-  }
-
-  @PluginMethod
-  fun startCerca(call: PluginCall) {
-    val token = call.getString("token") ?: ""
-    val intent = Intent(context, CercaService::class.java).putExtra(CercaService.EXTRA_TOKEN, token)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      context.startForegroundService(intent)
-    } else {
-      context.startService(intent)
-    }
-    call.resolve()
-  }
-
-  @PluginMethod
-  fun stopCerca(call: PluginCall) {
-    context.stopService(Intent(context, CercaService::class.java))
-    call.resolve()
-  }
-
-  @PluginMethod
-  fun startScan(call: PluginCall) {
-    call.resolve()
-  }
-
-  @PluginMethod
-  fun stopScan(call: PluginCall) {
     call.resolve()
   }
 

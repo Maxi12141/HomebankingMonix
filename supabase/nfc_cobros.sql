@@ -1,5 +1,5 @@
--- Monix Cerca (BLE/NFC) + pago contactless.
--- Los tokens que viajan por radio nunca son CBU/alias: solo un secreto rotativo hasheado.
+-- Pago contactless (tarjeta NFC, criptograma) y cobros por NFC / QR.
+-- Los tokens que viajan por NFC nunca son CBU/alias: solo un secreto rotativo hasheado.
 
 create schema if not exists private;
 
@@ -11,61 +11,6 @@ alter table public.cuentas
 
 alter table public.cuentas
   add column if not exists nfc_contacto_activo boolean not null default false;
-
--- ─── Presencia (acercar celulares) ──────────────────────────────────────────
-create table if not exists public.presencia_cerca (
-  id bigint generated always as identity primary key,
-  persona_id uuid not null references public.personas(id) on delete cascade,
-  cuenta_id uuid not null references public.cuentas(id) on delete cascade,
-  token_hash text not null,
-  visible boolean not null default true,
-  expires_at timestamptz not null,
-  last_seen_at timestamptz not null default now(),
-  created_at timestamptz not null default now(),
-  constraint presencia_cerca_persona_id_key unique (persona_id),
-  constraint presencia_cerca_token_hash_key unique (token_hash)
-);
-
-create index if not exists presencia_cerca_cuenta_id_idx
-  on public.presencia_cerca (cuenta_id);
-
-create index if not exists presencia_cerca_expires_at_idx
-  on public.presencia_cerca (expires_at);
-
-create index if not exists presencia_cerca_visible_expires_idx
-  on public.presencia_cerca (visible, expires_at);
-
-alter table public.presencia_cerca enable row level security;
-alter table public.presencia_cerca force row level security;
-
-drop policy if exists presencia_cerca_select_own on public.presencia_cerca;
-create policy presencia_cerca_select_own
-  on public.presencia_cerca for select
-  to authenticated
-  using ((select auth.uid()) = persona_id);
-
-drop policy if exists presencia_cerca_insert_own on public.presencia_cerca;
-create policy presencia_cerca_insert_own
-  on public.presencia_cerca for insert
-  to authenticated
-  with check ((select auth.uid()) = persona_id);
-
-drop policy if exists presencia_cerca_update_own on public.presencia_cerca;
-create policy presencia_cerca_update_own
-  on public.presencia_cerca for update
-  to authenticated
-  using ((select auth.uid()) = persona_id)
-  with check ((select auth.uid()) = persona_id);
-
-drop policy if exists presencia_cerca_delete_own on public.presencia_cerca;
-create policy presencia_cerca_delete_own
-  on public.presencia_cerca for delete
-  to authenticated
-  using ((select auth.uid()) = persona_id);
-
-revoke all on table public.presencia_cerca from anon, public;
-grant select, insert, update, delete on table public.presencia_cerca to authenticated;
-grant all on table public.presencia_cerca to service_role;
 
 -- ─── Cobros NFC / QR ────────────────────────────────────────────────────────
 create table if not exists public.cobros_nfc (
@@ -140,17 +85,6 @@ create table if not exists private.nfc_tarjetas (
   constraint nfc_tarjetas_token_hash_key unique (token_hash)
 );
 
-create table if not exists private.cerca_auditoria (
-  id bigint generated always as identity primary key,
-  buscador_id uuid not null,
-  persona_destino_id uuid,
-  accion text not null,
-  created_at timestamptz not null default now()
-);
-
-create index if not exists cerca_auditoria_buscador_idx
-  on private.cerca_auditoria (buscador_id, created_at desc);
-
 create table if not exists private.rpc_rate (
   id bigint generated always as identity primary key,
   persona_id uuid not null,
@@ -163,7 +97,6 @@ create index if not exists rpc_rate_lookup_idx
 
 revoke all on table private.nfc_criptogramas from public, anon, authenticated;
 revoke all on table private.nfc_tarjetas from public, anon, authenticated;
-revoke all on table private.cerca_auditoria from public, anon, authenticated;
 revoke all on table private.rpc_rate from public, anon, authenticated;
 
 -- ─── Helpers ────────────────────────────────────────────────────────────────
@@ -256,219 +189,6 @@ end;
 $$;
 
 revoke all on function private.cuenta_propia(uuid) from public, anon, authenticated;
-
--- ─── Presencia ──────────────────────────────────────────────────────────────
-create or replace function private.activar_presencia(p_cuenta_id uuid, p_token text)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_uid uuid := auth.uid();
-  v_cuenta public.cuentas;
-begin
-  perform private.assert_token(p_token);
-  v_cuenta := private.cuenta_propia(p_cuenta_id);
-
-  insert into public.presencia_cerca (
-    persona_id, cuenta_id, token_hash, visible, expires_at, last_seen_at
-  )
-  values (
-    v_uid,
-    v_cuenta.id,
-    private.hash_token(p_token),
-    true,
-    now() + interval '30 minutes',
-    now()
-  )
-  on conflict (persona_id) do update
-    set cuenta_id = excluded.cuenta_id,
-        token_hash = excluded.token_hash,
-        visible = true,
-        expires_at = excluded.expires_at,
-        last_seen_at = now();
-end;
-$$;
-
--- Los wrappers públicos DEBEN ser SECURITY DEFINER: authenticated no tiene
--- USAGE/EXECUTE sobre schema private, así que INVOKER devolvía HTTP 403.
--- La autorización sigue en private.* (auth.uid() + cuenta_propia).
-create or replace function public.activar_presencia(p_cuenta_id uuid, p_token text)
-returns void
-language sql
-security definer
-set search_path = ''
-as $$
-  select private.activar_presencia(p_cuenta_id, p_token);
-$$;
-
-create or replace function private.desactivar_presencia()
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_uid uuid := auth.uid();
-begin
-  if v_uid is null then
-    raise exception 'No autenticado';
-  end if;
-
-  update public.presencia_cerca
-  set visible = false,
-      expires_at = now(),
-      last_seen_at = now()
-  where persona_id = v_uid;
-end;
-$$;
-
-create or replace function public.desactivar_presencia()
-returns void
-language sql
-security definer
-set search_path = ''
-as $$
-  select private.desactivar_presencia();
-$$;
-
-create or replace function private.resolver_presencia(p_token text)
-returns table(nombre text, apellido text, alias text)
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_uid uuid := auth.uid();
-  v_hash text;
-  v_row public.presencia_cerca;
-  v_persona public.personas;
-  v_cuenta public.cuentas;
-begin
-  if v_uid is null then
-    raise exception 'No autenticado';
-  end if;
-
-  perform private.assert_token(p_token);
-  perform private.enforce_rate('resolver_presencia', 40, interval '5 minutes');
-
-  v_hash := private.hash_token(p_token);
-
-  select * into v_row
-  from public.presencia_cerca
-  where token_hash = v_hash
-    and visible = true
-    and expires_at > now();
-
-  if not found then
-    return;
-  end if;
-
-  if v_row.persona_id = v_uid then
-    return;
-  end if;
-
-  select * into v_persona from public.personas where id = v_row.persona_id;
-  select * into v_cuenta from public.cuentas where id = v_row.cuenta_id;
-
-  insert into private.cerca_auditoria (buscador_id, persona_destino_id, accion)
-  values (v_uid, v_row.persona_id, 'visto');
-
-  nombre := v_persona.nombre;
-  apellido := v_persona.apellido;
-  alias := v_cuenta.alias;
-  return next;
-end;
-$$;
-
-create or replace function public.resolver_presencia(p_token text)
-returns table(nombre text, apellido text, alias text)
-language sql
-security definer
-set search_path = ''
-as $$
-  select * from private.resolver_presencia(p_token);
-$$;
-
-create or replace function private.abrir_destino_cerca(p_token text)
-returns table(
-  nombre text,
-  apellido text,
-  alias text,
-  cbu text,
-  cuenta_id uuid,
-  moneda text
-)
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_uid uuid := auth.uid();
-  v_hash text;
-  v_row public.presencia_cerca;
-  v_persona public.personas;
-  v_cuenta public.cuentas;
-begin
-  if v_uid is null then
-    raise exception 'No autenticado';
-  end if;
-
-  perform private.assert_token(p_token);
-  perform private.enforce_rate('abrir_destino_cerca', 12, interval '5 minutes');
-
-  v_hash := private.hash_token(p_token);
-
-  select * into v_row
-  from public.presencia_cerca
-  where token_hash = v_hash
-    and visible = true
-    and expires_at > now();
-
-  if not found then
-    raise exception 'La persona ya no está visible cerca';
-  end if;
-
-  if v_row.persona_id = v_uid then
-    raise exception 'No podés transferirte a vos mismo';
-  end if;
-
-  select * into v_persona from public.personas where id = v_row.persona_id;
-  select * into v_cuenta from public.cuentas where id = v_row.cuenta_id and activa = true;
-
-  if not found or v_cuenta.cbu is null then
-    raise exception 'La cuenta destino no está disponible';
-  end if;
-
-  insert into private.cerca_auditoria (buscador_id, persona_destino_id, accion)
-  values (v_uid, v_row.persona_id, 'revelado_cbu');
-
-  nombre := v_persona.nombre;
-  apellido := v_persona.apellido;
-  alias := v_cuenta.alias;
-  cbu := v_cuenta.cbu;
-  cuenta_id := v_cuenta.id;
-  moneda := v_cuenta.moneda;
-  return next;
-end;
-$$;
-
-create or replace function public.abrir_destino_cerca(p_token text)
-returns table(
-  nombre text,
-  apellido text,
-  alias text,
-  cbu text,
-  cuenta_id uuid,
-  moneda text
-)
-language sql
-security definer
-set search_path = ''
-as $$
-  select * from private.abrir_destino_cerca(p_token);
-$$;
 
 -- ─── NFC tarjeta / criptograma ──────────────────────────────────────────────
 create or replace function private.registrar_tarjeta_nfc(p_cuenta_id uuid, p_token text)
@@ -1272,7 +992,6 @@ begin
     where n.nspname = 'private'
       and p.proname in (
         'hash_token','assert_token','enforce_rate','cuenta_propia',
-        'activar_presencia','desactivar_presencia','resolver_presencia','abrir_destino_cerca',
         'registrar_tarjeta_nfc','generar_criptograma_nfc','crear_cobro_nfc',
         'obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_nfc','pagar_cobro_qr',
         'resolver_qr_cuenta','pagar_qr_cuenta'
@@ -1287,7 +1006,6 @@ begin
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname in (
-        'activar_presencia','desactivar_presencia','resolver_presencia','abrir_destino_cerca',
         'registrar_tarjeta_nfc','generar_criptograma_nfc','crear_cobro_nfc',
         'obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_nfc','pagar_cobro_qr',
         'resolver_qr_cuenta','pagar_qr_cuenta'

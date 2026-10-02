@@ -21,7 +21,7 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 | Generación de PDF | jsPDF + html2canvas |
 | API Banco Central | REST HTTP (cátedra) |
 | QR (generar / escanear) | `qrcode` + `jsqr` |
-| App nativa Android | Capacitor 7 + plugin propio `monix-radio` (Kotlin, BLE + HCE) |
+| App nativa Android | Capacitor 7 + plugin propio `monix-radio` (Kotlin, NFC + HCE) |
 
 **Tipografías** (Google Fonts, cargadas en `index.html`):
 - `Plus Jakarta Sans` — headings y montos
@@ -34,7 +34,7 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 ### Autenticación
 - Registro con datos personales (nombre, apellido, DNI, email, teléfono, dirección, fecha de nacimiento)
 - Login / logout con Supabase Auth
-- Protección de rutas: rutas privadas (`/dashboard`, `/cuentas`, `/dolares`, `/transferir`, `/cerca`, `/historial`, `/depositar`, `/perfil`, `/contactos`, `/pagar`, `/reservas`, `/prestamos`, `/tarjeta`, `/mercado-monix`, `/promos`, `/cashback`, `/financiacion`) requieren sesión activa; rutas públicas (`/`, `/login`, `/register`) redirigen al dashboard si ya hay sesión
+- Protección de rutas: rutas privadas (`/dashboard`, `/cuentas`, `/dolares`, `/transferir`, `/historial`, `/depositar`, `/perfil`, `/contactos`, `/pagar`, `/reservas`, `/prestamos`, `/tarjeta`, `/mercado-monix`, `/promos`, `/cashback`, `/financiacion`) requieren sesión activa; rutas públicas (`/`, `/login`, `/register`) redirigen al dashboard si ya hay sesión
 - `ErrorBoundary` alrededor de toda la app: si algo cuelga (Realtime, un hook nativo), muestra un fallback en vez de dejar la pantalla en blanco
 - Pantalla de fallback (`MissingEnvScreen`) si faltan o son inválidas las variables `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, en vez de romper la app con pantalla en blanco (ver `isSupabaseConfigured` en `src/lib/supabaseClient.ts`)
 
@@ -69,12 +69,6 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 ### Compra y Venta de Dólares
 - Compra o venta de USD contra la caja en pesos, al tipo de cambio oficial (`useMercadoFinanciero`, refresco cada 20 s)
 - Requiere tener ambas cuentas (ARS y USD) abiertas; acredita/debita en las dos cuentas y registra el movimiento correspondiente
-
-### Monix Cerca
-- Transferencias por proximidad: acercar dos celulares con Monix identifica a la otra persona (nombre y alias) y permite transferirle al toque, sin compartir CBU
-- Funciona por NFC (tocar los teléfonos, disponible en el navegador con Chrome Android) o por Bluetooth de fondo con la APK nativa (`monix-radio`, plugin Capacitor en Kotlin) — con la APK, el otro no necesita tener Monix abierto
-- Presencia "visible" publica un token rotativo de 30 minutos en `presencia_cerca`; el token nunca es el CBU/alias real — el servidor resuelve identidad y destino recién al confirmar la transferencia (`resolver_presencia` / `abrir_destino_cerca`, RPCs de Supabase)
-- Al detectar a alguien cerca con la app en segundo plano, se muestra un prompt (`CercaPrompt`) para transferirle sin tener que abrir la pantalla de Cerca
 
 ### Historial
 - Listado de hasta 100 movimientos con paginación
@@ -174,7 +168,6 @@ src/
 │   │   ├── Input.tsx              # Input con label integrado
 │   │   └── Modal.tsx              # Modal con overlay y AnimatePresence
 │   ├── AgendaContactosPanel.tsx   # Panel de contactos guardados
-│   ├── CercaPrompt.tsx            # Modal "¿Transferirle?" al detectar a alguien con Monix Cerca
 │   ├── ErrorBoundary.tsx          # Fallback de error de React para toda la app
 │   ├── LoadingScreen.tsx          # Pantalla de carga animada (mínimo 2.4 s)
 │   ├── MissingEnvScreen.tsx       # Fallback si faltan variables de entorno de Supabase
@@ -196,7 +189,6 @@ src/
 ├── hooks/
 │   ├── useAuth.ts                 # Sincroniza sesión de Supabase con authStore
 │   ├── useBankNames.ts            # Resuelve códigos de banco a nombres via BC API
-│   ├── useCerca.tsx               # Contexto de Monix Cerca: visibilidad, búsqueda BLE/NFC, prompt de transferencia
 │   ├── useContactos.ts            # CRUD de contactos (Zustand persist en localStorage)
 │   ├── useCuenta.ts               # Fetch de cuenta + suscripción Realtime de saldo
 │   ├── useMovimientos.ts          # Fetch de movimientos con límite
@@ -208,14 +200,13 @@ src/
 ├── lib/
 │   ├── scanQr.ts                  # Escaneo de QR desde cámara/imagen (jsqr) + detección de iOS
 │   ├── supabaseClient.ts          # Instancia única del cliente Supabase + isSupabaseConfigured
-│   └── tokens.ts                  # Helpers de tokens rotativos (Cerca/NFC) y mensajes de error de RPC
+│   └── tokens.ts                  # Helpers de tokens rotativos (NFC/QR) y mensajes de error de RPC
 │
 ├── native/
-│   └── monixRadio.ts              # Wrapper del plugin Capacitor `monix-radio` (BLE/HCE nativo, Android)
+│   └── monixRadio.ts              # Wrapper del plugin Capacitor `monix-radio` (NFC/HCE nativo, Android)
 │
 ├── pages/
 │   ├── CashbackPage.tsx           # Simulador de cashback por comercio (demo)
-│   ├── CercaPage.tsx              # Monix Cerca: buscar y transferir a personas cercanas
 │   ├── CompraVentaDolaresPage.tsx # Compra/venta de USD contra la caja en pesos
 │   ├── ContactosPage.tsx          # Gestión de agenda de contactos
 │   ├── CuentasPage.tsx            # Cajas de ahorro (ARS/USD) del usuario
@@ -237,7 +228,6 @@ src/
 │
 ├── services/
 │   ├── bancoCentral.ts            # Cliente HTTP para la API del Banco Central
-│   ├── cerca.ts                   # RPCs de Supabase para presencia y resolución de Monix Cerca
 │   └── nfcPago.ts                 # RPCs de Supabase para cobros/pagos contactless (QR/NFC)
 │
 ├── store/
@@ -268,9 +258,9 @@ supabase/
 ├── cuentas_moneda.sql             # Agrega `moneda` (ARS/USD) a `cuentas`
 ├── personas_credito.sql           # Agrega sueldo_acreditado / ingreso_mensual a `personas` (usados por Préstamos)
 ├── prestamos.sql                  # Tabla `prestamos` (monto, cuotas, tna, situación crediticia) + RLS
-└── cerca_nfc.sql                  # Tablas `presencia_cerca` y `cobros_nfc` + columnas de tarjeta en `cuentas` + RLS
+└── nfc_cobros.sql                 # Tabla `cobros_nfc` + columnas de tarjeta en `cuentas` + RLS
 
-plugins/monix-radio/                # Plugin nativo de Capacitor (Android, Kotlin): BLE de fondo + emulación de tarjeta NFC (HCE)
+plugins/monix-radio/                # Plugin nativo de Capacitor (Android, Kotlin): grabado de stickers NFC + emulación de tarjeta NFC (HCE)
 ```
 
 ---
@@ -312,8 +302,8 @@ Una cuenta bancaria por usuario.
 | `alias` | text (unique) | Generado aleatoriamente (tres palabras con punto) |
 | `tasa_anual` | numeric | TNA de la cuenta principal, default 32% (agregada en `supabase/cuentas_interes.sql`) |
 | `ultima_interes_at` | timestamptz | Última vez que se acreditó interés (agregada en `supabase/cuentas_interes.sql`) |
-| `tarjeta_congelada` | boolean | Tarjeta congelada por el usuario (agregada en `supabase/cerca_nfc.sql`) |
-| `nfc_contacto_activo` | boolean | Pago contactless (NFC/QR) activado (agregada en `supabase/cerca_nfc.sql`) |
+| `tarjeta_congelada` | boolean | Tarjeta congelada por el usuario (agregada en `supabase/nfc_cobros.sql`) |
+| `nfc_contacto_activo` | boolean | Pago contactless (NFC/QR) activado (agregada en `supabase/nfc_cobros.sql`) |
 | `created_at` | timestamptz | Auto |
 
 ### `reservas`
@@ -346,22 +336,8 @@ Préstamos personales en pesos (definida en `supabase/prestamos.sql`).
 | `proxima_cuota_at` | timestamptz | Fecha de la próxima cuota a cobrar |
 | `created_at` | timestamptz | Auto |
 
-### `presencia_cerca`
-Quién está "visible" para Monix Cerca, una fila por persona (definida en `supabase/cerca_nfc.sql`).
-
-| Columna | Tipo | Descripción |
-|---|---|---|
-| `id` | bigint (PK) | — |
-| `persona_id` | uuid (FK → personas, unique) | — |
-| `cuenta_id` | uuid (FK → cuentas) | Cuenta a acreditar si le transfieren |
-| `token_hash` | text (unique) | Hash del token rotativo que se publica por BLE/NFC — nunca el CBU/alias |
-| `visible` | boolean | Si está publicando presencia activamente |
-| `expires_at` | timestamptz | El token deja de resolverse pasado este momento (rotación ~30 min) |
-| `last_seen_at` | timestamptz | Último heartbeat |
-| `created_at` | timestamptz | Auto |
-
 ### `cobros_nfc`
-Cobros con QR o NFC, generados por el comercio y pagados por el cliente (definida en `supabase/cerca_nfc.sql`).
+Cobros con QR o NFC, generados por el comercio y pagados por el cliente (definida en `supabase/nfc_cobros.sql`).
 
 | Columna | Tipo | Descripción |
 |---|---|---|
@@ -490,14 +466,13 @@ npm run dev
 
 ---
 
-## App nativa Android (Monix Cerca / NFC)
+## App nativa Android (NFC)
 
-La web corre en cualquier navegador, pero dos features de Cerca necesitan la APK (Capacitor) porque el navegador no da acceso a Bluetooth/NFC en segundo plano:
+La web corre en cualquier navegador, pero el pago acercando el teléfono necesita la APK (Capacitor), porque el navegador no da acceso a la emulación de tarjeta NFC:
 
-- **BLE de fondo**: quedar "visible" para otros aunque la app esté cerrada (`plugins/monix-radio/.../CercaService.kt`)
 - **Emulación de tarjeta NFC (HCE)**: que un lector de tarjetas físico le pague a la cuenta como si tocara una tarjeta real (`MonixHceService.kt`)
 
-Sin la APK, Monix Cerca funciona igual pero solo con la app abierta y por NFC de lectura/escritura del navegador (Chrome Android); en iPhone, el pago contactless cae al fallback de QR (`isIosDevice`, `QrBox`). El código nativo vive en `plugins/monix-radio/android` (Kotlin) y se expone al lado web mediante `src/native/monixRadio.ts`. Para generar el proyecto Android y el APK: `npm run cap:add` (una vez) → `npm run apk:debug`.
+Sin la APK, el sticker NFC de la tarjeta se puede grabar desde el navegador (Chrome Android); en iPhone, el pago contactless cae al fallback de QR (`isIosDevice`, `QrBox`). El código nativo vive en `plugins/monix-radio/android` (Kotlin) y se expone al lado web mediante `src/native/monixRadio.ts`. Para generar el proyecto Android y el APK: `npm run cap:add` (una vez) → `npm run apk:debug`.
 
 ---
 
@@ -531,7 +506,7 @@ ON cuentas FOR UPDATE
 USING (persona_id = auth.uid());
 ```
 
-> El repo incluye SQL ya escrito para correr directamente en el SQL Editor de Supabase: `supabase/policies.sql` (políticas RLS de `personas`, `cuentas`, `movimientos` y `reservas`), `supabase/reservas.sql` (crea la tabla `reservas`), `supabase/cuentas_interes.sql` (agrega `tasa_anual` / `ultima_interes_at` a `cuentas`), `supabase/cuentas_moneda.sql` (agrega `moneda` a `cuentas`), `supabase/personas_credito.sql` (agrega `sueldo_acreditado` / `ingreso_mensual` a `personas`), `supabase/prestamos.sql` (crea la tabla `prestamos`, con sus propias políticas RLS incluidas) y `supabase/cerca_nfc.sql` (crea `presencia_cerca` y `cobros_nfc`, agrega `tarjeta_congelada` / `nfc_contacto_activo` a `cuentas`, con sus propias políticas RLS incluidas). Ejecutar en ese orden: `reservas.sql` → `cuentas_interes.sql` → `cuentas_moneda.sql` → `personas_credito.sql` → `prestamos.sql` → `cerca_nfc.sql` → `policies.sql`.
+> El repo incluye SQL ya escrito para correr directamente en el SQL Editor de Supabase: `supabase/policies.sql` (políticas RLS de `personas`, `cuentas`, `movimientos` y `reservas`), `supabase/reservas.sql` (crea la tabla `reservas`), `supabase/cuentas_interes.sql` (agrega `tasa_anual` / `ultima_interes_at` a `cuentas`), `supabase/cuentas_moneda.sql` (agrega `moneda` a `cuentas`), `supabase/personas_credito.sql` (agrega `sueldo_acreditado` / `ingreso_mensual` a `personas`), `supabase/prestamos.sql` (crea la tabla `prestamos`, con sus propias políticas RLS incluidas) y `supabase/nfc_cobros.sql` (crea `cobros_nfc`, agrega `tarjeta_congelada` / `nfc_contacto_activo` a `cuentas`, con sus propias políticas RLS incluidas). Ejecutar en ese orden: `reservas.sql` → `cuentas_interes.sql` → `cuentas_moneda.sql` → `personas_credito.sql` → `prestamos.sql` → `nfc_cobros.sql` → `policies.sql`.
 
 ### Realtime
 
@@ -551,9 +526,9 @@ Habilitar replicación en tiempo real para la tabla `cuentas` (Supabase → Data
 
 **Saldo en tiempo real**: `useCuenta` mantiene una suscripción activa a `postgres_changes` en la fila de la cuenta del usuario. Cuando `saldo` cambia en la base de datos, el dashboard anima el CountUp desde el valor anterior al nuevo valor y muestra un indicador temporal del delta.
 
-**Un solo canal Realtime por cuenta**: como `CercaProvider` y cada página montan su propio `useCuenta()`, las suscripciones se comparten por `cuenta.id` con conteo de referencias (`useCuenta.ts`) — evita el crash de supabase-js al intentar agregar un segundo listener `postgres_changes` sobre un canal ya suscripto.
+**Un solo canal Realtime por cuenta**: como `App` y cada página montan su propio `useCuenta()`, las suscripciones se comparten por `cuenta.id` con conteo de referencias (`useCuenta.ts`) — evita el crash de supabase-js al intentar agregar un segundo listener `postgres_changes` sobre un canal ya suscripto.
 
-**Tokens rotativos en Cerca/NFC**: lo que viaja por Bluetooth, NFC o en un QR nunca es el CBU/alias real, sino un token de corta duración. El servidor (RPCs de Supabase) es quien resuelve identidad y cuenta destino recién al confirmar la operación.
+**Tokens rotativos en NFC/QR**: lo que viaja por NFC o en un QR nunca es el CBU/alias real, sino un token de corta duración. El servidor (RPCs de Supabase) es quien resuelve identidad y cuenta destino recién al confirmar la operación.
 
 ---
 
