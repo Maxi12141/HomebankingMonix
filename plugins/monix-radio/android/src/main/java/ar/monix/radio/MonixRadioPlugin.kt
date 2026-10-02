@@ -9,11 +9,6 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.nfc.NdefMessage
-import android.nfc.NdefRecord
-import android.nfc.NfcAdapter
-import android.nfc.Tag
-import android.nfc.tech.Ndef
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -44,21 +39,12 @@ import java.io.File
 @CapacitorPlugin(
   name = "MonixRadio",
   permissions = [
-    Permission(strings = [Manifest.permission.NFC, Manifest.permission.POST_NOTIFICATIONS], alias = "radio"),
+    Permission(strings = [Manifest.permission.POST_NOTIFICATIONS], alias = "radio"),
     Permission(strings = [Manifest.permission.CAMERA], alias = "camera"),
     Permission(strings = [Manifest.permission.RECORD_AUDIO], alias = "mic")
   ]
 )
-class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
-  companion object {
-    @Volatile var instance: MonixRadioPlugin? = null
-    var hcePayload: String = ""
-  }
-
-  override fun load() {
-    instance = this
-  }
-
+class MonixRadioPlugin : Plugin() {
   @PluginMethod
   fun pedirCamara(call: PluginCall) {
     if (getPermissionState("camera") == PermissionState.GRANTED) {
@@ -413,99 +399,5 @@ class MonixRadioPlugin : Plugin(), NfcAdapter.ReaderCallback {
       speech = null
     }
     call.resolve()
-  }
-
-  @PluginMethod
-  fun startNfcListen(call: PluginCall) {
-    val adapter = NfcAdapter.getDefaultAdapter(context)
-    adapter?.enableReaderMode(
-      activity,
-      this,
-      NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
-      null
-    )
-    call.resolve()
-  }
-
-  @PluginMethod
-  fun stopNfcListen(call: PluginCall) {
-    NfcAdapter.getDefaultAdapter(context)?.disableReaderMode(activity)
-    call.resolve()
-  }
-
-  @PluginMethod
-  fun writeNfc(call: PluginCall) {
-    // Una escritura pendiente sin tag presentado se cancela en vez de
-    // perderse: antes, un segundo llamado a writeNfc() pisaba silenciosamente
-    // la referencia y la promesa original del caller anterior quedaba colgada
-    // para siempre (nunca resuelta ni rechazada).
-    writeTimeoutHandler?.removeCallbacksAndMessages(null)
-    writeCall?.reject("Se canceló: se pidió grabar un nuevo tag antes de acercar el anterior")
-
-    pendingWrite = call.getString("payload")
-    writeCall = call
-
-    val handler = Handler(Looper.getMainLooper())
-    writeTimeoutHandler = handler
-    handler.postDelayed({
-      if (writeCall === call) {
-        pendingWrite = null
-        writeCall = null
-        call.reject("No se detectó ningún tag NFC a tiempo. Acercá el teléfono al tag e intentá de nuevo.")
-      }
-    }, 25_000)
-  }
-
-  @PluginMethod
-  fun startHce(call: PluginCall) {
-    hcePayload = call.getString("payload") ?: ""
-    call.resolve()
-  }
-
-  @PluginMethod
-  fun stopHce(call: PluginCall) {
-    hcePayload = ""
-    call.resolve()
-  }
-
-  private var pendingWrite: String? = null
-  private var writeCall: PluginCall? = null
-  private var writeTimeoutHandler: Handler? = null
-
-  override fun onTagDiscovered(tag: Tag) {
-    val payload = pendingWrite
-    if (payload != null) {
-      writeTimeoutHandler?.removeCallbacksAndMessages(null)
-      writeTimeoutHandler = null
-      try {
-        val ndef = Ndef.get(tag) ?: return
-        ndef.connect()
-        val record = NdefRecord.createTextRecord("es", payload)
-        ndef.writeNdefMessage(NdefMessage(arrayOf(record)))
-        ndef.close()
-        pendingWrite = null
-        writeCall?.resolve()
-        writeCall = null
-      } catch (e: Exception) {
-        writeCall?.reject(e.message)
-        writeCall = null
-      }
-      return
-    }
-    try {
-      val ndef = Ndef.get(tag) ?: return
-      ndef.connect()
-      val msg = ndef.ndefMessage
-      val text = msg?.records?.firstOrNull()?.payload?.let { bytes ->
-        if (bytes.size <= 3) String(bytes) else String(bytes, 3, bytes.size - 3, Charsets.UTF_8)
-      }
-      ndef.close()
-      if (!text.isNullOrBlank()) {
-        val data = JSObject()
-        data.put("payload", text)
-        notifyListeners("nfcRead", data)
-      }
-    } catch (_: Exception) {
-    }
   }
 }

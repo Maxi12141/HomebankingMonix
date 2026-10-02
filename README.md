@@ -21,7 +21,7 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 | Generación de PDF | jsPDF + html2canvas |
 | API Banco Central | REST HTTP (cátedra) |
 | QR (generar / escanear) | `qrcode` + `jsqr` |
-| App nativa Android | Capacitor 7 + plugin propio `monix-radio` (Kotlin, NFC + HCE) |
+| App nativa Android | Capacitor 7 + plugin propio `monix-radio` (Kotlin: huella, voz y cámara) |
 
 **Tipografías** (Google Fonts, cargadas en `index.html`):
 - `Plus Jakarta Sans` — headings y montos
@@ -82,10 +82,10 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 ### Depósito
 - Acreditación de fondos en la cuenta propia
 
-### Pagar (cobro y pago contactless)
-- Dos modos: **Cobrar** (generás un cobro con monto y descripción, se muestra como QR) y **NFC** (pagás un cobro escaneando el QR o tocando con NFC)
+### Pagar (cobro y pago con QR)
+- Dos modos: **Cobrar** (generás un cobro con monto y descripción, se muestra como QR) y **Escanear** (pagás un cobro escaneando su QR)
 - Cada cobro (`cobros_nfc`) tiene estado `pendiente` / `pagado` / `expirado` / `cancelado` y vence a los pocos minutos
-- El pago se resuelve en el servidor vía RPCs de Supabase (`crear_cobro_nfc`, `pagar_cobro_nfc`) que debitan/acreditan las cuentas de comprador y comercio y registran el movimiento
+- El pago se resuelve en el servidor vía RPCs de Supabase (`crear_cobro_nfc`, `pagar_cobro_qr`) que debitan/acreditan las cuentas de comprador y comercio y registran el movimiento
 - Acceso directo desde el botón QR central de la barra de navegación mobile
 
 ### Reservas
@@ -97,8 +97,6 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 ### Mi Tarjeta
 - Tarjeta de débito virtual 3D interactiva (`MonixCard3D`, tilt con el mouse), con flip para ver frente (PAN enmascarado) y dorso (CBU/alias con copiar al portapapeles)
 - Congelar / descongelar tarjeta: persiste en `cuentas.tarjeta_congelada` (es un estado real de la cuenta, no solo visual)
-- Pago contactless: activar/desactivar el chip NFC (`cuentas.nfc_contacto_activo`) y grabar un sticker NFC físico contra el teléfono (`registrarTarjetaNfc`, plugin nativo `monix-radio`)
-- En iPhone (sin NFC de escritura disponible en el navegador) el pago contactless se resuelve mostrando un QR de la tarjeta (`QrBox`) que el comercio escanea, en vez de acercar el chip
 - Límites diarios de compra/extracción/online (informativos, sin enforcement real)
 
 ### Préstamos
@@ -174,11 +172,10 @@ src/
 │   ├── MonixCard3D.tsx            # Tarjeta de débito virtual 3D interactiva (tilt + flip)
 │   ├── MonixLogoAnimated.tsx      # Logo con animación de salto letra por letra (hover)
 │   ├── MonixLogoNavbar.tsx        # Logo compacto con shimmer para la navbar
-│   ├── NfcPayPanels.tsx           # Paneles "Cobrar" (genera QR) y "NFC" (paga) de Pagar
-│   ├── NfcWaves.tsx               # Animación de ondas mientras se espera el tap NFC
+│   ├── NfcPayPanels.tsx           # Paneles "Cobrar" (genera QR) y "Escanear" (paga) de Pagar
 │   ├── NotificationBell.tsx       # Campanita de notificaciones (depósitos/transferencias entrantes)
 │   ├── OnboardingTour.tsx         # Tour guiado con spotlight animado (Framer Motion)
-│   ├── QrBox.tsx                  # Genera y muestra un QR (cobro, tarjeta) a partir de un payload
+│   ├── QrBox.tsx                  # Genera y muestra un QR (cobro, cuenta) a partir de un payload
 │   ├── ReservasHomeCard.tsx       # Card resumen de Reservas en el Dashboard
 │   ├── TransactionDetailModal.tsx # Modal de detalle de movimiento + descarga PDF
 │   └── WelcomeBonusModal.tsx      # Modal de bono de bienvenida ($150.000)
@@ -200,10 +197,10 @@ src/
 ├── lib/
 │   ├── scanQr.ts                  # Escaneo de QR desde cámara/imagen (jsqr) + detección de iOS
 │   ├── supabaseClient.ts          # Instancia única del cliente Supabase + isSupabaseConfigured
-│   └── tokens.ts                  # Helpers de tokens rotativos (NFC/QR) y mensajes de error de RPC
+│   └── tokens.ts                  # Prefijos de los QR internos y mensajes de error de RPC
 │
 ├── native/
-│   └── monixRadio.ts              # Wrapper del plugin Capacitor `monix-radio` (NFC/HCE nativo, Android)
+│   └── monixRadio.ts              # Wrapper del plugin Capacitor `monix-radio` (huella, voz y cámara nativas, Android)
 │
 ├── pages/
 │   ├── CashbackPage.tsx           # Simulador de cashback por comercio (demo)
@@ -217,7 +214,7 @@ src/
 │   ├── LandingPage.tsx            # Página de bienvenida (no autenticado)
 │   ├── LoginPage.tsx              # Formulario de inicio de sesión
 │   ├── MercadoMonixPage.tsx       # Mini-marketplace interno (mercadoMONIX)
-│   ├── PagarPage.tsx              # Cobro con QR y pago contactless (NFC)
+│   ├── PagarPage.tsx              # Cobro y pago con QR
 │   ├── PrestamosPage.tsx          # Simulador y gestión de préstamos personales
 │   ├── ProfilePage.tsx            # Perfil y configuración del usuario
 │   ├── PromosPage.tsx             # Listado de ofertas/descuentos (demo)
@@ -228,7 +225,7 @@ src/
 │
 ├── services/
 │   ├── bancoCentral.ts            # Cliente HTTP para la API del Banco Central
-│   └── nfcPago.ts                 # RPCs de Supabase para cobros/pagos contactless (QR/NFC)
+│   └── nfcPago.ts                 # RPCs de Supabase para cobros y pagos con QR
 │
 ├── store/
 │   ├── authStore.ts               # Estado de sesión (user + persona)
@@ -241,7 +238,6 @@ src/
 │
 ├── types/
 │   ├── index.ts                   # Tipos TypeScript: Persona, Cuenta, Movimiento, Prestamo, Contacto
-│   └── nfc.d.ts                   # Tipos para las APIs Web NFC del navegador
 │
 ├── utils/
 │   ├── comprobante.ts             # Generación de PDF con html2canvas + jsPDF
@@ -260,7 +256,7 @@ supabase/
 ├── prestamos.sql                  # Tabla `prestamos` (monto, cuotas, tna, situación crediticia) + RLS
 └── nfc_cobros.sql                 # Tabla `cobros_nfc` + columnas de tarjeta en `cuentas` + RLS
 
-plugins/monix-radio/                # Plugin nativo de Capacitor (Android, Kotlin): grabado de stickers NFC + emulación de tarjeta NFC (HCE)
+plugins/monix-radio/                # Plugin nativo de Capacitor (Android, Kotlin): huella, voz y cámara
 ```
 
 ---
@@ -303,7 +299,6 @@ Una cuenta bancaria por usuario.
 | `tasa_anual` | numeric | TNA de la cuenta principal, default 32% (agregada en `supabase/cuentas_interes.sql`) |
 | `ultima_interes_at` | timestamptz | Última vez que se acreditó interés (agregada en `supabase/cuentas_interes.sql`) |
 | `tarjeta_congelada` | boolean | Tarjeta congelada por el usuario (agregada en `supabase/nfc_cobros.sql`) |
-| `nfc_contacto_activo` | boolean | Pago contactless (NFC/QR) activado (agregada en `supabase/nfc_cobros.sql`) |
 | `created_at` | timestamptz | Auto |
 
 ### `reservas`
@@ -337,7 +332,7 @@ Préstamos personales en pesos (definida en `supabase/prestamos.sql`).
 | `created_at` | timestamptz | Auto |
 
 ### `cobros_nfc`
-Cobros con QR o NFC, generados por el comercio y pagados por el cliente (definida en `supabase/nfc_cobros.sql`).
+Cobros con QR, generados por el comercio y pagados por el cliente (definida en `supabase/nfc_cobros.sql`).
 
 | Columna | Tipo | Descripción |
 |---|---|---|
@@ -466,13 +461,9 @@ npm run dev
 
 ---
 
-## App nativa Android (NFC)
+## App nativa Android
 
-La web corre en cualquier navegador, pero el pago acercando el teléfono necesita la APK (Capacitor), porque el navegador no da acceso a la emulación de tarjeta NFC:
-
-- **Emulación de tarjeta NFC (HCE)**: que un lector de tarjetas físico le pague a la cuenta como si tocara una tarjeta real (`MonixHceService.kt`)
-
-Sin la APK, el sticker NFC de la tarjeta se puede grabar desde el navegador (Chrome Android); en iPhone, el pago contactless cae al fallback de QR (`isIosDevice`, `QrBox`). El código nativo vive en `plugins/monix-radio/android` (Kotlin) y se expone al lado web mediante `src/native/monixRadio.ts`. Para generar el proyecto Android y el APK: `npm run cap:add` (una vez) → `npm run apk:debug`.
+La web corre en cualquier navegador. La APK (Capacitor) suma huella, dictado por voz para Moni y cámara nativa para leer QR. El código nativo vive en `plugins/monix-radio/android` (Kotlin) y se expone al lado web mediante `src/native/monixRadio.ts`. Para generar el proyecto Android y el APK: `npm run cap:add` (una vez) → `npm run apk:debug`.
 
 ---
 
@@ -506,7 +497,7 @@ ON cuentas FOR UPDATE
 USING (persona_id = auth.uid());
 ```
 
-> El repo incluye SQL ya escrito para correr directamente en el SQL Editor de Supabase: `supabase/policies.sql` (políticas RLS de `personas`, `cuentas`, `movimientos` y `reservas`), `supabase/reservas.sql` (crea la tabla `reservas`), `supabase/cuentas_interes.sql` (agrega `tasa_anual` / `ultima_interes_at` a `cuentas`), `supabase/cuentas_moneda.sql` (agrega `moneda` a `cuentas`), `supabase/personas_credito.sql` (agrega `sueldo_acreditado` / `ingreso_mensual` a `personas`), `supabase/prestamos.sql` (crea la tabla `prestamos`, con sus propias políticas RLS incluidas) y `supabase/nfc_cobros.sql` (crea `cobros_nfc`, agrega `tarjeta_congelada` / `nfc_contacto_activo` a `cuentas`, con sus propias políticas RLS incluidas). Ejecutar en ese orden: `reservas.sql` → `cuentas_interes.sql` → `cuentas_moneda.sql` → `personas_credito.sql` → `prestamos.sql` → `nfc_cobros.sql` → `policies.sql`.
+> El repo incluye SQL ya escrito para correr directamente en el SQL Editor de Supabase: `supabase/policies.sql` (políticas RLS de `personas`, `cuentas`, `movimientos` y `reservas`), `supabase/reservas.sql` (crea la tabla `reservas`), `supabase/cuentas_interes.sql` (agrega `tasa_anual` / `ultima_interes_at` a `cuentas`), `supabase/cuentas_moneda.sql` (agrega `moneda` a `cuentas`), `supabase/personas_credito.sql` (agrega `sueldo_acreditado` / `ingreso_mensual` a `personas`), `supabase/prestamos.sql` (crea la tabla `prestamos`, con sus propias políticas RLS incluidas) y `supabase/nfc_cobros.sql` (crea `cobros_nfc`, agrega `tarjeta_congelada` a `cuentas`, con sus propias políticas RLS incluidas). Ejecutar en ese orden: `reservas.sql` → `cuentas_interes.sql` → `cuentas_moneda.sql` → `personas_credito.sql` → `prestamos.sql` → `nfc_cobros.sql` → `policies.sql`.
 
 ### Realtime
 
@@ -527,8 +518,6 @@ Habilitar replicación en tiempo real para la tabla `cuentas` (Supabase → Data
 **Saldo en tiempo real**: `useCuenta` mantiene una suscripción activa a `postgres_changes` en la fila de la cuenta del usuario. Cuando `saldo` cambia en la base de datos, el dashboard anima el CountUp desde el valor anterior al nuevo valor y muestra un indicador temporal del delta.
 
 **Un solo canal Realtime por cuenta**: como `App` y cada página montan su propio `useCuenta()`, las suscripciones se comparten por `cuenta.id` con conteo de referencias (`useCuenta.ts`) — evita el crash de supabase-js al intentar agregar un segundo listener `postgres_changes` sobre un canal ya suscripto.
-
-**Tokens rotativos en NFC/QR**: lo que viaja por NFC o en un QR nunca es el CBU/alias real, sino un token de corta duración. El servidor (RPCs de Supabase) es quien resuelve identidad y cuenta destino recién al confirmar la operación.
 
 ---
 

@@ -93,7 +93,7 @@ export const TOPICS: Topic[] = [
     keywords: ['ayuda', 'help', 'opciones', 'menu', 'funciones'],
     extra: ['sabes', 'consultas'],
     answers: () => [
-      'Sé de todo Monix: saldo, CBU/alias, transferir, depositar, historial, QR, NFC, metas comunes, dólares, reservas, préstamos, tarjetas, contactos, promos, cashback, financiación, mercadoMONIX, perfil, huella y seguridad. Preguntame concreto.',
+      'Sé de todo Monix: saldo, CBU/alias, transferir, depositar, historial, QR, metas comunes, dólares, reservas, préstamos, tarjetas, contactos, promos, cashback, financiación, mercadoMONIX, perfil, huella y seguridad. Preguntame concreto.',
       'Podés preguntarme cómo hacer algo, cuánto cuesta, límites, tasas o qué pantalla usar. Por ejemplo: “¿cómo pido un préstamo?” o “¿qué TNA tiene Reservas?”.',
       'No hace falta que uses las sugerencias. Escribí en criollo: “quiero mandar plata”, “se me perdió la tarjeta”, “rinde el ahorro?”. Te respondo con el producto de Monix que corresponde.',
     ],
@@ -105,7 +105,7 @@ export const TOPICS: Topic[] = [
     extra: ['entidad', 'neobank'],
     weak: ['monix', 'banco'],
     answers: () => [
-      'Monix es un banco digital: caja de ahorro en pesos (y otra en dólares si la abrís), transferencias 24 hs, QR/NFC, préstamos, reservas con interés, débito y marketplace propio.',
+      'Monix es un banco digital: caja de ahorro en pesos (y otra en dólares si la abrís), transferencias 24 hs, QR, préstamos, reservas con interés, débito y marketplace propio.',
       'Es tu homebanking: ves el saldo, movés plata, pagás, pedís crédito y hacés rendir un bolsillo de ahorro. Todo desde la app, sin sucursal.',
       'Monix concentra cuenta, tarjeta de débito, pagos, dólar oficial, préstamos personales y beneficios (promos, cashback, financiación) en un solo lugar.',
     ],
@@ -206,20 +206,7 @@ export const TOPICS: Topic[] = [
     answers: () => [
       'En Pagar mostrás tu QR para cobrar (podés ponerle monto) o tocás “Escanear para pagar”. El botón QR del centro de la barra también abre esto.',
       'Para cobrar: Pagar → tu código. Para pagar: escaneá el QR del otro. El cobro vence a los pocos minutos si nadie paga.',
-      'QR es para cobros entre personas o comercios. El pago acercando el celular o el sticker NFC está en Mis Tarjetas, aparte.',
-    ],
-  },
-  {
-    id: 'nfc',
-    href: '/tarjeta',
-    hrefLabel: 'Mis Tarjetas',
-    phrases: ['pago nfc', 'pagar acercando', 'sin contacto', 'contactless', 'sticker nfc'],
-    keywords: ['nfc', 'contactless', 'acercar', 'tap', 'chip'],
-    extra: ['sticker', 'hce', 'pos'],
-    answers: () => [
-      'El pago contactless se activa en Mis Tarjetas. En Android podés grabar un sticker NFC; en iPhone se muestra un QR de la tarjeta porque no se escribe el chip desde la app.',
-      'Activá “pago contactless” en Mis Tarjetas. Si la tarjeta está congelada, el NFC no sirve hasta que la descongeles.',
-      'NFC y QR no son lo mismo: NFC/sticker en Mis Tarjetas; QR para cobrar o escanear, en Pagar.',
+      'QR es para cobros entre personas o comercios.',
     ],
   },
   {
@@ -276,8 +263,8 @@ export const TOPICS: Topic[] = [
     keywords: ['tarjeta', 'debit', 'debito', 'cvv', 'pan', 'visa'],
     extra: ['plastico', 'virtual', 'dorso'],
     answers: () => [
-      'En Mis Tarjetas tenés débito en pesos y, si abriste USD, en dólares. Podés girarla, ver datos, congelarla y activar NFC. Los números sensibles solo se muestran si los pedís.',
-      'Es débito Visa virtual (y sticker NFC si lo grabás). No hay tarjeta de crédito Monix: para cuotas usá Financiación o mercadoMONIX.',
+      'En Mis Tarjetas tenés débito en pesos y, si abriste USD, en dólares. Podés girarla, ver datos y congelarla. Los números sensibles solo se muestran si los pedís.',
+      'Es débito Visa virtual. No hay tarjeta de crédito Monix: para cuotas usá Financiación o mercadoMONIX.',
       'Si la perdés, congelala al instante en Mis Tarjetas. Después la descongelás desde la misma pantalla.',
     ],
   },
@@ -289,7 +276,7 @@ export const TOPICS: Topic[] = [
     keywords: ['congelar', 'freeze', 'bloquear', 'pausar', 'perdida', 'robo'],
     extra: ['descongelar', 'activar', 'inhabilitar'],
     answers: () => [
-      'En Mis Tarjetas está Congelar. Corta compras y NFC al toque. Cuando esté segura, la descongelás ahí mismo.',
+      'En Mis Tarjetas está Congelar. Corta las compras al toque. Cuando esté segura, la descongelás ahí mismo.',
       'Si sospechás un uso raro: congelá la tarjeta y mirá Historial. Monix no te va a pedir el CVV por chat ni por mail.',
     ],
   },
@@ -501,8 +488,8 @@ export const TOPICS: Topic[] = [
     keywords: ['app', 'apk', 'android', 'ios', 'iphone', 'celular', 'aplicacion'],
     extra: ['nativa', 'capacitor'],
     answers: () => [
-      'Monix corre en el navegador y como app Android. En el teléfono tenés NFC, huella y el pago con QR. En iPhone el contactless se resuelve con QR de la tarjeta.',
-      'Para grabar el sticker NFC hace falta la APK. El resto del banco, incluidas las metas comunes, funciona en la web.',
+      'Monix corre en el navegador y como app Android. En el teléfono tenés huella y el pago con QR.',
+      'Todo el banco, incluidas las metas comunes, funciona también en la web.',
     ],
   },
   {

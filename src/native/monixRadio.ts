@@ -1,16 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
 
-export interface RadioCapabilities {
-  native: boolean
-  nfc: boolean
-}
-
-type NfcHandler = (payload: string) => void
-
-function hasNdef(): boolean {
-  return typeof window !== 'undefined' && 'NDEFReader' in window
-}
-
 export function isNative(): boolean {
   if (typeof window === 'undefined') return false
   if (Capacitor.isNativePlatform()) return true
@@ -19,11 +8,6 @@ export function isNative(): boolean {
 }
 
 type MonixPlugin = {
-  startNfcListen: () => Promise<void>
-  stopNfcListen: () => Promise<void>
-  writeNfc: (opts: { payload: string }) => Promise<void>
-  startHce: (opts: { payload: string }) => Promise<void>
-  stopHce: () => Promise<void>
   pedirCamara?: () => Promise<void>
   pedirMic?: () => Promise<void>
   pedirTodosLosPermisos?: () => Promise<void>
@@ -40,13 +24,6 @@ type MonixPlugin = {
 async function getPlugin(): Promise<MonixPlugin | null> {
   if (!isNative()) return null
   return registerPlugin<MonixPlugin>('MonixRadio')
-}
-
-export function radioCapabilities(): RadioCapabilities {
-  return {
-    native: isNative(),
-    nfc: hasNdef() || isNative(),
-  }
 }
 
 function conTiempo<T>(promesa: Promise<T>, ms: number) {
@@ -106,15 +83,6 @@ async function pedirMediosWeb() {
     }
   } catch {
     /* notificaciones no disponibles */
-  }
-  if (isNative() || !hasNdef()) return
-  const ac = new AbortController()
-  try {
-    await new NDEFReader().scan({ signal: ac.signal })
-  } catch {
-    /* NFC denegado o no disponible en Chrome */
-  } finally {
-    ac.abort()
   }
 }
 
@@ -202,153 +170,9 @@ export async function onVozNativa(handler: (text: string, isFinal: boolean) => v
   })
 }
 
-function mensajeNfc(err: unknown): Error {
-  const name = err && typeof err === 'object' && 'name' in err ? String(err.name) : ''
-  const raw = err instanceof Error ? err.message : ''
-  if (name === 'NotAllowedError' || /permission|denied|not allowed/i.test(raw)) {
-    return new Error(
-      'Chrome bloqueó el NFC. Tocá el candado de la barra → Permisos → NFC → Permitir. Con la APK de Monix no hace falta este permiso.',
-    )
-  }
-  return err instanceof Error ? err : new Error('No se pudo activar el NFC')
-}
-
 export function isAbortError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false
   const name = 'name' in err ? String(err.name) : ''
   const message = 'message' in err ? String(err.message) : ''
   return name === 'AbortError' || /signal is aborted/i.test(message)
 }
-
-export class MonixRadio {
-  private nfcHandlers = new Set<NfcHandler>()
-  private ndef: NDEFReader | null = null
-  private scanAbort: AbortController | null = null
-  private webNfcActive = false
-  private pluginUnsubs: Array<{ remove: () => Promise<void> }> = []
-
-  onNfc(handler: NfcHandler) {
-    this.nfcHandlers.add(handler)
-    return () => this.nfcHandlers.delete(handler)
-  }
-
-  private emitNfc(payload: string) {
-    this.nfcHandlers.forEach((h) => h(payload))
-  }
-
-  async stopNfcListen() {
-    const plugin = await getPlugin()
-    if (plugin) await plugin.stopNfcListen()
-    this.webNfcActive = false
-    this.scanAbort?.abort()
-    this.scanAbort = null
-    this.ndef = null
-    await Promise.all(this.pluginUnsubs.map((u) => u.remove()))
-    this.pluginUnsubs = []
-  }
-
-  async startNfcListen() {
-    const plugin = await getPlugin()
-    if (plugin) {
-      const sub = await plugin.addListener('nfcRead', (data) => {
-        const payload = String(data.payload ?? '')
-        if (payload) this.emitNfc(payload)
-      })
-      this.pluginUnsubs.push(sub)
-      await plugin.startNfcListen()
-      return
-    }
-    await this.startWebNfcListen()
-  }
-
-  private async startWebNfcListen() {
-    if (!hasNdef()) {
-      throw new Error('Este navegador no soporta NFC. Usá Chrome en Android o la APK de Monix.')
-    }
-    if (this.webNfcActive) return
-    this.scanAbort = new AbortController()
-    this.ndef = new NDEFReader()
-    this.webNfcActive = true
-    try {
-      await this.ndef.scan({ signal: this.scanAbort.signal })
-    } catch (err) {
-      this.webNfcActive = false
-      this.ndef = null
-      if (isAbortError(err)) return
-      throw mensajeNfc(err)
-    }
-    if (!this.ndef) return
-    this.ndef.onreading = (event) => {
-      for (const record of event.message.records) {
-        try {
-          const decoder = new TextDecoder(record.encoding ?? 'utf-8')
-          const text = decoder.decode(record.data)
-          if (text) this.emitNfc(text)
-        } catch {
-          /* ignore binary records */
-        }
-      }
-    }
-  }
-
-  async writeNfc(payload: string, options?: { signal?: AbortSignal }) {
-    const plugin = await getPlugin()
-    if (plugin) {
-      // El plugin nativo no tiene forma de cancelar una llamada en curso (el
-      // puente de Capacitor no lo soporta) — sin esto, cancelar o agotar el
-      // timeout del caller nunca se reflejaba acá y el await quedaba esperando
-      // a que el usuario acerque un tag, sin importar el signal recibido.
-      // El lado nativo (MonixRadioPlugin.kt) igual acota la escritura
-      // pendiente con su propio timeout, así que no queda colgada para siempre.
-      if (options?.signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-      await new Promise<void>((resolve, reject) => {
-        let settled = false
-        const onAbort = () => {
-          if (settled) return
-          settled = true
-          reject(new DOMException('Aborted', 'AbortError'))
-        }
-        options?.signal?.addEventListener('abort', onAbort)
-        plugin.writeNfc({ payload }).then(
-          () => {
-            if (settled) return
-            settled = true
-            options?.signal?.removeEventListener('abort', onAbort)
-            resolve()
-          },
-          (err) => {
-            if (settled) return
-            settled = true
-            options?.signal?.removeEventListener('abort', onAbort)
-            reject(err)
-          },
-        )
-      })
-      return
-    }
-    if (!hasNdef()) {
-      throw new Error('En este navegador no se puede grabar NFC. Probá Chrome en Android con un sticker, o la APK.')
-    }
-    const writer = new NDEFReader()
-    await writer.write(
-      { records: [{ recordType: 'text', data: payload, lang: 'es' }] },
-      options?.signal ? { signal: options.signal } : undefined,
-    )
-  }
-
-  async startHce(payload: string) {
-    const plugin = await getPlugin()
-    if (plugin) {
-      await plugin.startHce({ payload })
-      return
-    }
-    throw new Error('Para pagar acercando este teléfono necesitás la APK de Monix. En el navegador podés grabar el chip de la tarjeta física.')
-  }
-
-  async stopHce() {
-    const plugin = await getPlugin()
-    if (plugin) await plugin.stopHce()
-  }
-}
-
-export const monixRadio = new MonixRadio()

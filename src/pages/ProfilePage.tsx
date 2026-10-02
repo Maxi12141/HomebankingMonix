@@ -347,7 +347,7 @@ export function ProfilePage() {
             <div className="flex-1 min-w-0">
               <p className="font-body font-medium text-navy dark:text-white text-sm">Permisos del teléfono</p>
               <p className="font-body text-xs text-slate-secondary mt-0.5">
-                Cámara, micrófono y NFC. Sin esto no abre el QR ni el pago acercando la tarjeta.
+                Cámara y micrófono. Sin esto no abre el QR.
               </p>
             </div>
           </div>
@@ -358,7 +358,7 @@ export function ProfilePage() {
             onClick={() => { void permitirDispositivos() }}
             className="w-full"
           >
-            Permitir cámara, micrófono y NFC
+            Permitir cámara y micrófono
           </Button>
         </Card>
 

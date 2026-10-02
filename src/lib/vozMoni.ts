@@ -1,6 +1,6 @@
 import {
+  isNative,
   onVozNativa,
-  radioCapabilities,
   startVozNativa,
   stopVozNativa,
 } from '../native/monixRadio'
@@ -33,7 +33,7 @@ function ctorVoz(): RecogCtor | null {
 }
 
 export function soportaVozMoni() {
-  return typeof window !== 'undefined' && (radioCapabilities().native || Boolean(ctorVoz()))
+  return typeof window !== 'undefined' && (isNative() || Boolean(ctorVoz()))
 }
 
 function normalize(value: string) {
@@ -328,7 +328,7 @@ export class VozMoni {
   }
 
   private arrancar() {
-    if (radioCapabilities().native) {
+    if (isNative()) {
       void this.arrancarNativo()
       return
     }

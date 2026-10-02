@@ -93,9 +93,6 @@ async function aplicarQr(
     await cargarCuenta(parsed.value)
     return
   }
-  if (parsed?.kind === 'pay') {
-    throw new Error('Ese código es de la tarjeta. Para pagar con QR usá el código de esta pantalla.')
-  }
   if (!parsed) {
     // No matchea ningún formato conocido — sin esto caía a cargarCobro con el raw y mostraba un error de Postgres.
     throw new Error('Ese código QR no es de Monix.')

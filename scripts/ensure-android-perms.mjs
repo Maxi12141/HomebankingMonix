@@ -92,7 +92,6 @@ const perms = [
   'android.permission.CAMERA',
   'android.permission.RECORD_AUDIO',
   'android.permission.MODIFY_AUDIO_SETTINGS',
-  'android.permission.NFC',
   'android.permission.USE_BIOMETRIC',
   'android.permission.USE_FINGERPRINT',
   'android.permission.POST_NOTIFICATIONS',

@@ -27,22 +27,6 @@ function mapCobro(row: Record<string, unknown>): CobroNfc {
   }
 }
 
-export async function registrarTarjetaNfc(cuentaId: string, token: string) {
-  const { error } = await supabase.rpc('registrar_tarjeta_nfc', {
-    p_cuenta_id: cuentaId,
-    p_token: token,
-  })
-  if (error) throw new Error(rpcMessage(error, 'No se pudo grabar el chip'))
-}
-
-export async function generarCriptogramaNfc(cuentaId: string, token: string) {
-  const { error } = await supabase.rpc('generar_criptograma_nfc', {
-    p_cuenta_id: cuentaId,
-    p_token: token,
-  })
-  if (error) throw new Error(rpcMessage(error, 'No se pudo generar el pago contactless'))
-}
-
 export async function crearCobroNfc(cuentaId: string, monto: number, descripcion: string) {
   const { data, error } = await supabase.rpc('crear_cobro_nfc', {
     p_cuenta_id: cuentaId,
@@ -64,14 +48,6 @@ export async function obtenerCobroNfc(cobroId: string): Promise<CobroNfc> {
 export async function cancelarCobroNfc(cobroId: string) {
   const { error } = await supabase.rpc('cancelar_cobro_nfc', { p_cobro_id: cobroId })
   if (error) throw new Error(rpcMessage(error, 'No se pudo cancelar el cobro'))
-}
-
-export async function pagarCobroNfc(cobroId: string, secreto: string) {
-  const { error } = await supabase.rpc('pagar_cobro_nfc', {
-    p_cobro_id: cobroId,
-    p_secreto: secreto,
-  })
-  if (error) throw new Error(rpcMessage(error, 'No se pudo completar el pago'))
 }
 
 export async function pagarCobroQr(cobroId: string) {
@@ -112,7 +88,7 @@ export async function pagarQrCuenta(cuentaDestinoId: string, monto: number, desc
 
 export async function setTarjetaFlags(
   cuentaId: string,
-  flags: { tarjeta_congelada?: boolean; nfc_contacto_activo?: boolean },
+  flags: { tarjeta_congelada?: boolean },
 ) {
   const { error } = await supabase.from('cuentas').update(flags).eq('id', cuentaId)
   if (error) throw new Error(rpcMessage(error, 'No se pudo actualizar la tarjeta'))

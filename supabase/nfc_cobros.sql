@@ -1,5 +1,4 @@
--- Pago contactless (tarjeta NFC, criptograma) y cobros por NFC / QR.
--- Los tokens que viajan por NFC nunca son CBU/alias: solo un secreto rotativo hasheado.
+-- Tarjeta (congelar) y cobros por QR: crear, consultar, cancelar y pagar.
 
 create schema if not exists private;
 
@@ -8,9 +7,6 @@ create extension if not exists pgcrypto with schema extensions;
 -- ─── Tarjeta ────────────────────────────────────────────────────────────────
 alter table public.cuentas
   add column if not exists tarjeta_congelada boolean not null default false;
-
-alter table public.cuentas
-  add column if not exists nfc_contacto_activo boolean not null default false;
 
 -- ─── Cobros NFC / QR ────────────────────────────────────────────────────────
 create table if not exists public.cobros_nfc (
@@ -60,31 +56,7 @@ revoke all on table public.cobros_nfc from anon, public;
 grant select on table public.cobros_nfc to authenticated;
 grant all on table public.cobros_nfc to service_role;
 
--- ─── Secretos NFC (no expuestos a la Data API) ──────────────────────────────
-create table if not exists private.nfc_criptogramas (
-  id bigint generated always as identity primary key,
-  cuenta_id uuid not null references public.cuentas(id) on delete cascade,
-  token_hash text not null,
-  usado boolean not null default false,
-  expires_at timestamptz not null,
-  created_at timestamptz not null default now(),
-  constraint nfc_criptogramas_token_hash_key unique (token_hash)
-);
-
-create index if not exists nfc_criptogramas_cuenta_id_idx
-  on private.nfc_criptogramas (cuenta_id);
-
-create index if not exists nfc_criptogramas_expires_idx
-  on private.nfc_criptogramas (expires_at)
-  where usado = false;
-
-create table if not exists private.nfc_tarjetas (
-  cuenta_id uuid primary key references public.cuentas(id) on delete cascade,
-  token_hash text not null,
-  updated_at timestamptz not null default now(),
-  constraint nfc_tarjetas_token_hash_key unique (token_hash)
-);
-
+-- ─── Rate limiting (no expuesto a la Data API) ─────────────────────────────
 create table if not exists private.rpc_rate (
   id bigint generated always as identity primary key,
   persona_id uuid not null,
@@ -95,8 +67,6 @@ create table if not exists private.rpc_rate (
 create index if not exists rpc_rate_lookup_idx
   on private.rpc_rate (persona_id, accion, created_at desc);
 
-revoke all on table private.nfc_criptogramas from public, anon, authenticated;
-revoke all on table private.nfc_tarjetas from public, anon, authenticated;
 revoke all on table private.rpc_rate from public, anon, authenticated;
 
 -- ─── Helpers ────────────────────────────────────────────────────────────────
@@ -190,82 +160,7 @@ $$;
 
 revoke all on function private.cuenta_propia(uuid) from public, anon, authenticated;
 
--- ─── NFC tarjeta / criptograma ──────────────────────────────────────────────
-create or replace function private.registrar_tarjeta_nfc(p_cuenta_id uuid, p_token text)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_cuenta public.cuentas;
-begin
-  perform private.assert_token(p_token);
-  v_cuenta := private.cuenta_propia(p_cuenta_id);
-
-  if v_cuenta.tarjeta_congelada then
-    raise exception 'La tarjeta está congelada';
-  end if;
-
-  insert into private.nfc_tarjetas (cuenta_id, token_hash, updated_at)
-  values (v_cuenta.id, private.hash_token(p_token), now())
-  on conflict (cuenta_id) do update
-    set token_hash = excluded.token_hash,
-        updated_at = now();
-
-  update public.cuentas
-  set nfc_contacto_activo = true
-  where id = v_cuenta.id;
-end;
-$$;
-
-create or replace function public.registrar_tarjeta_nfc(p_cuenta_id uuid, p_token text)
-returns void
-language sql
-security definer
-set search_path = ''
-as $$
-  select private.registrar_tarjeta_nfc(p_cuenta_id, p_token);
-$$;
-
-create or replace function private.generar_criptograma_nfc(p_cuenta_id uuid, p_token text)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_cuenta public.cuentas;
-begin
-  perform private.assert_token(p_token);
-  v_cuenta := private.cuenta_propia(p_cuenta_id);
-
-  if v_cuenta.tarjeta_congelada then
-    raise exception 'La tarjeta está congelada';
-  end if;
-
-  if not v_cuenta.nfc_contacto_activo then
-    raise exception 'Activá el pago contactless en Mi Tarjeta';
-  end if;
-
-  delete from private.nfc_criptogramas
-  where cuenta_id = v_cuenta.id
-    and (usado = true or expires_at < now());
-
-  insert into private.nfc_criptogramas (cuenta_id, token_hash, expires_at)
-  values (v_cuenta.id, private.hash_token(p_token), now() + interval '90 seconds');
-end;
-$$;
-
-create or replace function public.generar_criptograma_nfc(p_cuenta_id uuid, p_token text)
-returns void
-language sql
-security definer
-set search_path = ''
-as $$
-  select private.generar_criptograma_nfc(p_cuenta_id, p_token);
-$$;
-
+-- ─── Cobros ─────────────────────────────────────────────────────────────────
 create or replace function private.crear_cobro_nfc(
   p_cuenta_id uuid,
   p_monto numeric,
@@ -434,214 +329,6 @@ security definer
 set search_path = ''
 as $$
   select private.cancelar_cobro_nfc(p_cobro_id);
-$$;
-
-create or replace function private.pagar_cobro_nfc(p_cobro_id uuid, p_secreto text)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_uid uuid := auth.uid();
-  v_hash text;
-  v_cobro public.cobros_nfc;
-  v_pagador public.cuentas;
-  v_comercio public.cuentas;
-  v_pagador_persona public.personas;
-  v_comercio_persona public.personas;
-  v_crypto private.nfc_criptogramas;
-  v_gasto_dia numeric;
-  v_limite numeric;
-  v_id_a uuid;
-  v_id_b uuid;
-begin
-  if v_uid is null then
-    raise exception 'No autenticado';
-  end if;
-
-  perform private.assert_token(p_secreto);
-  perform private.enforce_rate('pagar_cobro_nfc', 20, interval '5 minutes');
-
-  v_hash := private.hash_token(p_secreto);
-
-  select * into v_cobro
-  from public.cobros_nfc
-  where id = p_cobro_id;
-
-  if not found then
-    raise exception 'No encontramos ese cobro';
-  end if;
-
-  if v_cobro.estado <> 'pendiente' then
-    raise exception 'Ese cobro ya no está disponible';
-  end if;
-
-  if v_cobro.expires_at <= now() then
-    update public.cobros_nfc
-    set estado = 'expirado'
-    where id = v_cobro.id and estado = 'pendiente';
-    raise exception 'El cobro expiró';
-  end if;
-
-  -- Criptograma de un solo uso (teléfono) o chip estático de la tarjeta.
-  select * into v_crypto
-  from private.nfc_criptogramas
-  where token_hash = v_hash
-    and usado = false
-    and expires_at > now();
-
-  if found then
-    select * into v_pagador from public.cuentas where id = v_crypto.cuenta_id;
-  else
-    select c.* into v_pagador
-    from private.nfc_tarjetas t
-    join public.cuentas c on c.id = t.cuenta_id
-    where t.token_hash = v_hash;
-  end if;
-
-  if v_pagador.id is null then
-    raise exception 'Chip o teléfono no reconocido';
-  end if;
-
-  if not v_pagador.activa then
-    raise exception 'La cuenta pagadora no está activa';
-  end if;
-
-  if v_pagador.tarjeta_congelada then
-    raise exception 'La tarjeta está congelada';
-  end if;
-
-  if not v_pagador.nfc_contacto_activo then
-    raise exception 'El pago contactless está desactivado';
-  end if;
-
-  select * into v_comercio from public.cuentas where id = v_cobro.comercio_cuenta_id and activa = true;
-  if not found then
-    raise exception 'La cuenta del comercio no está disponible';
-  end if;
-
-  if v_pagador.id = v_comercio.id or v_pagador.persona_id = v_comercio.persona_id then
-    raise exception 'No podés pagarte a vos mismo';
-  end if;
-
-  if v_pagador.moneda <> v_comercio.moneda then
-    raise exception 'La moneda de la tarjeta no coincide con el cobro';
-  end if;
-
-  -- El POS (comercio) o el dueño de la tarjeta pueden confirmar el débito.
-  if v_uid <> v_cobro.comercio_persona_id and v_uid <> v_pagador.persona_id then
-    raise exception 'No tenés permiso para este pago';
-  end if;
-
-  if v_crypto.id is null then
-    v_limite := case when v_pagador.moneda = 'USD' then 1500 else 250000 end;
-    select coalesce(sum(m.monto), 0) into v_gasto_dia
-    from public.movimientos m
-    where m.cuenta_id = v_pagador.id
-      and m.tipo = 'transferencia_salida'
-      and m.descripcion like 'Pago NFC|%'
-      and m.created_at >= date_trunc('day', now());
-
-    if v_gasto_dia + v_cobro.monto > v_limite then
-      raise exception 'Superaste el límite diario de la tarjeta contactless';
-    end if;
-  end if;
-
-  v_id_a := least(v_pagador.id, v_comercio.id);
-  v_id_b := greatest(v_pagador.id, v_comercio.id);
-
-  perform 1
-  from public.cuentas
-  where id in (v_id_a, v_id_b)
-  order by id
-  for update;
-
-  select * into v_pagador from public.cuentas where id = v_pagador.id;
-  select * into v_comercio from public.cuentas where id = v_comercio.id;
-
-  if v_pagador.saldo < v_cobro.monto then
-    raise exception 'Saldo insuficiente';
-  end if;
-
-  select * into v_pagador_persona from public.personas where id = v_pagador.persona_id;
-  select * into v_comercio_persona from public.personas where id = v_comercio.persona_id;
-
-  update public.cuentas
-  set saldo = round(saldo - v_cobro.monto, 2)
-  where id = v_pagador.id;
-
-  update public.cuentas
-  set saldo = round(saldo + v_cobro.monto, 2)
-  where id = v_comercio.id;
-
-  insert into public.movimientos (
-    cuenta_id, tipo, monto, saldo_resultante, descripcion,
-    cuenta_destino_id, destinatario_nombre, destinatario_apellido,
-    destinatario_dni, destino_cbu, destino_alias
-  ) values (
-    v_pagador.id,
-    'transferencia_salida',
-    v_cobro.monto,
-    round(v_pagador.saldo - v_cobro.monto, 2),
-    concat('Pago NFC|', coalesce(v_cobro.descripcion, 'Contactless')),
-    v_comercio.id,
-    v_comercio_persona.nombre,
-    v_comercio_persona.apellido,
-    v_comercio_persona.dni,
-    v_comercio.cbu,
-    v_comercio.alias
-  );
-
-  insert into public.movimientos (
-    cuenta_id, tipo, monto, saldo_resultante, descripcion,
-    cuenta_destino_id, destinatario_nombre, destinatario_apellido,
-    destinatario_dni, destino_cbu, destino_alias
-  ) values (
-    v_comercio.id,
-    'transferencia_entrada',
-    v_cobro.monto,
-    round(v_comercio.saldo + v_cobro.monto, 2),
-    concat('Pago NFC|', coalesce(v_cobro.descripcion, 'Contactless')),
-    v_pagador.id,
-    v_pagador_persona.nombre,
-    v_pagador_persona.apellido,
-    v_pagador_persona.dni,
-    v_pagador.cbu,
-    v_pagador.alias
-  );
-
-  if v_crypto.id is not null then
-    update private.nfc_criptogramas
-    set usado = true
-    where id = v_crypto.id
-      and usado = false;
-
-    if not found then
-      raise exception 'El código de pago ya fue usado';
-    end if;
-  end if;
-
-  update public.cobros_nfc
-  set estado = 'pagado',
-      pagador_cuenta_id = v_pagador.id,
-      pagado_at = now()
-  where id = v_cobro.id
-    and estado = 'pendiente';
-
-  if not found then
-    raise exception 'Ese cobro ya no está disponible';
-  end if;
-end;
-$$;
-
-create or replace function public.pagar_cobro_nfc(p_cobro_id uuid, p_secreto text)
-returns void
-language sql
-security definer
-set search_path = ''
-as $$
-  select private.pagar_cobro_nfc(p_cobro_id, p_secreto);
 $$;
 
 create or replace function private.resolver_qr_cuenta(p_cuenta_id uuid)
@@ -992,8 +679,7 @@ begin
     where n.nspname = 'private'
       and p.proname in (
         'hash_token','assert_token','enforce_rate','cuenta_propia',
-        'registrar_tarjeta_nfc','generar_criptograma_nfc','crear_cobro_nfc',
-        'obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_nfc','pagar_cobro_qr',
+        'crear_cobro_nfc','obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_qr',
         'resolver_qr_cuenta','pagar_qr_cuenta'
       )
   loop
@@ -1006,8 +692,7 @@ begin
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname in (
-        'registrar_tarjeta_nfc','generar_criptograma_nfc','crear_cobro_nfc',
-        'obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_nfc','pagar_cobro_qr',
+        'crear_cobro_nfc','obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_qr',
         'resolver_qr_cuenta','pagar_qr_cuenta'
       )
   loop
