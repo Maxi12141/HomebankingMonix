@@ -1,18 +1,29 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
 import { listarTransacciones } from '../services/bancoCentral'
 
-export function useSyncTransferenciasEntrantes() {
-  const { cuentas, updateSaldoCuenta, triggerRefresh } = useCuentaStore()
-  const syncingRef = useRef(false)
+// Candado de módulo, no por instancia: la sync corre desde PageWrapper y
+// también desde la pantalla del QR mientras espera un pago. Dos pasadas en
+// paralelo podían acreditar dos veces la misma transferencia (el chequeo de
+// bc_transaccion_id y el insert no son atómicos).
+let enCurso: Promise<void> | null = null
 
-  // string estable para el dependency array — cuentas cambia de referencia en cada fetch
-  const cuentaIds = cuentas.map((c) => c.id).join(',')
+/**
+ * Trae del Banco Central las transferencias entrantes de las últimas 24 h y
+ * acredita las que todavía no están en movimientos. Si ya hay una pasada
+ * corriendo, espera esa en vez de arrancar otra.
+ */
+export function sincronizarTransferenciasEntrantes(): Promise<void> {
+  if (!enCurso) {
+    enCurso = sincronizar().finally(() => { enCurso = null })
+  }
+  return enCurso
+}
 
-  const sync = useCallback(async () => {
-    if (cuentas.length === 0 || syncingRef.current) return
-    syncingRef.current = true
+async function sincronizar() {
+  const { cuentas, updateSaldoCuenta, triggerRefresh } = useCuentaStore.getState()
+  if (cuentas.length === 0) return
 
     try {
       const transacciones = await listarTransacciones(1440)
@@ -79,16 +90,19 @@ export function useSyncTransferenciasEntrantes() {
       if (procesadas > 0) triggerRefresh()
     } catch (e) {
       console.error('Error al sincronizar transferencias entrantes:', e)
-    } finally {
-      syncingRef.current = false
     }
-  }, [cuentaIds])
+}
+
+export function useSyncTransferenciasEntrantes() {
+  // string estable para el dependency array — cuentas cambia de referencia en cada fetch
+  const cuentaIds = useCuentaStore((s) => s.cuentas.map((c) => c.id).join(','))
 
   useEffect(() => {
-    sync()
-    const interval = setInterval(sync, 2 * 60 * 1000)
+    if (!cuentaIds) return
+    void sincronizarTransferenciasEntrantes()
+    const interval = setInterval(() => { void sincronizarTransferenciasEntrantes() }, 2 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [sync])
+  }, [cuentaIds])
 
-  return { sync }
+  return { sync: sincronizarTransferenciasEntrantes }
 }

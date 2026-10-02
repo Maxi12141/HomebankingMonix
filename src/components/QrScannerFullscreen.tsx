@@ -31,6 +31,7 @@ export function QrScannerFullscreen({
   onClosed,
   onMostrarQr,
   onToggleTorch,
+  onReintentar,
 }: {
   videoRef: RefObject<HTMLVideoElement>
   error?: string
@@ -42,6 +43,9 @@ export function QrScannerFullscreen({
   onClosed?: () => void
   onMostrarQr?: () => void
   onToggleTorch: () => void
+  // Si leer el QR dio error, la cámara queda apagada (pantalla negra): sin
+  // este botón la única salida era cerrar el escáner.
+  onReintentar?: () => void
 }) {
   const theme = useThemeStore((s) => s.theme)
   const originX = useQrScanStore((s) => s.originX)
@@ -211,9 +215,18 @@ export function QrScannerFullscreen({
       </div>
 
       {error && (
-        <p className="absolute inset-x-0 top-28 z-10 px-6 text-center font-body text-sm text-white/90">
-          {error}
-        </p>
+        <div className="absolute inset-x-0 top-28 z-10 flex flex-col items-center gap-3 px-6 text-center">
+          <p className="font-body text-sm text-white/90" role="alert">{error}</p>
+          {onReintentar && (
+            <button
+              type="button"
+              onClick={onReintentar}
+              className="rounded-full bg-white/15 px-5 py-2.5 font-body text-sm font-medium text-white backdrop-blur-md hover:bg-white/25"
+            >
+              Escanear de nuevo
+            </button>
+          )}
+        </div>
       )}
 
       <button

@@ -1,9 +1,14 @@
-import { useState } from 'react'
-import { Download, Loader2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Download, Loader2, Share2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Modal } from './ui/Modal'
 import { Card } from './ui/Card'
-import { downloadComprobante } from '../utils/comprobante'
+import {
+  comprobantePdfFile,
+  compartirArchivo,
+  downloadComprobante,
+  puedeCompartirArchivos,
+} from '../utils/comprobante'
 import { formatMonto } from '../utils/cuenta'
 import type { Movimiento } from '../types'
 
@@ -36,8 +41,31 @@ function DetailRow({ label, value }: { label: string; value: string | null | und
 
 export function TransactionDetailModal({ movimiento, bankName, onClose }: Props) {
   const [downloading, setDownloading] = useState(false)
+  const [compartiendo, setCompartiendo] = useState(false)
+  // PDF ya generado de este movimiento, para que un segundo toque comparta al
+  // instante si el primero tardó demasiado (ver compartirArchivo).
+  const pdfRef = useRef<{ id: string; file: File } | null>(null)
 
   if (!movimiento) return null
+
+  async function handleShare() {
+    if (!movimiento || compartiendo) return
+    setCompartiendo(true)
+    try {
+      let file = pdfRef.current?.id === movimiento.id ? pdfRef.current.file : null
+      if (!file) {
+        file = await comprobantePdfFile(movimiento, bankName)
+        pdfRef.current = { id: movimiento.id, file }
+      }
+      const resultado = await compartirArchivo(file)
+      if (resultado === 'sin-gesto') toast('Comprobante listo: tocá compartir de nuevo', { icon: '📄' })
+      else if (resultado === 'error') toast.error('No se pudo compartir el comprobante')
+    } catch {
+      toast.error('No se pudo generar el comprobante')
+    } finally {
+      setCompartiendo(false)
+    }
+  }
 
   async function handleDownload() {
     if (!movimiento || downloading) return
@@ -88,6 +116,17 @@ export function TransactionDetailModal({ movimiento, bankName, onClose }: Props)
             </p>
           </div>
           <div className="flex items-center gap-2 mt-1">
+            {puedeCompartirArchivos() && (
+              <button
+                onClick={() => { void handleShare() }}
+                disabled={compartiendo}
+                className="text-slate-secondary hover:text-mint transition-colors disabled:opacity-50"
+                aria-label="Compartir comprobante"
+                title="Compartir comprobante PDF"
+              >
+                {compartiendo ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
+              </button>
+            )}
             <button
               onClick={handleDownload}
               disabled={downloading}

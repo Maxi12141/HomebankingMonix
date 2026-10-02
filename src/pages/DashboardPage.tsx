@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, Receipt, ChevronLeft, ChevronRight, QrCode } from 'lucide-react'
+import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, Receipt, ChevronLeft, ChevronRight, QrCode, Share2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CountUp from 'react-countup'
 import { useAuthStore } from '../store/authStore'
+import { compartirTexto, textoDatosCuenta } from '../utils/compartir'
 import { useCuenta } from '../hooks/useCuenta'
 import { useMovimientos } from '../hooks/useMovimientos'
 import { useBankNames } from '../hooks/useBankNames'
@@ -116,6 +117,7 @@ const itemVariants = {
 const MOSTRAR_SALDO_KEY = 'monix_mostrar_saldo'
 
 function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy: number; titulo: string }) {
+  const persona = useAuthStore((s) => s.persona)
   const isUSD = cuenta.moneda === 'USD'
   const tasa = Number(cuenta.tasa_anual ?? 32)
   const rendimientoDiario = estimacionDiaria(cuenta.saldo, tasa)
@@ -253,6 +255,20 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             {copiedAlias ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
           </button>
         </div>
+
+        {cuenta.cbu && (
+          <button
+            type="button"
+            onClick={() => {
+              void compartirTexto({ titulo: 'Mis datos de Monix', texto: textoDatosCuenta(cuenta, persona) })
+            }}
+            className="ml-auto inline-flex items-center gap-1.5 font-body text-xs font-medium text-mint hover:text-mint-hover transition-colors"
+            aria-label="Compartir mis datos"
+          >
+            <Share2 size={13} />
+            Compartir
+          </button>
+        )}
       </div>
     </Card>
   )

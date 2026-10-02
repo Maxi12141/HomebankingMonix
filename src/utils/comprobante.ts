@@ -207,12 +207,15 @@ async function crearPdf(mov: Movimiento, bankName?: string): Promise<jsPDF> {
       logging: false,
     })
 
-    const imgData = canvas.toDataURL('image/png')
+    // JPEG y no PNG: con PNG el PDF de una sola página pesaba ~6 MB (pesado
+    // para mandarlo por WhatsApp). A scale 2 con calidad 0.92 el texto se ve
+    // igual de nítido.
+    const imgData = canvas.toDataURL('image/jpeg', 0.92)
     const pdfW = 210
     const pdfH = (canvas.height / canvas.width) * pdfW
 
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
-    doc.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH)
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
+    doc.addImage(imgData, 'JPEG', 0, 0, pdfW, pdfH)
     return doc
   } finally {
     document.body.removeChild(container)
@@ -244,15 +247,19 @@ export function puedeCompartirArchivos(): boolean {
 
 export type ResultadoCompartir = 'compartido' | 'cancelado' | 'error'
 
-/** Abre el share sheet nativo con el PDF adjunto — llamar directo desde el handler de un click. */
-export async function compartirComprobante(mov: Movimiento, bankName?: string): Promise<ResultadoCompartir> {
+/**
+ * Abre el share sheet nativo con un PDF ya generado (comprobantePdfFile).
+ * Generar el PDF tarda y el navegador puede rechazar el share por haber pasado
+ * mucho desde el toque ('sin-gesto'): con el archivo ya listo, un segundo
+ * toque comparte al instante.
+ */
+export async function compartirArchivo(file: File): Promise<ResultadoCompartir | 'sin-gesto'> {
   try {
-    const file = await comprobantePdfFile(mov, bankName)
     await navigator.share({ files: [file], title: 'Comprobante Monix' })
     return 'compartido'
   } catch (err) {
-    // El usuario cerró el share sheet sin elegir nada — no es un error real.
     if (err instanceof DOMException && err.name === 'AbortError') return 'cancelado'
+    if (err instanceof DOMException && err.name === 'NotAllowedError') return 'sin-gesto'
     return 'error'
   }
 }

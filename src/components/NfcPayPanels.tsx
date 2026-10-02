@@ -16,8 +16,8 @@ import { decodeJwt } from 'jose'
 import {
   MONIX_BANK_CODE,
   avisarLectura,
-  esJwtQr,
   firmarQrPropio,
+  leerQrSimple,
   nombreBanco,
   verificarJwtQr,
   type QrJwtClaims,
@@ -59,16 +59,16 @@ async function aplicarQr(
   // bancos de la cátedra. Si claims.cid apunta a un cobro propio, se sigue
   // exactamente el camino de siempre (con seguimiento en tiempo real); si no,
   // se resuelve como una transferencia común por CBU.
-  if (esJwtQr(raw.trim())) {
+  {
     const resultado = await verificarJwtQr(raw)
     if (resultado) {
-      const { claims } = resultado
+      const { claims, token } = resultado
       // Aviso de lectura (spec, secciones 12 y 13): el banco emisor le avisa a
       // su usuario y cierra el QR, como un posnet. Si ya lo escaneó otra
       // persona responde 409 y no se deja pagar; si no responde, se sigue.
       const persona = useAuthStore.getState().persona
       const aviso = await avisarLectura(
-        raw,
+        token,
         claims,
         persona ? `${persona.nombre} ${persona.apellido.charAt(0)}.`.trim() : null,
       )
@@ -94,8 +94,15 @@ async function aplicarQr(
     return
   }
   if (!parsed) {
+    // QR de otro banco sin firma (CBU pelado, alias o JSON plano): se resuelve
+    // como una transferencia común, igual que un QR firmado sin cobro.
+    const simple = leerQrSimple(raw)
+    if (simple) {
+      await cargarDestinoJwt(simple)
+      return
+    }
     // No matchea ningún formato conocido — sin esto caía a cargarCobro con el raw y mostraba un error de Postgres.
-    throw new Error('Ese código QR no es de Monix.')
+    throw new Error('No reconocemos este código QR. Probá con el QR de cobro de un banco o una cuenta.')
   }
   await cargarCobro(raw.replace(/^MONIXPAY:/i, ''))
 }
@@ -977,6 +984,7 @@ export function EscanearYPagar({
               if (closingRef.current) onCerrarScan?.()
             }}
             onToggleTorch={() => { void toggleTorch() }}
+            onReintentar={() => { void escanearQr() }}
           />,
           document.body,
         )}
@@ -1003,6 +1011,7 @@ export function EscanearYPagar({
               if (closingRef.current) onCerrarScan?.()
             }}
             onToggleTorch={() => { void toggleTorch() }}
+            onReintentar={() => { void escanearQr() }}
           />,
           document.body,
         )}

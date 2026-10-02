@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Check, Copy, Plus, Target, Users } from 'lucide-react'
+import { ArrowLeft, Check, Copy, Plus, Share2, Target, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useSearchParams } from 'react-router-dom'
 import { PageWrapper } from '../components/layout/PageWrapper'
@@ -7,6 +7,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { MetasAyuda } from '../components/MetasAyuda'
+import { compartirTexto } from '../utils/compartir'
 import { useCuenta } from '../hooks/useCuenta'
 import { formatMonto } from '../utils/cuenta'
 import {
@@ -231,14 +232,23 @@ export function MetasPage() {
 
   async function copiarCodigo() {
     if (!detalle) return
-    const url = `${window.location.origin}/metas?codigo=${detalle.codigo}`
     try {
-      await navigator.clipboard.writeText(`${detalle.codigo} · ${url}`)
+      await navigator.clipboard.writeText(detalle.codigo)
       setCopiado(true)
       window.setTimeout(() => setCopiado(false), 1600)
     } catch {
       toast.error('No se pudo copiar')
     }
+  }
+
+  function compartirInvitacion() {
+    if (!detalle) return
+    // El link abre /metas con el código ya cargado (codigoUrl más arriba).
+    void compartirTexto({
+      titulo: `Meta "${detalle.titulo}" en Monix`,
+      texto: `Sumate a mi meta "${detalle.titulo}" en Monix. Código de invitación: ${detalle.codigo}`,
+      url: `${window.location.origin}/metas?codigo=${detalle.codigo}`,
+    })
   }
 
   if (detalle) {
@@ -310,14 +320,26 @@ export function MetasPage() {
                   <p className="font-body text-[11px] text-slate-secondary uppercase">Código</p>
                   <p className="font-display tracking-widest text-navy dark:text-white">{detalle.codigo}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => { void copiarCodigo() }}
-                  className="text-mint"
-                  aria-label="Copiar código"
-                >
-                  {copiado ? <Check size={18} /> : <Copy size={18} />}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => { void copiarCodigo() }}
+                    className="p-2 rounded-lg text-mint hover:bg-mint/10"
+                    aria-label="Copiar código"
+                    title="Copiar código"
+                  >
+                    {copiado ? <Check size={18} /> : <Copy size={18} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={compartirInvitacion}
+                    className="p-2 rounded-lg text-mint hover:bg-mint/10"
+                    aria-label="Compartir invitación"
+                    title="Compartir invitación"
+                  >
+                    <Share2 size={18} />
+                  </button>
+                </div>
               </div>
               <form onSubmit={(e) => { void onInvitar(e) }} className="flex flex-col gap-3">
                 <Input

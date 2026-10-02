@@ -186,7 +186,7 @@ No requiere intercambiar claves: el emisor sólo usa la suya. El `qr` firmado pr
 | Banco | bankCode | avisoUrl |
 | --- | --- | --- |
 | Monix | 3 | `https://jrsismsrdqvhwmegfslz.supabase.co/functions/v1/qr-lectura` |
-| Banco Tuo | 12 | `https://bjpgdcgloinsjogpwwgm.supabase.co/functions/v1/qr-lectura` |
+| Banco Tuo | 12 | `https://banco-tuo.vercel.app/api/qr/aviso-lectura` |
 | _(completar)_ | | |
 
 ## 13. QR de un solo uso (cierre al escanear, como un posnet)

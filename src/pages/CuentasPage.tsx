@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check, Lock, ShieldCheck, Landmark, DollarSign } from 'lucide-react'
+import { Copy, Check, Lock, ShieldCheck, Landmark, DollarSign, Share2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
@@ -10,7 +10,8 @@ import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
-import type { Cuenta } from '../types'
+import { compartirTexto, textoDatosCuenta } from '../utils/compartir'
+import type { Cuenta, Persona } from '../types'
 
 type Estado = 'idle' | 'confirmar' | 'abriendo'
 
@@ -38,7 +39,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
   )
 }
 
-function CuentaCard({ cuenta, titulo }: { cuenta: Cuenta; titulo: string }) {
+function CuentaCard({ cuenta, titulo, persona }: { cuenta: Cuenta; titulo: string; persona: Persona | null }) {
   const Icon = cuenta.moneda === 'USD' ? DollarSign : Landmark
   return (
     <Card className="p-6">
@@ -58,6 +59,21 @@ function CuentaCard({ cuenta, titulo }: { cuenta: Cuenta; titulo: string }) {
         <CopyField label="CBU" value={cuenta.cbu ?? '—'} />
         <CopyField label="Alias" value={cuenta.alias ?? '—'} />
       </div>
+      {cuenta.cbu && (
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full mt-3"
+          onClick={() => {
+            void compartirTexto({ titulo: 'Mis datos de Monix', texto: textoDatosCuenta(cuenta, persona) })
+          }}
+        >
+          <span className="inline-flex items-center justify-center gap-2">
+            <Share2 size={16} />
+            Compartir mis datos
+          </span>
+        </Button>
+      )}
     </Card>
   )
 }
@@ -121,10 +137,10 @@ export function CuentasPage() {
         </div>
 
         <div className="flex flex-col gap-4">
-          {cuenta && <CuentaCard cuenta={cuenta} titulo="Caja de ahorro en pesos" />}
+          {cuenta && <CuentaCard cuenta={cuenta} titulo="Caja de ahorro en pesos" persona={persona} />}
 
           {cuentaUSD ? (
-            <CuentaCard cuenta={cuentaUSD} titulo="Caja de ahorro en dólares" />
+            <CuentaCard cuenta={cuentaUSD} titulo="Caja de ahorro en dólares" persona={persona} />
           ) : (
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-3">

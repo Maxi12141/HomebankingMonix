@@ -12,7 +12,7 @@ import { useTransferenciasRecientes } from '../hooks/useTransferenciasRecientes'
 import { useMercadoFinanciero } from '../hooks/useMercadoFinanciero'
 import { formatMonto } from '../utils/cuenta'
 import { esCelular } from '../lib/biometria'
-import { compartirComprobante, downloadComprobante, puedeCompartirArchivos } from '../utils/comprobante'
+import { comprobantePdfFile, compartirArchivo, downloadComprobante, puedeCompartirArchivos } from '../utils/comprobante'
 import { AgendaContactosPanel } from '../components/AgendaContactosPanel'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
@@ -145,6 +145,9 @@ export function TransferPage() {
   const [comprobante, setComprobante] = useState<Movimiento | null>(null)
   const [vinoDeQr, setVinoDeQr] = useState(false)
   const [compartiendo, setCompartiendo] = useState(false)
+  // PDF ya generado del comprobante: si el primer toque tardó demasiado y el
+  // navegador rechazó el share, el segundo comparte al instante.
+  const pdfRef = useRef<{ id: string; file: File } | null>(null)
   // Si el Banco Central ya aceptó el envío, un reintento no debe volver a mandarle la plata.
   const opRef = useRef<{ id: string; enviadoBC: boolean; bcTransaccionId: string | null; destinoCbu: string; monto: number } | null>(null)
 
@@ -406,8 +409,14 @@ export function TransferPage() {
     setCompartiendo(true)
     try {
       if (puedeCompartirArchivos()) {
-        const resultado = await compartirComprobante(comprobante)
-        if (resultado === 'error') toast.error('No se pudo compartir el comprobante')
+        let file = pdfRef.current?.id === comprobante.id ? pdfRef.current.file : null
+        if (!file) {
+          file = await comprobantePdfFile(comprobante)
+          pdfRef.current = { id: comprobante.id, file }
+        }
+        const resultado = await compartirArchivo(file)
+        if (resultado === 'sin-gesto') toast('Comprobante listo: tocá compartir de nuevo', { icon: '📄' })
+        else if (resultado === 'error') toast.error('No se pudo compartir el comprobante')
       } else {
         await downloadComprobante(comprobante)
       }

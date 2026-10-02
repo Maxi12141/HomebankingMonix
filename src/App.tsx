@@ -37,6 +37,7 @@ import { PrestamosPage } from './pages/PrestamosPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { useBiometriaLock } from './hooks/useBiometriaLock'
+import { useCuenta } from './hooks/useCuenta'
 import { HuellaLockScreen } from './components/HuellaLockScreen'
 import { aplicarBarraDeEstado } from './native/statusBar'
 
@@ -52,6 +53,15 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
   return user && !provisioning ? <Navigate to="/dashboard" replace /> : <>{children}</>
 }
 
+// Carga las cuentas (y su Realtime) una vez para toda la app logueada. Antes
+// lo hacía AhoraProvider; al sacarlo, las páginas que no llaman a useCuenta()
+// por su cuenta (Historial) quedaban en "Cargando..." al entrar directo o
+// recargar, porque useMovimientos espera a que la store tenga cuentas.
+function CuentasGlobales() {
+  useCuenta()
+  return null
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth()
   const { locked, unlock } = useBiometriaLock(loading ? null : user)
@@ -63,6 +73,8 @@ function AppRoutes() {
   }
 
   return (
+    <>
+    {!loading && user && <CuentasGlobales />}
     <Routes>
       <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />
       <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
@@ -88,6 +100,7 @@ function AppRoutes() {
       <Route path="/contactos" element={<RequireAuth><ContactosPage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }
 
