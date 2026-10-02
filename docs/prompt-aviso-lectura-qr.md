@@ -30,7 +30,7 @@ Un endpoint nuevo (en Supabase: una Edge Function desplegada con `verify_jwt: fa
 2. Validar el body: `qr` string (rechazar más de 4096 caracteres), `banco` entero positivo, `nombre` opcional (trim, cortar a 40).
 3. Verificar `qr` con TU PROPIA clave pública (`jwtVerify` de `jose`, `algorithms: ['ES256']`, `clockTolerance: 120`) y chequear que `iss` sea tu bankCode. Si falla: 401. No hace falta ninguna clave de otro banco.
 4. Con el `cbu` de los claims, buscar la cuenta activa y su dueño (con service role / server-side).
-5. Ignorar duplicados: si ya registraste un aviso del mismo QR (mismo `jti`, o mismo `qr` si no usás `jti`) y mismo `banco` en los últimos 30 segundos, responder 202 sin volver a avisar. La cámara suele leer el mismo código varias veces seguidas.
+5. Ignorar duplicados: si ya registraste un aviso del mismo QR (mismo `jti`; si tus QR no tienen `jti`, misma cuenta) y mismo `banco` en los últimos 30 segundos, responder 202 sin volver a avisar. La cámara suele leer el mismo código varias veces seguidas.
 6. Guardar el aviso (por ejemplo una tabla `qr_lecturas` con `persona_id`, `cuenta_id`, `jti`, `banco_lector`, `nombre_lector`, `created_at`, con RLS para que cada usuario lea sólo las suyas) y avisarle al usuario en tiempo real. En Supabase: sumar la tabla a la publicación `supabase_realtime` y en la pantalla donde se muestra el QR suscribirse a `INSERT` con filtro por el usuario. Mostrar un toast tipo "Juan P. escaneó tu QR" (si `banco` no es el tuyo, sumar "desde <nombre del banco>").
 
 ### 2. Mandar avisos (rol lector)

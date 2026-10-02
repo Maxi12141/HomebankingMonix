@@ -96,18 +96,17 @@ Deno.serve(async (req: Request) => {
   const jti = typeof claims.jti === "string" ? claims.jti : null
   const cid = typeof claims.cid === "string" ? claims.cid : null
 
-  if (jti) {
-    const desde = new Date(Date.now() - VENTANA_DUPLICADO_MS).toISOString()
-    const { data: previo } = await supabase
-      .from("qr_lecturas")
-      .select("id")
-      .eq("jti", jti)
-      .eq("banco_lector", banco)
-      .gte("created_at", desde)
-      .limit(1)
-    if (previo && previo.length > 0) {
-      return jsonResponse({ ok: true, avisado: true }, 202)
-    }
+  // Con jti se compara el QR exacto; sin jti (emisores que no lo agregan),
+  // alcanza con misma cuenta + mismo banco lector dentro de la ventana.
+  const desde = new Date(Date.now() - VENTANA_DUPLICADO_MS).toISOString()
+  const base = supabase
+    .from("qr_lecturas")
+    .select("id")
+    .eq("banco_lector", banco)
+    .gte("created_at", desde)
+  const { data: previo } = await (jti ? base.eq("jti", jti) : base.eq("cuenta_id", cuenta.id)).limit(1)
+  if (previo && previo.length > 0) {
+    return jsonResponse({ ok: true, avisado: true }, 202)
   }
 
   const { error } = await supabase.from("qr_lecturas").insert({

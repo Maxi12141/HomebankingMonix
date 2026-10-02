@@ -172,7 +172,7 @@ Respuestas: `202 {"ok":true,"avisado":true|false}` si se aceptó · `400` si fal
 **Banco emisor (el que recibe el aviso):**
 1. Verificar `qr` con **su propia** clave pública (ES256) y que `iss` sea su `bankCode`. Aceptar hasta ~2 min después de `exp`.
 2. Con el `cbu` de los claims, buscar al dueño de la cuenta y avisarle (realtime, push, lo que use cada uno).
-3. Ignorar avisos repetidos del mismo QR y mismo banco en una ventana corta (30 s): la cámara puede leer el mismo código varias veces.
+3. Ignorar avisos repetidos del mismo QR (mismo `jti`; sin `jti`, misma cuenta) y mismo banco en una ventana corta (30 s): la cámara puede leer el mismo código varias veces.
 4. Responder CORS (`Access-Control-Allow-Origin: *` y `OPTIONS`).
 
 **Recomendado:** agregar el claim `jti` (id único, p. ej. `crypto.randomUUID()`) al firmar los QR, para saber qué QR exacto se leyó. Es opcional: el aviso funciona igual sin él.
