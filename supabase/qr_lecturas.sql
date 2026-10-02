@@ -28,3 +28,10 @@ create policy "qr_lecturas: ver las propias"
 revoke insert, update, delete on public.qr_lecturas from anon, authenticated;
 
 alter publication supabase_realtime add table public.qr_lecturas;
+
+-- QR de un solo uso (spec, sección 13): sólo puede haber UNA lectura por jti.
+-- Si dos personas escanean el mismo QR a la vez, el segundo insert falla con
+-- 23505 y la Edge Function le responde 409 ("ya fue escaneado").
+create unique index if not exists qr_lecturas_jti_unico
+  on public.qr_lecturas (jti)
+  where jti is not null;

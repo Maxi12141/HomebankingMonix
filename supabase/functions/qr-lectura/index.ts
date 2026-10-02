@@ -20,14 +20,18 @@ const MONIX_PUBLIC_JWK = {
 // Un QR se puede leer hasta su vencimiento; se da un margen chico para
 // relojes desfasados y la latencia del aviso.
 const TOLERANCIA_SEGUNDOS = 120
-// Dos avisos iguales (mismo QR, mismo banco) dentro de esta ventana cuentan
-// como uno: la cámara puede leer el mismo código varias veces seguidas.
+// Sólo para QR sin jti: avisos de la misma cuenta y mismo banco dentro de esta
+// ventana cuentan como uno (la cámara lee el mismo código varias veces).
 const VENTANA_DUPLICADO_MS = 30_000
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+}
+
+function yaUsado() {
+  return jsonResponse({ ok: false, usado: true, error: "Este QR ya fue escaneado" }, 409)
 }
 
 function jsonResponse(body: unknown, status = 200) {
@@ -96,29 +100,68 @@ Deno.serve(async (req: Request) => {
   const jti = typeof claims.jti === "string" ? claims.jti : null
   const cid = typeof claims.cid === "string" ? claims.cid : null
 
-  // Con jti se compara el QR exacto; sin jti (emisores que no lo agregan),
-  // alcanza con misma cuenta + mismo banco lector dentro de la ventana.
-  const desde = new Date(Date.now() - VENTANA_DUPLICADO_MS).toISOString()
-  const base = supabase
-    .from("qr_lecturas")
-    .select("id")
-    .eq("banco_lector", banco)
-    .gte("created_at", desde)
-  const { data: previo } = await (jti ? base.eq("jti", jti) : base.eq("cuenta_id", cuenta.id)).limit(1)
-  if (previo && previo.length > 0) {
+  // QR de un solo uso, como un posnet (spec, sección 13): con jti, la primera
+  // lectura se queda con el QR. Si vuelve a avisar el mismo lector (mismo
+  // banco y nombre: la cámara lee varias veces) se acepta sin duplicar; si es
+  // otro, 409 y el banco lector no deja pagar.
+  if (jti) {
+    const veredicto = await dueñoDelQr(jti)
+    if (veredicto === "mismo") return jsonResponse({ ok: true, avisado: true }, 202)
+    if (veredicto === "otro") return yaUsado()
+
+    const { error } = await supabase.from("qr_lecturas").insert(fila())
+    if (error) {
+      // 23505 = otro lector ganó la carrera por el índice único de jti.
+      if (error.code === "23505") {
+        return (await dueñoDelQr(jti)) === "mismo"
+          ? jsonResponse({ ok: true, avisado: true }, 202)
+          : yaUsado()
+      }
+      return jsonResponse({ error: "No se pudo registrar el aviso" }, 500)
+    }
     return jsonResponse({ ok: true, avisado: true }, 202)
   }
 
-  const { error } = await supabase.from("qr_lecturas").insert({
-    persona_id: cuenta.persona_id,
-    cuenta_id: cuenta.id,
-    jti,
-    cid,
-    banco_lector: banco,
-    nombre_lector: nombreLimpio,
-  })
+  // Sin jti (emisores que no lo agregan) no se puede saber qué QR exacto se
+  // leyó, así que no hay cierre: sólo se evitan avisos repetidos de la misma
+  // cuenta + mismo banco lector dentro de la ventana.
+  const desde = new Date(Date.now() - VENTANA_DUPLICADO_MS).toISOString()
+  const { data: previo } = await supabase
+    .from("qr_lecturas")
+    .select("id")
+    .eq("banco_lector", banco)
+    .eq("cuenta_id", cuenta.id)
+    .gte("created_at", desde)
+    .limit(1)
+  if (previo && previo.length > 0) {
+    return jsonResponse({ ok: true, avisado: true }, 202)
+  }
+  const { error } = await supabase.from("qr_lecturas").insert(fila())
   if (error) {
     return jsonResponse({ error: "No se pudo registrar el aviso" }, 500)
   }
   return jsonResponse({ ok: true, avisado: true }, 202)
+
+  function fila() {
+    return {
+      persona_id: cuenta!.persona_id,
+      cuenta_id: cuenta!.id,
+      jti,
+      cid,
+      banco_lector: banco,
+      nombre_lector: nombreLimpio,
+    }
+  }
+
+  async function dueñoDelQr(id: string): Promise<"libre" | "mismo" | "otro"> {
+    const { data } = await supabase
+      .from("qr_lecturas")
+      .select("banco_lector, nombre_lector")
+      .eq("jti", id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+    const primero = data?.[0]
+    if (!primero) return "libre"
+    return primero.banco_lector === banco && primero.nombre_lector === nombreLimpio ? "mismo" : "otro"
+  }
 })

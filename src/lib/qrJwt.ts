@@ -61,30 +61,48 @@ export const BANCOS_AVISO: Record<number, BancoAviso> = {
     nombre: 'Monix',
     avisoUrl: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/qr-lectura`,
   },
+  12: {
+    nombre: 'Banco Tuo',
+    avisoUrl: 'https://bjpgdcgloinsjogpwwgm.supabase.co/functions/v1/qr-lectura',
+  },
 }
 
 export function nombreBanco(bankCode: number): string {
   return BANCOS_AVISO[bankCode]?.nombre ?? `Banco ${bankCode}`
 }
 
+export type ResultadoAviso = 'ok' | 'usado' | 'sin-respuesta'
+
 /**
- * Le avisa al banco que emitió el QR que lo acabamos de leer. Nunca tira ni
- * frena el pago: si el banco no tiene avisoUrl, no responde o falla, se ignora.
+ * Le avisa al banco que emitió el QR que lo acabamos de leer y espera su
+ * respuesta como máximo 3 s. 'usado' (409) = el QR ya lo escaneó otra persona
+ * y no hay que dejar pagar (spec, sección 13). Si el banco no tiene avisoUrl,
+ * no responde o falla, devuelve 'sin-respuesta' y el pago sigue normal: un
+ * banco caído nunca traba un pago.
  */
-export function avisarLectura(token: string, claims: QrJwtClaims, nombreLector: string | null) {
+export async function avisarLectura(
+  token: string,
+  claims: QrJwtClaims,
+  nombreLector: string | null,
+): Promise<ResultadoAviso> {
   const url = BANCOS_AVISO[claims.iss]?.avisoUrl
-  if (!url) return
-  void fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      qr: token.trim(),
-      banco: MONIX_BANK_CODE,
-      ...(nombreLector ? { nombre: nombreLector } : {}),
-    }),
-    keepalive: true,
-    signal: AbortSignal.timeout(4000),
-  }).catch(() => undefined)
+  if (!url) return 'sin-respuesta'
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        qr: token.trim(),
+        banco: MONIX_BANK_CODE,
+        ...(nombreLector ? { nombre: nombreLector } : {}),
+      }),
+      signal: AbortSignal.timeout(3000),
+    })
+    if (res.status === 409) return 'usado'
+    return res.ok ? 'ok' : 'sin-respuesta'
+  } catch {
+    return 'sin-respuesta'
+  }
 }
 
 export function esJwtQr(raw: string): boolean {

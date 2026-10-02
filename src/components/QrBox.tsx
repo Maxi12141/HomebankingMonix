@@ -13,7 +13,16 @@ export function QrBox({
   useEffect(() => {
     let alive = true
     void import('qrcode').then((QR) =>
-      QR.toDataURL(value, { width: 280, margin: 1, color: { dark: '#0D2B52', light: '#ffffff' } }).then((url) => {
+      // El JWT del QR interbancario (con jti, cid y monto) es largo: con
+      // corrección "L" el QR tiene menos módulos (en una pantalla no hay
+      // manchas que corregir) y a 560 px queda nítido en pantallas de alta
+      // densidad — se lee mucho mejor desde otro celular.
+      QR.toDataURL(value, {
+        width: 560,
+        margin: 1,
+        errorCorrectionLevel: 'L',
+        color: { dark: '#0D2B52', light: '#ffffff' },
+      }).then((url) => {
         if (!alive) return
         setSrc(url)
         onReady?.(url)

@@ -186,5 +186,32 @@ No requiere intercambiar claves: el emisor sólo usa la suya. El `qr` firmado pr
 | Banco | bankCode | avisoUrl |
 | --- | --- | --- |
 | Monix | 3 | `https://jrsismsrdqvhwmegfslz.supabase.co/functions/v1/qr-lectura` |
+| Banco Tuo | 12 | `https://bjpgdcgloinsjogpwwgm.supabase.co/functions/v1/qr-lectura` |
 | _(completar)_ | | |
-| _(completar)_ | | |
+
+## 13. QR de un solo uso (cierre al escanear, como un posnet)
+
+**Fecha:** 2026-10-01
+
+Un QR con `jti` se cierra en cuanto lo escanea la primera persona: el emisor deja de mostrarlo y nadie más puede usarlo.
+
+### Cambios al contrato de la sección 12
+
+- `jti` pasa a ser **obligatorio** para tener cierre. Un QR sin `jti` sigue funcionando, pero no se cierra (no hay cómo identificarlo).
+- Respuesta nueva del emisor: **`409 {"ok":false,"usado":true,"error":"Este QR ya fue escaneado"}`** cuando el QR ya lo escaneó *otra* persona.
+- El lector ya **no** hace *fire-and-forget*: espera la respuesta como máximo **3 s**.
+
+### Banco emisor (recibe el aviso)
+
+1. Buscar la primera lectura registrada de ese `jti`.
+2. Si no hay ninguna: registrarla, avisarle al usuario y responder 202.
+3. Si la hay y es del **mismo lector** (mismo `banco` y mismo `nombre`; la cámara lee varias veces): responder 202 sin registrar ni avisar de nuevo.
+4. Si la hay y es de **otro** lector: responder 409.
+5. Índice único sobre `jti` en la tabla de lecturas: si dos personas escanean a la vez, el segundo insert falla y se responde 409.
+6. En la pantalla del QR: al llegar el aviso del `jti` que se está mostrando, ocultar el QR y mostrar "Juan P. escaneó tu QR" (y "Esperando el pago…" si tenía monto), con un botón para generar uno nuevo (firma nueva, `jti` nuevo).
+
+### Banco lector (escanea)
+
+1. Al leer un QR JWT cuyo `iss` tenga `avisoUrl`, hacer el POST y esperar hasta 3 s.
+2. **409** → no dejar pagar: "Este QR ya fue escaneado por otra persona. Pedí que te muestren uno nuevo."
+3. 202, otro error, timeout o banco sin `avisoUrl` → seguir con el pago normal (un banco caído nunca traba pagos).

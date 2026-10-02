@@ -64,10 +64,18 @@ async function aplicarQr(
     const resultado = await verificarJwtQr(raw)
     if (resultado) {
       const { claims } = resultado
-      // Aviso de lectura (spec, sección 12): el banco emisor le avisa a su
-      // usuario que escaneamos su QR. Fire-and-forget, no frena el pago.
+      // Aviso de lectura (spec, secciones 12 y 13): el banco emisor le avisa a
+      // su usuario y cierra el QR, como un posnet. Si ya lo escaneó otra
+      // persona responde 409 y no se deja pagar; si no responde, se sigue.
       const persona = useAuthStore.getState().persona
-      avisarLectura(raw, claims, persona ? `${persona.nombre} ${persona.apellido.charAt(0)}.`.trim() : null)
+      const aviso = await avisarLectura(
+        raw,
+        claims,
+        persona ? `${persona.nombre} ${persona.apellido.charAt(0)}.`.trim() : null,
+      )
+      if (aviso === 'usado') {
+        throw new Error('Este QR ya fue escaneado por otra persona. Pedí que te muestren uno nuevo.')
+      }
       if (claims.iss === MONIX_BANK_CODE && claims.cid) {
         await cargarCobro(claims.cid)
         return
@@ -138,9 +146,15 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   // Sube en cada descarte de cobro: un crearCobroNfc que estaba en vuelo
   // cuando el usuario cambió de moneda no debe pisar el QR nuevo.
   const generacionRef = useRef(0)
-  const claveQr = `${cuenta?.cbu ?? ''}|${cobro?.id ?? ''}`
+  // ronda sube con "Generar nuevo QR": fuerza una firma nueva (otro jti)
+  // aunque no haya cambiado ni la cuenta ni el cobro.
+  const [ronda, setRonda] = useState(0)
+  const claveQr = `${cuenta?.cbu ?? ''}|${cobro?.id ?? ''}|${ronda}`
   const userId = useAuthStore((st) => st.user?.id)
-  const [lectura, setLectura] = useState<{ jti: string | null; texto: string } | null>(null)
+  // QR de un solo uso, como un posnet (spec, sección 13): cuando llega el
+  // aviso de que escanearon EL QR que está en pantalla, se cierra.
+  const [cerradoPor, setCerradoPor] = useState<string | null>(null)
+  const jtiActualRef = useRef<string | null>(null)
 
   // QR interbancario firmado (docs/qr-interbancario-jwt.md): se pide a la
   // Edge Function apenas hay cuenta/cobro para mostrar. Si falla (sin red, la
@@ -162,9 +176,9 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       .then((jwt) => { if (vivo) setJwtFirmado({ clave, jwt }) })
       .catch(() => { if (vivo) setFirmaFallida(clave) })
     return () => { vivo = false }
-  }, [cuenta?.cbu, cuenta?.alias, cuenta?.moneda, cobro?.id, cobro?.monto, cobro?.moneda])
+  }, [cuenta?.cbu, cuenta?.alias, cuenta?.moneda, cobro?.id, cobro?.monto, cobro?.moneda, ronda])
 
-  useEffect(() => { setLectura(null) }, [claveQr])
+  useEffect(() => { setCerradoPor(null) }, [claveQr])
 
   // Aviso de lectura: la Edge Function qr-lectura inserta una fila cada vez
   // que un banco (Monix u otro) nos avisa que escaneó un QR nuestro.
@@ -184,7 +198,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
           const quien = fila.nombre_lector ?? 'Alguien'
           const banco = fila.banco_lector === MONIX_BANK_CODE ? '' : ` desde ${nombreBanco(fila.banco_lector)}`
           const texto = `${quien} escaneó tu QR${banco}`
-          setLectura({ jti: fila.jti, texto })
+          if (fila.jti && fila.jti === jtiActualRef.current) setCerradoPor(texto)
           toast(texto, { icon: '👀' })
         })
         .subscribe()
@@ -284,6 +298,11 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
     setMonedaQr(m)
   }
 
+  function nuevoQr() {
+    nuevoCobro()
+    setRonda((r) => r + 1)
+  }
+
   function nuevoCobro() {
     generacionRef.current += 1
     // El estado se limpia en el acto; la cancelación del cobro viejo corre de
@@ -339,17 +358,47 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   const montoPendiente = montoValido ? cobro?.monto !== montoNum : !!cobro
   const cargandoQr = !!cuenta?.cbu && (!qrValue || montoPendiente)
   const qrMostrado = qrValue || jwtFirmado?.jwt || ''
-  // La línea bajo el QR sólo vale para el QR que se está mostrando ahora; si
-  // cambió (moneda, monto), el toast ya avisó y la línea desaparece. Con jti
-  // se compara exacto; sin jti (QR firmado antes de sumarlo) vale la última
-  // lectura, que igual se limpia al cambiar de QR (efecto de abajo).
-  let jtiActual: string | null = null
+  // Sólo cierra el aviso del QR que está en pantalla: si se escanea uno viejo
+  // (otra moneda, otro monto) queda el toast, pero este QR sigue abierto.
   try {
-    jtiActual = jwtQr ? ((decodeJwt(jwtQr).jti as string | undefined) ?? null) : null
+    jtiActualRef.current = jwtQr ? ((decodeJwt(jwtQr).jti as string | undefined) ?? null) : null
   } catch {
-    jtiActual = null
+    jtiActualRef.current = null
   }
-  const lecturaActual = lectura && (!lectura.jti || !jtiActual || lectura.jti === jtiActual) ? lectura.texto : null
+
+  if (cerradoPor) {
+    const esperando = cobro?.estado === 'pendiente'
+    const overlay = variante === 'overlay'
+    const contenido = (
+      <>
+        <ScanLine size={44} className="text-mint mx-auto mb-3" />
+        <h2 className={`font-display text-lg font-semibold ${overlay ? 'text-white' : 'text-navy dark:text-white'}`} role="status">
+          {cerradoPor}
+        </h2>
+        {esperando && cobro ? (
+          <p className={`font-body text-sm mt-2 inline-flex items-center gap-2 ${overlay ? 'text-white/70' : 'text-slate-secondary'}`}>
+            <Loader2 size={14} className="animate-spin text-mint" />
+            Esperando el pago de {formatMonto(cobro.monto, cobro.moneda)}…
+          </p>
+        ) : (
+          <p className={`font-body text-sm mt-2 ${overlay ? 'text-white/70' : 'text-slate-secondary'}`}>
+            Este QR ya no se puede volver a usar.
+          </p>
+        )}
+        <Button className={`w-full mt-6 ${overlay ? 'max-w-xs' : ''}`} type="button" onClick={nuevoQr}>
+          Generar nuevo QR
+        </Button>
+      </>
+    )
+    if (overlay) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center px-6 pb-28 pt-16 text-center">
+          {contenido}
+        </div>
+      )
+    }
+    return <Card className="p-8 text-center">{contenido}</Card>
+  }
 
   if (variante === 'overlay') {
     return (
@@ -387,9 +436,6 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         <QrConCarga value={qrMostrado} cargando={cargandoQr} />
         {cuenta?.alias && (
           <p className="font-body text-sm text-white/70 text-center mt-3">@{cuenta.alias}</p>
-        )}
-        {lecturaActual && (
-          <p className="font-body text-sm text-mint text-center mt-1" role="status">{lecturaActual}</p>
         )}
         {cobro && (
           <p className="font-display text-xl font-bold text-mint text-center mt-2">
@@ -451,9 +497,6 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         <p className="font-body text-xs text-slate-secondary text-center mt-3">
           @{cuenta.alias}
         </p>
-      )}
-      {lecturaActual && (
-        <p className="font-body text-sm text-mint text-center mt-1" role="status">{lecturaActual}</p>
       )}
       {cobro && (
         <p className="font-display text-xl font-bold text-mint text-center mt-2">
