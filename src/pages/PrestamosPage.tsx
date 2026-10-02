@@ -26,12 +26,17 @@ function formatARS(n: number) {
 
 const PLAZOS_CANDIDATOS = [3, 6, 12, 18, 24]
 
+// Última situación crediticia consultada por DNI: al volver a la pantalla se
+// muestra de una (y se refresca por detrás) en vez de pasar por "cargando".
+const situacionPorDni = new Map<string, number>()
+
 export function PrestamosPage() {
   const { persona } = useAuthStore()
   const { cuenta, refreshCuenta } = useCuenta()
   const { prestamos, loading: loadingPrestamos, refreshPrestamos } = usePrestamos(cuenta ?? null)
 
-  const [situacion, setSituacion] = useState<number | null>(null)
+  const dni = persona?.dni
+  const [situacion, setSituacion] = useState<number | null>(() => (dni ? situacionPorDni.get(dni) ?? null : null))
   const [situacionError, setSituacionError] = useState(false)
 
   const [monto, setMonto] = useState('')
@@ -40,17 +45,28 @@ export function PrestamosPage() {
   const [error, setError] = useState('')
   const [verEsquema, setVerEsquema] = useState(false)
 
+  // Depende del DNI y no del objeto persona: el store lo reemplaza por uno
+  // nuevo al refrescar la sesión, y antes eso volvía todo a "estimado" y
+  // repetía la consulta (la pantalla titilaba entre los dos valores).
   useEffect(() => {
-    if (!persona) return
-    setSituacion(null)
+    if (!dni) return
+    let vigente = true
+    setSituacion(situacionPorDni.get(dni) ?? null)
     setSituacionError(false)
-    consultarSituacion(persona.dni)
-      .then((r) => setSituacion(r.situacion))
+    consultarSituacion(dni)
+      .then((r) => {
+        situacionPorDni.set(dni, r.situacion)
+        if (vigente) setSituacion(r.situacion)
+      })
       // Un 404 ya lo resuelve consultarSituacion como situación 1 — acá sólo llega un error real.
-      .catch(() => setSituacionError(true))
-  }, [persona])
+      .catch(() => { if (vigente) setSituacionError(true) })
+    return () => { vigente = false }
+  }, [dni])
 
   const situacionLista = situacion != null
+  // Mientras se consulta no se muestran tasa, topes ni plazos: con valores
+  // estimados la pantalla saltaba a otros números al llegar la respuesta.
+  const consultando = !situacionLista && !situacionError
   const nivel = nivelPorSituacion(situacion ?? 1)
   const oferta = useMemo(
     () => calcularOferta(situacion ?? 1, persona?.sueldo_acreditado ?? false),
@@ -201,10 +217,14 @@ export function PrestamosPage() {
               </div>
               <div>
                 <p className="font-display text-base font-semibold text-navy dark:text-white">Simulador</p>
-                <p className="font-body text-xs text-slate-secondary">
-                  TNA {oferta.tna.toFixed(1)}% · hasta {formatARS(oferta.montoMax)} · hasta {oferta.cuotasMax} cuotas
-                  {!situacionLista && ' (estimado)'}
-                </p>
+                {consultando ? (
+                  <p className="font-body text-xs text-slate-secondary animate-pulse">Consultando tu situación crediticia…</p>
+                ) : (
+                  <p className="font-body text-xs text-slate-secondary">
+                    TNA {oferta.tna.toFixed(1)}% · hasta {formatARS(oferta.montoMax)} · hasta {oferta.cuotasMax} cuotas
+                    {!situacionLista && ' (estimado)'}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -221,7 +241,10 @@ export function PrestamosPage() {
             <div className="mt-4 mb-1">
               <p className="font-body text-xs text-slate-secondary uppercase tracking-wider mb-2">Plazo</p>
               <div className="flex flex-wrap gap-2">
-                {plazos.map((p) => (
+                {consultando && PLAZOS_CANDIDATOS.slice(0, 4).map((p) => (
+                  <span key={p} className="h-9 w-[5.5rem] rounded-lg bg-slate-input dark:bg-white/5 animate-pulse" aria-hidden />
+                ))}
+                {!consultando && plazos.map((p) => (
                   <button
                     key={p}
                     type="button"
@@ -238,7 +261,7 @@ export function PrestamosPage() {
               </div>
             </div>
 
-            {montoNum > 0 && (
+            {montoNum > 0 && !consultando && (
               <div className="rounded-xl bg-slate-input dark:bg-white/5 px-4 py-3 space-y-2 mt-4">
                 <div className="flex justify-between gap-3">
                   <span className="font-body text-sm text-slate-secondary">Cuota mensual</span>
@@ -271,12 +294,12 @@ export function PrestamosPage() {
               </div>
             )}
 
-            {!okMonto && montoNum > 0 && (
+            {!okMonto && montoNum > 0 && !consultando && (
               <p className="font-body text-xs text-red-500 dark:text-red-400 mt-3">
                 El monto supera el máximo disponible para esta oferta ({formatARS(oferta.montoMax)}).
               </p>
             )}
-            {superaRatio && okMonto && (
+            {superaRatio && okMonto && !consultando && (
               <p className="font-body text-xs text-red-500 dark:text-red-400 mt-3">
                 La cuota supera el {Math.round(oferta.ratioIngreso * 100)}% de tu ingreso declarado. Elegí un plazo más largo o un monto menor.
               </p>
@@ -284,7 +307,7 @@ export function PrestamosPage() {
             {error && (
               <p className="font-body text-xs text-red-500 dark:text-red-400 mt-3">{error}</p>
             )}
-            {solicitarBloqueadoPor && !error && (
+            {solicitarBloqueadoPor && !error && !consultando && (
               <p className="font-body text-xs text-slate-secondary mt-3">{solicitarBloqueadoPor}</p>
             )}
 
