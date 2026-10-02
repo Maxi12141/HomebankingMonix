@@ -95,7 +95,7 @@ export function ForgotPasswordPage() {
         <div className="bg-white dark:bg-navy-card rounded-2xl border border-slate-200 dark:border-white/10 p-8 shadow-sm dark:shadow-none">
           {enviado ? (
             <div className="text-center py-2">
-              <div className="w-14 h-14 rounded-full bg-mint/15 text-mint flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 rounded-full bg-mint/15 text-navy dark:text-mint flex items-center justify-center mx-auto mb-4">
                 <MailCheck size={26} />
               </div>
               <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-2">Revisá tu email</h2>
@@ -105,7 +105,7 @@ export function ForgotPasswordPage() {
               </p>
               <Link
                 to="/login"
-                className="text-mint hover:text-mint-hover transition-colors font-body text-sm font-medium"
+                className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors font-body text-sm font-medium"
               >
                 ‹ Volver a iniciar sesión
               </Link>
@@ -141,7 +141,7 @@ export function ForgotPasswordPage() {
                 </Button>
               </form>
               <p className="text-center text-sm font-body text-slate-secondary mt-6">
-                <Link to="/login" className="text-mint hover:text-mint-hover transition-colors">
+                <Link to="/login" className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
                   ‹ Volver a iniciar sesión
                 </Link>
               </p>

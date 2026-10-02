@@ -34,7 +34,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
         <span className="block font-body text-[10px] uppercase tracking-wider text-slate-secondary">{label}</span>
         <span className="block font-body text-sm text-navy dark:text-white truncate">{value}</span>
       </span>
-      {copiado ? <Check size={16} className="text-mint shrink-0" /> : <Copy size={16} className="text-slate-secondary shrink-0" />}
+      {copiado ? <Check size={16} className="text-navy dark:text-mint shrink-0" /> : <Copy size={16} className="text-slate-secondary shrink-0" />}
     </button>
   )
 }
@@ -50,7 +50,7 @@ function CuentaCard({ cuenta, titulo, persona }: { cuenta: Cuenta; titulo: strin
             {formatMonto(Number(cuenta.saldo), cuenta.moneda)}
           </p>
         </div>
-        <div className="rounded-xl bg-mint/15 text-mint p-2.5 shrink-0">
+        <div className="rounded-xl bg-mint/15 text-navy dark:text-mint p-2.5 shrink-0">
           <Icon size={22} />
         </div>
       </div>
@@ -183,7 +183,7 @@ export function CuentasPage() {
       >
         <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="rounded-xl bg-mint/15 text-mint p-2.5">
+            <div className="rounded-xl bg-mint/15 text-navy dark:text-mint p-2.5">
               <ShieldCheck size={20} />
             </div>
             <p className="font-display text-base font-semibold text-navy dark:text-white">

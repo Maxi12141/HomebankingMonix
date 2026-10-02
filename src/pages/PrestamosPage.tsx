@@ -202,7 +202,7 @@ export function PrestamosPage() {
         {ingresoDeclarado == null && situacionLista && nivel.disponible && (
           <p className="font-body text-xs text-slate-secondary mb-4 flex items-center gap-1.5">
             <Info size={13} className="shrink-0" />
-            <Link to="/perfil" className="text-mint hover:text-mint-hover transition-colors">
+            <Link to="/perfil" className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
               Declará tu ingreso mensual en Perfil
             </Link>
             &nbsp;para poder solicitar el préstamo.
@@ -212,7 +212,7 @@ export function PrestamosPage() {
         {/* Simulador: siempre visible y usable, se pueda o no pedir el préstamo todavía */}
           <Card className="p-6 mb-6">
             <div className="flex items-center gap-3 mb-5">
-              <div className="rounded-xl bg-mint/15 text-mint p-2.5">
+              <div className="rounded-xl bg-mint/15 text-navy dark:text-mint p-2.5">
                 <HandCoins size={20} />
               </div>
               <div>
@@ -265,7 +265,7 @@ export function PrestamosPage() {
               <div className="rounded-xl bg-slate-input dark:bg-white/5 px-4 py-3 space-y-2 mt-4">
                 <div className="flex justify-between gap-3">
                   <span className="font-body text-sm text-slate-secondary">Cuota mensual</span>
-                  <span className="font-display font-bold text-mint">{formatARS(cuota)}</span>
+                  <span className="font-display font-bold text-navy dark:text-mint">{formatARS(cuota)}</span>
                 </div>
                 <p className="font-body text-[11px] text-slate-secondary leading-relaxed flex items-start gap-1.5">
                   <Info size={12} className="shrink-0 mt-0.5" />
@@ -371,7 +371,7 @@ function PrestamoCard({ prestamo }: { prestamo: Prestamo }) {
           </p>
         </div>
         {prestamo.estado === 'pagado' ? (
-          <span className="flex items-center gap-1 rounded-full bg-mint/15 text-mint px-2.5 py-1 font-body text-xs font-medium shrink-0">
+          <span className="flex items-center gap-1 rounded-full bg-mint/15 text-navy dark:text-mint px-2.5 py-1 font-body text-xs font-medium shrink-0">
             <CircleCheck size={13} /> Pagado
           </span>
         ) : atrasada ? (
@@ -404,7 +404,7 @@ function PrestamoCard({ prestamo }: { prestamo: Prestamo }) {
         <button
           type="button"
           onClick={() => setVerCuotas(true)}
-          className="flex items-center gap-1.5 font-body text-xs text-mint hover:text-mint-hover transition-colors mt-3"
+          className="flex items-center gap-1.5 font-body text-xs text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors mt-3"
         >
           <ListOrdered size={13} />
           Ver cuotas restantes

@@ -314,7 +314,7 @@ export function ProfilePage() {
           <div className="flex items-center gap-3 mt-3">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="font-body text-xs text-mint hover:text-mint-hover transition-colors"
+              className="font-body text-xs text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
             >
               {avatarUrl ? 'Cambiar foto' : 'Subir foto'}
             </button>
@@ -334,7 +334,7 @@ export function ProfilePage() {
 
         {/* Badge verificado */}
         <Card className="p-5 flex items-center gap-3 mb-6">
-          <BadgeCheck size={24} className="text-mint shrink-0" />
+          <BadgeCheck size={24} className="text-navy dark:text-mint shrink-0" />
           <div>
             <p className="font-body font-medium text-navy dark:text-white text-sm">Cuenta verificada</p>
             <p className="font-body text-xs text-slate-secondary">Tu identidad fue verificada correctamente</p>
@@ -343,7 +343,7 @@ export function ProfilePage() {
 
         <Card className="p-5 mb-4">
           <div className="flex items-start gap-3 mb-4">
-            <ShieldCheck size={22} className="text-mint shrink-0 mt-0.5" />
+            <ShieldCheck size={22} className="text-navy dark:text-mint shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="font-body font-medium text-navy dark:text-white text-sm">Permisos del teléfono</p>
               <p className="font-body text-xs text-slate-secondary mt-0.5">
@@ -364,7 +364,7 @@ export function ProfilePage() {
 
         <Card className="p-5 mb-6">
           <div className="flex items-start gap-3">
-            <Fingerprint size={22} className="text-mint shrink-0 mt-0.5" />
+            <Fingerprint size={22} className="text-navy dark:text-mint shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con biometría</p>
               <p className="font-body text-xs text-slate-secondary mt-0.5">
@@ -400,7 +400,7 @@ export function ProfilePage() {
             {!editMode && (
               <button
                 onClick={() => setEditMode(true)}
-                className="text-sm font-body text-mint hover:text-mint-hover transition-colors"
+                className="text-sm font-body text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
               >
                 Editar
               </button>

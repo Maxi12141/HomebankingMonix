@@ -481,7 +481,7 @@ export function RegisterPage() {
                     <button
                       type="button"
                       onClick={() => setModalLegal('terminos')}
-                      className="text-mint hover:text-mint-hover underline underline-offset-2"
+                      className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover underline underline-offset-2"
                     >
                       Términos y Condiciones
                     </button>{' '}
@@ -489,7 +489,7 @@ export function RegisterPage() {
                     <button
                       type="button"
                       onClick={() => setModalLegal('privacidad')}
-                      className="text-mint hover:text-mint-hover underline underline-offset-2"
+                      className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover underline underline-offset-2"
                     >
                       Política de Privacidad
                     </button>{' '}
@@ -523,7 +523,7 @@ export function RegisterPage() {
 
           <p className="text-center text-sm font-body text-slate-secondary mt-6">
             ¿Ya tenés cuenta?{' '}
-            <Link to="/login" className="text-mint hover:text-mint-hover transition-colors">
+            <Link to="/login" className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
               Iniciá sesión
             </Link>
           </p>

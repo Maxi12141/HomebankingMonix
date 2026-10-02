@@ -278,7 +278,7 @@ export function MetasPage() {
           {detalle.proposito && (
             <p className="font-body text-sm text-slate-secondary mt-1">{detalle.proposito}</p>
           )}
-          <p className="font-body text-xs text-mint mt-2 uppercase tracking-wider">
+          <p className="font-body text-xs text-navy dark:text-mint mt-2 uppercase tracking-wider">
             {estadoMeta(detalle.estado)}
           </p>
 
@@ -324,7 +324,7 @@ export function MetasPage() {
                   <button
                     type="button"
                     onClick={() => { void copiarCodigo() }}
-                    className="p-2 rounded-lg text-mint hover:bg-mint/10"
+                    className="p-2 rounded-lg text-navy dark:text-mint hover:bg-mint/10"
                     aria-label="Copiar código"
                     title="Copiar código"
                   >
@@ -333,7 +333,7 @@ export function MetasPage() {
                   <button
                     type="button"
                     onClick={compartirInvitacion}
-                    className="p-2 rounded-lg text-mint hover:bg-mint/10"
+                    className="p-2 rounded-lg text-navy dark:text-mint hover:bg-mint/10"
                     aria-label="Compartir invitación"
                     title="Compartir invitación"
                   >
@@ -375,7 +375,7 @@ export function MetasPage() {
 
           <Card className="p-5 mb-4">
             <p className="font-display font-semibold text-navy dark:text-white mb-3 flex items-center gap-2">
-              <Users size={18} className="text-mint" />
+              <Users size={18} className="text-navy dark:text-mint" />
               Quién aportó
             </p>
             <ul className="flex flex-col gap-2">
@@ -387,7 +387,7 @@ export function MetasPage() {
                       <span className="text-slate-secondary"> · armó la meta</span>
                     )}
                   </span>
-                  <span className="font-body text-sm text-mint">{ars(m.aporteTotal)}</span>
+                  <span className="font-body text-sm text-navy dark:text-mint">{ars(m.aporteTotal)}</span>
                 </li>
               ))}
             </ul>
@@ -475,7 +475,7 @@ export function MetasPage() {
                   className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-navy-card px-4 py-3"
                 >
                   <span className="font-body text-sm text-navy dark:text-white">{etiquetaAporte(a)}</span>
-                  <span className={`font-body text-sm ${a.monto < 0 ? 'text-slate-secondary' : 'text-mint'}`}>
+                  <span className={`font-body text-sm ${a.monto < 0 ? 'text-slate-secondary' : 'text-navy dark:text-mint'}`}>
                     {a.monto < 0 ? ars(Math.abs(a.monto)) : `+${ars(a.monto)}`}
                   </span>
                 </li>
@@ -558,7 +558,7 @@ export function MetasPage() {
           <p className="font-body text-sm text-slate-secondary">Cargando metas...</p>
         ) : lista.length === 0 ? (
           <Card className="p-6 text-center">
-            <div className="w-14 h-14 mx-auto rounded-full bg-mint/15 text-mint flex items-center justify-center mb-3">
+            <div className="w-14 h-14 mx-auto rounded-full bg-mint/15 text-navy dark:text-mint flex items-center justify-center mb-3">
               <Target size={26} />
             </div>
             <p className="font-display font-semibold text-navy dark:text-white">Todavía no hay ninguna</p>
@@ -575,7 +575,7 @@ export function MetasPage() {
                   onClick={() => { void abrir(m.id) }}
                   className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-navy-card px-4 py-3 text-left hover:border-mint/40"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint/20 text-mint">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint/20 text-navy dark:text-mint">
                     <Target size={18} />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -584,7 +584,7 @@ export function MetasPage() {
                       {m.miembros} {m.miembros === 1 ? 'persona' : 'personas'} · {estadoMeta(m.estado)}
                     </span>
                   </span>
-                  <span className="font-body text-sm text-mint shrink-0">{ars(m.saldo)}</span>
+                  <span className="font-body text-sm text-navy dark:text-mint shrink-0">{ars(m.saldo)}</span>
                 </button>
               </li>
             ))}

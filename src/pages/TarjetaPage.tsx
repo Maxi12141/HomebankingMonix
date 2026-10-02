@@ -138,7 +138,7 @@ export function TarjetaPage() {
 
         <Card className="p-6 mb-4">
           <div className="flex items-center gap-2 mb-4">
-            <CreditCard size={18} className="text-mint" />
+            <CreditCard size={18} className="text-navy dark:text-mint" />
             <h2 className="font-display text-base font-semibold text-navy dark:text-white">
               Datos de la tarjeta
             </h2>
@@ -169,7 +169,7 @@ export function TarjetaPage() {
             <div className="h-px bg-slate-200 dark:bg-white/10" />
             <div className="flex items-center justify-between gap-3">
               <dt className="font-body text-xs text-slate-secondary uppercase tracking-wider">Estado</dt>
-              <dd className={`font-body text-sm font-medium ${frozen ? 'text-amber-500' : 'text-mint'}`}>
+              <dd className={`font-body text-sm font-medium ${frozen ? 'text-amber-500' : 'text-navy dark:text-mint'}`}>
                 {frozen ? 'Congelada' : 'Activa'}
               </dd>
             </div>
@@ -185,7 +185,7 @@ export function TarjetaPage() {
 
         <Card className="p-6 mb-4">
           <div className="flex items-center gap-2 mb-4">
-            <Wallet size={18} className="text-mint" />
+            <Wallet size={18} className="text-navy dark:text-mint" />
             <h2 className="font-display text-base font-semibold text-navy dark:text-white">
               Límites diarios
             </h2>
@@ -198,7 +198,7 @@ export function TarjetaPage() {
         </Card>
 
         <Card className="p-5 flex items-start gap-3">
-          <ShieldCheck size={20} className="text-mint shrink-0 mt-0.5" />
+          <ShieldCheck size={20} className="text-navy dark:text-mint shrink-0 mt-0.5" />
           <div>
             <p className="font-body text-sm font-medium text-navy dark:text-white">
               Protección MONIX

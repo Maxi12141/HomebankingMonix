@@ -45,7 +45,7 @@ export function CashbackPage() {
       <div className="max-w-3xl mx-auto">
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-1.5 font-body text-sm text-slate-secondary hover:text-mint transition-colors mb-4"
+          className="inline-flex items-center gap-1.5 font-body text-sm text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors mb-4"
         >
           <ArrowLeft size={16} />
           Volver al inicio
@@ -59,7 +59,7 @@ export function CashbackPage() {
         </p>
 
         <Card className="p-5 mb-4 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-mint/15 text-mint flex items-center justify-center">
+          <div className="w-11 h-11 rounded-xl bg-mint/15 text-navy dark:text-mint flex items-center justify-center">
             <Wallet size={20} />
           </div>
           <div>
@@ -84,12 +84,12 @@ export function CashbackPage() {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon size={18} className={on ? 'text-mint' : 'text-slate-secondary'} />
+                  <Icon size={18} className={on ? 'text-navy dark:text-mint' : 'text-slate-secondary'} />
                   <div className="min-w-0 flex-1">
                     <p className="font-body font-medium text-navy dark:text-white text-sm">{m.name}</p>
                     <p className="font-body text-xs text-slate-secondary">{m.cat}</p>
                   </div>
-                  <span className="font-display font-bold text-mint text-sm">{m.pct}%</span>
+                  <span className="font-display font-bold text-navy dark:text-mint text-sm">{m.pct}%</span>
                 </div>
               </button>
             )
@@ -118,7 +118,7 @@ export function CashbackPage() {
               className="mt-4 rounded-xl bg-slate-input dark:bg-white/5 px-4 py-3 flex items-center justify-between"
             >
               <span className="font-body text-sm text-slate-secondary">Te devolverían</span>
-              <span className="font-display text-lg font-bold text-mint">{formatARS(devolucion)}</span>
+              <span className="font-display text-lg font-bold text-navy dark:text-mint">{formatARS(devolucion)}</span>
             </motion.div>
           </AnimatePresence>
 

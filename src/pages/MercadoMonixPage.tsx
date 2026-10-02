@@ -52,7 +52,7 @@ function ProductImage({ producto, className = 'h-44' }: { producto: ProductoMerc
         />
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center gap-1 px-3 text-center bg-gradient-to-br from-navy/10 to-mint/10">
-          <span className="font-display text-xs font-bold text-mint uppercase tracking-wider">
+          <span className="font-display text-xs font-bold text-navy dark:text-mint uppercase tracking-wider">
             {producto.categoria}
           </span>
           <span className="font-body text-[11px] text-navy dark:text-white line-clamp-2">
@@ -163,7 +163,7 @@ export function MercadoMonixPage() {
       <div className="max-w-5xl mx-auto">
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-1.5 font-body text-sm text-slate-secondary hover:text-mint transition-colors mb-4"
+          className="inline-flex items-center gap-1.5 font-body text-sm text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors mb-4"
         >
           <ArrowLeft size={16} />
           Volver al inicio
@@ -205,13 +205,13 @@ export function MercadoMonixPage() {
 
           <div className="flex flex-wrap gap-3 mt-4">
             <span className="inline-flex items-center gap-1.5 text-xs font-body text-white/80">
-              <Truck size={13} className="text-mint" /> Envío full
+              <Truck size={13} className="text-navy dark:text-mint" /> Envío full
             </span>
             <span className="inline-flex items-center gap-1.5 text-xs font-body text-white/80">
-              <ShieldCheck size={13} className="text-mint" /> Compra protegida
+              <ShieldCheck size={13} className="text-navy dark:text-mint" /> Compra protegida
             </span>
             <span className="inline-flex items-center gap-1.5 text-xs font-body text-white/80">
-              <CreditCard size={13} className="text-mint" /> Débito MONIX
+              <CreditCard size={13} className="text-navy dark:text-mint" /> Débito MONIX
             </span>
           </div>
         </div>
@@ -264,16 +264,16 @@ export function MercadoMonixPage() {
                   <p className="font-display text-lg sm:text-xl font-bold text-navy dark:text-white">
                     {formatARS(p.precio)}
                   </p>
-                  <p className="font-body text-[11px] sm:text-xs text-mint mt-0.5">
+                  <p className="font-body text-[11px] sm:text-xs text-navy dark:text-mint mt-0.5">
                     en {p.cuotas} cuotas sin interés
                   </p>
                   {p.envioGratis && (
-                    <p className="font-body text-[11px] sm:text-xs text-mint font-medium mt-1.5 inline-flex items-center gap-1">
+                    <p className="font-body text-[11px] sm:text-xs text-navy dark:text-mint font-medium mt-1.5 inline-flex items-center gap-1">
                       <Truck size={12} /> Envío gratis
                     </p>
                   )}
                   <p className="font-body text-[10px] sm:text-[11px] text-slate-secondary mt-2 inline-flex items-center gap-1">
-                    <Star size={11} className="text-mint fill-mint" />
+                    <Star size={11} className="text-navy dark:text-mint fill-navy dark:fill-mint" />
                     {p.rating} · {p.vendidos.toLocaleString('es-AR')} vendidos
                   </p>
                   <Button
@@ -349,7 +349,7 @@ export function MercadoMonixPage() {
                     <p className="font-display font-bold text-navy dark:text-white mt-1">
                       {formatARS(producto.precio)}
                     </p>
-                    <p className="font-body text-xs text-mint">
+                    <p className="font-body text-xs text-navy dark:text-mint">
                       hasta {producto.cuotas} cuotas s/interés
                     </p>
                   </div>
@@ -416,7 +416,7 @@ export function MercadoMonixPage() {
                   <div className="h-px bg-slate-200 dark:bg-white/10" />
                   <div className="flex justify-between gap-3">
                     <span className="font-body text-sm text-slate-secondary">Saldo después</span>
-                    <span className={`font-display text-sm font-bold ${total > saldo ? 'text-red-500' : 'text-mint'}`}>
+                    <span className={`font-display text-sm font-bold ${total > saldo ? 'text-red-500' : 'text-navy dark:text-mint'}`}>
                       {formatARS(roundMoney(saldo - total))}
                     </span>
                   </div>

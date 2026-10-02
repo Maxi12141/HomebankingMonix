@@ -176,7 +176,7 @@ export function DatePicker({ value, onChange, label, placeholder = 'DD/MM/AAAA' 
             type="button"
             tabIndex={-1}
             onClick={toggle}
-            className="p-1 text-slate-secondary hover:text-mint transition-colors"
+            className="p-1 text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors"
           >
             <Calendar size={15} />
           </button>
@@ -196,7 +196,7 @@ export function DatePicker({ value, onChange, label, placeholder = 'DD/MM/AAAA' 
                 <button
                   type="button"
                   onClick={() => setYearMode(false)}
-                  className="font-display text-sm font-semibold text-mint hover:text-mint/70 transition-colors"
+                  className="font-display text-sm font-semibold text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint/70 transition-colors"
                 >
                   {vy}
                 </button>
@@ -218,7 +218,7 @@ export function DatePicker({ value, onChange, label, placeholder = 'DD/MM/AAAA' 
                   <button
                     type="button"
                     onClick={() => setYearMode(true)}
-                    className="font-display text-sm font-semibold text-mint hover:text-mint/70 transition-colors px-1 rounded"
+                    className="font-display text-sm font-semibold text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint/70 transition-colors px-1 rounded"
                   >
                     {vy}
                   </button>
@@ -287,8 +287,8 @@ export function DatePicker({ value, onChange, label, placeholder = 'DD/MM/AAAA' 
                           ${isSel(day)
                             ? 'bg-mint text-navy font-semibold'
                             : isToday(day)
-                            ? 'text-mint font-semibold ring-1 ring-inset ring-mint/40'
-                            : 'text-navy dark:text-white hover:bg-navy/5 dark:hover:bg-white/5 hover:text-mint'
+                            ? 'text-navy dark:text-mint font-semibold ring-1 ring-inset ring-mint/40'
+                            : 'text-navy dark:text-white hover:bg-navy/5 dark:hover:bg-white/5 hover:text-navy dark:hover:text-mint'
                           }
                         `}
                       >

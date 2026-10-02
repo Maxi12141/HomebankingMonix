@@ -201,7 +201,7 @@ export function HistorialPage() {
                       )}
                     </div>
                   </div>
-                  <span className={`font-display font-semibold text-base ml-4 shrink-0 ${entrada ? 'text-mint' : 'text-red-500 dark:text-red-400'}`}>
+                  <span className={`font-display font-semibold text-base ml-4 shrink-0 ${entrada ? 'text-navy dark:text-mint' : 'text-red-500 dark:text-red-400'}`}>
                     {entrada ? '+' : '-'}{montoFormateado}
                   </span>
                 </Card>

@@ -19,7 +19,7 @@ interface Props {
 
 function Iniciales({ nombre, apellido }: { nombre: string; apellido: string }) {
   return (
-    <div className="w-9 h-9 rounded-full bg-mint/20 text-mint flex items-center justify-center font-body font-bold text-sm shrink-0 select-none">
+    <div className="w-9 h-9 rounded-full bg-mint/20 text-navy dark:text-mint flex items-center justify-center font-body font-bold text-sm shrink-0 select-none">
       {(nombre[0] ?? '').toUpperCase()}{(apellido[0] ?? '').toUpperCase()}
     </div>
   )
@@ -112,7 +112,7 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
         <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Agenda</h2>
         <button
           onClick={() => (mostrarForm ? cancelarForm() : setMostrarForm(true))}
-          className="flex items-center gap-1.5 text-sm font-body text-mint hover:text-mint/80 transition-colors"
+          className="flex items-center gap-1.5 text-sm font-body text-navy dark:text-mint hover:text-navy/80 dark:hover:text-mint/80 transition-colors"
         >
           <UserPlus size={15} />
           Agregar
@@ -136,7 +136,7 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
               type="button"
               onClick={buscarPersona}
               disabled={!inputBusqueda.trim() || buscando}
-              className="px-3 rounded-xl bg-mint/10 border border-mint/20 text-mint hover:bg-mint/20 transition-colors disabled:opacity-40"
+              className="px-3 rounded-xl bg-mint/10 border border-mint/20 text-navy dark:text-mint hover:bg-mint/20 transition-colors disabled:opacity-40"
             >
               <Search size={16} />
             </button>
@@ -150,7 +150,7 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
               <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-mint/10 border border-mint/20">
                 <Iniciales nombre={personaEncontrada.nombre} apellido={personaEncontrada.apellido} />
                 <div className="min-w-0">
-                  <p className="text-sm font-body font-medium text-mint truncate">
+                  <p className="text-sm font-body font-medium text-navy dark:text-mint truncate">
                     {personaEncontrada.nombre} {personaEncontrada.apellido}
                   </p>
                   <p className="text-xs font-body text-slate-secondary truncate">
@@ -224,7 +224,7 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
                   <button
                     onClick={() => iniciarEdicion(c)}
                     title="Editar contacto"
-                    className="p-1.5 rounded-lg text-slate-secondary hover:text-mint hover:bg-mint/10 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-secondary hover:text-navy dark:hover:text-mint hover:bg-mint/10 transition-colors"
                   >
                     <Pencil size={14} />
                   </button>
@@ -271,7 +271,7 @@ export function AgendaContactosPanel({ onSelectContacto }: Props) {
                     </button>
                     <button
                       onClick={() => confirmarEdicion(c.cbu)}
-                      className="px-3 py-1.5 rounded-xl bg-mint/20 text-mint hover:bg-mint/30 transition-colors text-sm font-body font-medium flex items-center gap-1.5"
+                      className="px-3 py-1.5 rounded-xl bg-mint/20 text-navy dark:text-mint hover:bg-mint/30 transition-colors text-sm font-body font-medium flex items-center gap-1.5"
                     >
                       <Check size={15} />
                       Guardar

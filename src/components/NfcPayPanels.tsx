@@ -564,7 +564,7 @@ function BotonAgendar({
 
   if (!alias) return null
   if (guardado) {
-    return <p className="font-body text-sm text-mint text-center mt-3">En tu agenda</p>
+    return <p className="font-body text-sm text-navy dark:text-mint text-center mt-3">En tu agenda</p>
   }
   return (
     <Button
@@ -1022,7 +1022,7 @@ export function EscanearYPagar({
   return caja(
     <Card className="p-6">
       <div className="flex items-center gap-2 mb-4">
-        <ScanLine size={18} className="text-mint" />
+        <ScanLine size={18} className="text-navy dark:text-mint" />
         <h2 className="font-display font-semibold text-navy dark:text-white">Escanear para pagar</h2>
       </div>
       {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}

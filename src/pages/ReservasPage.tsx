@@ -141,7 +141,7 @@ export function ReservasPage() {
                 {loading ? '—' : formatARS(saldoReserva)}
               </p>
             </div>
-            <div className="rounded-xl bg-mint/15 text-mint p-2.5">
+            <div className="rounded-xl bg-mint/15 text-navy dark:text-mint p-2.5">
               <PiggyBank size={22} />
             </div>
           </div>
@@ -171,7 +171,7 @@ export function ReservasPage() {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="mt-3 flex items-center gap-1.5 font-body text-xs text-mint"
+                className="mt-3 flex items-center gap-1.5 font-body text-xs text-navy dark:text-mint"
               >
                 <TrendingUp size={14} />
                 Se acreditaron {formatARS(interesHoy)} de rendimiento

@@ -395,7 +395,7 @@ export function LandingPage() {
               variants={itemVariants}
               type="button"
               onClick={() => { void handleInstalar() }}
-              className="mt-5 inline-flex items-center gap-2 text-mint font-body text-sm font-medium hover:text-mint-hover transition-colors"
+              className="mt-5 inline-flex items-center gap-2 text-navy dark:text-mint font-body text-sm font-medium hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
             >
               <Download size={16} />
               Instalar app
@@ -428,7 +428,7 @@ export function LandingPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
               >
-                <div className="w-11 h-11 rounded-xl bg-mint/10 flex items-center justify-center text-mint mb-4">
+                <div className="w-11 h-11 rounded-xl bg-mint/10 flex items-center justify-center text-navy dark:text-mint mb-4">
                   <feature.icon size={22} />
                 </div>
                 <h3 className="font-display text-lg font-semibold text-navy dark:text-white mb-2">{feature.title}</h3>

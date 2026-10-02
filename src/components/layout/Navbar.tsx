@@ -57,7 +57,7 @@ export function Navbar() {
               <QrCode size={26} strokeWidth={2.2} />
             </span>
           </span>
-          <span className={`mt-0.5 text-[10px] font-body font-medium ${qrOpen ? 'text-mint' : 'text-navy dark:text-white'}`}>
+          <span className={`mt-0.5 text-[10px] font-body font-medium ${qrOpen ? 'text-navy dark:text-mint' : 'text-navy dark:text-white'}`}>
             QR
           </span>
         </button>
@@ -80,7 +80,7 @@ function SideLink({
       to={to}
       className={({ isActive }) =>
         `flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-body font-medium transition-colors ${
-          isActive ? 'text-mint' : 'text-slate-secondary'
+          isActive ? 'text-navy dark:text-mint' : 'text-slate-secondary'
         }`
       }
     >

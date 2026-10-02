@@ -184,7 +184,7 @@ export function DepositPage() {
                   Depositaste {formatMonto(depositado.monto, depositado.moneda)}
                 </p>
                 <p className="font-body text-sm text-slate-secondary mb-8">
-                  Nuevo saldo: <span className="text-mint font-medium">{formatMonto(depositado.saldo, depositado.moneda)}</span>
+                  Nuevo saldo: <span className="text-navy dark:text-mint font-medium">{formatMonto(depositado.saldo, depositado.moneda)}</span>
                 </p>
                 <Button className="w-full" onClick={handleReset}>Nuevo depósito</Button>
               </Card>

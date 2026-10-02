@@ -167,7 +167,7 @@ export function AdBanner() {
                     key={item.title}
                     className="flex items-start gap-2.5 rounded-xl bg-white/70 dark:bg-navy/40 px-3 py-2.5"
                   >
-                    <item.icon size={16} className="text-mint shrink-0 mt-0.5" />
+                    <item.icon size={16} className="text-navy dark:text-mint shrink-0 mt-0.5" />
                     <div className="min-w-0">
                       <p className="font-body text-sm font-medium text-navy dark:text-white">
                         {item.title}
@@ -214,7 +214,7 @@ function PromoCard({
         : 'bg-slate-50 border-slate-100 dark:bg-white/5 dark:border-white/10'
 
   const titleCls =
-    accent === 'mint' ? 'text-mint' : 'text-navy dark:text-white'
+    accent === 'mint' ? 'text-navy dark:text-mint' : 'text-navy dark:text-white'
 
   return (
     <div
@@ -243,7 +243,7 @@ function PromoCard({
         <ChevronDown
           size={16}
           className={`shrink-0 mt-0.5 sm:mt-0 text-slate-secondary transition-transform duration-200 ${
-            active ? 'rotate-180 text-mint' : ''
+            active ? 'rotate-180 text-navy dark:text-mint' : ''
           }`}
         />
       </button>

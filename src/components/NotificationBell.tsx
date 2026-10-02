@@ -94,7 +94,7 @@ export function NotificationBell() {
                 {notis.length > 0 && (
                   <button
                     onClick={() => markAllRead()}
-                    className="flex items-center gap-1 font-body text-xs text-slate-secondary hover:text-mint transition-colors"
+                    className="flex items-center gap-1 font-body text-xs text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors"
                   >
                     <CheckCheck size={14} />
                     Marcar leídas
@@ -116,7 +116,7 @@ export function NotificationBell() {
                       className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-navy/5 dark:hover:bg-white/5 transition-colors border-b border-slate-100 dark:border-white/5 last:border-0"
                     >
                       <div className="w-9 h-9 rounded-full bg-mint/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <ArrowDownLeft size={17} className="text-mint" strokeWidth={2.5} />
+                        <ArrowDownLeft size={17} className="text-navy dark:text-mint" strokeWidth={2.5} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-body text-sm font-medium text-navy dark:text-white">{titulo(n)}</p>
@@ -131,7 +131,7 @@ export function NotificationBell() {
                           })}
                         </p>
                       </div>
-                      <span className="font-display text-sm font-semibold text-mint shrink-0">
+                      <span className="font-display text-sm font-semibold text-navy dark:text-mint shrink-0">
                         +{currency(n.monto)}
                       </span>
                     </button>

@@ -58,7 +58,7 @@ function BadgeOtroBanco({ bankCode }: { bankCode: number }) {
 
 function Iniciales({ nombre, apellido }: { nombre: string; apellido: string }) {
   return (
-    <div className="w-10 h-10 rounded-full bg-mint/20 text-mint flex items-center justify-center font-body font-bold text-sm shrink-0 select-none">
+    <div className="w-10 h-10 rounded-full bg-mint/20 text-navy dark:text-mint flex items-center justify-center font-body font-bold text-sm shrink-0 select-none">
       {(nombre[0] ?? '').toUpperCase()}{(apellido[0] ?? '').toUpperCase()}
     </div>
   )
@@ -472,7 +472,7 @@ export function TransferPage() {
                         type="button"
                         onClick={() => buscarDestinatario()}
                         disabled={!destino.trim() || buscando}
-                        className="px-4 rounded-xl bg-mint/10 border border-mint/20 text-mint hover:bg-mint/20 transition-colors disabled:opacity-40"
+                        className="px-4 rounded-xl bg-mint/10 border border-mint/20 text-navy dark:text-mint hover:bg-mint/20 transition-colors disabled:opacity-40"
                       >
                         <Search size={18} />
                       </button>
@@ -485,7 +485,7 @@ export function TransferPage() {
                       <div className="mt-3 px-4 py-3 rounded-xl bg-mint/10 border border-mint/20 flex items-center gap-3">
                         <Iniciales nombre={destinatario.nombre} apellido={destinatario.apellido} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-body font-medium text-mint truncate">
+                          <p className="text-sm font-body font-medium text-navy dark:text-mint truncate">
                             {destinatario.nombre} {destinatario.apellido}
                           </p>
                           <p className="text-xs font-body text-slate-secondary mt-0.5 truncate">
@@ -493,7 +493,7 @@ export function TransferPage() {
                           </p>
                           <span className="flex flex-wrap items-center gap-1.5 mt-1">
                             <span className={`inline-block text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                              destinatario.moneda === 'USD' ? 'bg-mint/20 text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
+                              destinatario.moneda === 'USD' ? 'bg-mint/20 text-navy dark:text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
                             }`}>
                               {destinatario.moneda === 'USD' ? 'Cuenta en dólares' : 'Cuenta en pesos'}
                             </span>
@@ -507,7 +507,7 @@ export function TransferPage() {
                             type="button"
                             onClick={toggleAgenda}
                             title="En tu agenda — click para quitar"
-                            className="shrink-0 text-mint hover:text-mint/60 transition-colors"
+                            className="shrink-0 text-navy dark:text-mint hover:text-navy/60 dark:hover:text-mint/60 transition-colors"
                           >
                             <Star size={18} fill="currentColor" />
                           </button>
@@ -516,7 +516,7 @@ export function TransferPage() {
                             type="button"
                             onClick={toggleAgenda}
                             title="Agregar a agenda"
-                            className="shrink-0 text-slate-secondary hover:text-mint transition-colors"
+                            className="shrink-0 text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors"
                           >
                             <UserPlus size={17} />
                           </button>
@@ -561,7 +561,7 @@ export function TransferPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className={`text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        destinatario.moneda === 'USD' ? 'bg-mint/20 text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
+                        destinatario.moneda === 'USD' ? 'bg-mint/20 text-navy dark:text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
                       }`}>
                         {destinatario.moneda === 'USD' ? 'USD' : 'ARS'}
                       </span>
@@ -574,14 +574,14 @@ export function TransferPage() {
                     <button
                       type="button"
                       onClick={toggleAgenda}
-                      className="mb-6 w-full py-2.5 rounded-xl border border-mint/30 bg-mint/10 text-mint font-body font-medium text-sm hover:bg-mint/20 transition-colors flex items-center justify-center gap-2"
+                      className="mb-6 w-full py-2.5 rounded-xl border border-mint/30 bg-mint/10 text-navy dark:text-mint font-body font-medium text-sm hover:bg-mint/20 transition-colors flex items-center justify-center gap-2"
                     >
                       <UserPlus size={15} />
                       Agendar contacto
                     </button>
                   )}
                   {vinoDeQr && isGuardado(destinatario.cbu) && (
-                    <p className="font-body text-sm text-mint mb-6 text-center">En tu agenda</p>
+                    <p className="font-body text-sm text-navy dark:text-mint mb-6 text-center">En tu agenda</p>
                   )}
 
                   {cuentaUSD && (
@@ -712,7 +712,7 @@ export function TransferPage() {
                     <div className="h-px bg-slate-200 dark:bg-white/10" />
                     <div className="flex justify-between">
                       <span className="font-body text-slate-secondary text-sm">Enviás</span>
-                      <span className="font-display font-bold text-mint text-lg">{montoFormateado}</span>
+                      <span className="font-display font-bold text-navy dark:text-mint text-lg">{montoFormateado}</span>
                     </div>
                     {esConversion && (
                       <>
@@ -776,7 +776,7 @@ export function TransferPage() {
                       {esConversion && <> ({destinatario?.nombre} recibió {montoDestinoFormateado})</>}
                     </p>
                     <p className="font-body text-sm text-slate-secondary mb-8">
-                      Nuevo saldo: <span className="text-mint font-medium">{saldoFormateado}</span>
+                      Nuevo saldo: <span className="text-navy dark:text-mint font-medium">{saldoFormateado}</span>
                     </p>
                     <div className="flex flex-col gap-3">
                       {vinoDeQr && (
@@ -819,14 +819,14 @@ export function TransferPage() {
                             alias: destinatario.alias,
                             apodo: null,
                           })}
-                          className="w-full py-2.5 rounded-xl border border-mint/30 bg-mint/10 text-mint font-body font-medium text-sm hover:bg-mint/20 transition-colors flex items-center justify-center gap-2"
+                          className="w-full py-2.5 rounded-xl border border-mint/30 bg-mint/10 text-navy dark:text-mint font-body font-medium text-sm hover:bg-mint/20 transition-colors flex items-center justify-center gap-2"
                         >
                           <UserPlus size={15} />
                           {vinoDeQr ? 'Agendar contacto' : 'Agregar a contactos'}
                         </button>
                       )}
                       {destinatario && isGuardado(destinatario.cbu) && (
-                        <p className="text-sm font-body text-mint/80 text-center">
+                        <p className="text-sm font-body text-navy/80 dark:text-mint/80 text-center">
                           ✓ Guardado en tu agenda
                         </p>
                       )}

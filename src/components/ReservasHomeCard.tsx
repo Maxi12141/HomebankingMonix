@@ -31,7 +31,7 @@ export function ReservasHomeCard({ cuentaId }: Props) {
             Ahorrá aparte y sumá rendimiento todos los días
           </p>
         </div>
-        <div className="rounded-xl bg-mint/15 text-mint p-2.5 shrink-0">
+        <div className="rounded-xl bg-mint/15 text-navy dark:text-mint p-2.5 shrink-0">
           <PiggyBank size={20} />
         </div>
       </div>
@@ -49,7 +49,7 @@ export function ReservasHomeCard({ cuentaId }: Props) {
           Hoy ~ <span className="text-navy dark:text-white font-medium">+{formatARS(diario)}</span>
         </p>
         {interesHoy > 0 && (
-          <p className="font-body text-xs text-mint inline-flex items-center gap-1">
+          <p className="font-body text-xs text-navy dark:text-mint inline-flex items-center gap-1">
             <TrendingUp size={12} />
             +{formatARS(interesHoy)} acreditados
           </p>

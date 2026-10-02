@@ -88,7 +88,7 @@ export function MetasAyuda() {
         onClick={() => { setSenalar(false); setAbierta(true) }}
         aria-label="Cómo funcionan las metas comunes"
         title="Cómo funcionan"
-        className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-secondary hover:text-mint hover:bg-mint/10 transition-colors"
+        className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-secondary hover:text-navy dark:hover:text-mint hover:bg-mint/10 transition-colors"
         animate={senalar ? { scale: [1, 1.25, 1, 1.25, 1] } : { scale: 1 }}
         transition={{ duration: 1.4, ease: 'easeInOut' }}
         onAnimationComplete={() => setSenalar(false)}
@@ -102,7 +102,7 @@ export function MetasAyuda() {
             transition={{ duration: 0.7, repeat: 1, ease: 'easeOut' }}
           />
         )}
-        <HelpCircle size={20} className={senalar ? 'text-mint' : undefined} />
+        <HelpCircle size={20} className={senalar ? 'text-navy dark:text-mint' : undefined} />
       </motion.button>
 
       <Modal open={abierta} onClose={cerrar}>
@@ -122,7 +122,7 @@ export function MetasAyuda() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 + i * 0.12, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mint/15 text-mint">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mint/15 text-navy dark:text-mint">
                   <Icon size={18} />
                 </span>
                 <span>

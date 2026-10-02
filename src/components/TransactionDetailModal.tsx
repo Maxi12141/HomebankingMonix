@@ -120,7 +120,7 @@ export function TransactionDetailModal({ movimiento, bankName, onClose }: Props)
               <button
                 onClick={() => { void handleShare() }}
                 disabled={compartiendo}
-                className="text-slate-secondary hover:text-mint transition-colors disabled:opacity-50"
+                className="text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors disabled:opacity-50"
                 aria-label="Compartir comprobante"
                 title="Compartir comprobante PDF"
               >
@@ -130,7 +130,7 @@ export function TransactionDetailModal({ movimiento, bankName, onClose }: Props)
             <button
               onClick={handleDownload}
               disabled={downloading}
-              className="text-slate-secondary hover:text-mint transition-colors disabled:opacity-50"
+              className="text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors disabled:opacity-50"
               aria-label="Descargar comprobante"
               title="Descargar comprobante PDF"
             >

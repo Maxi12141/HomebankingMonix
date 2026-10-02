@@ -158,16 +158,17 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
   }
 
   return (
-    <Card className="p-8">
+    // Siempre sobre azul noche: en modo claro #001A3D, en oscuro igual que antes.
+    <Card variant="dark" className="p-8 !bg-navy dark:!bg-navy-card">
       <div className="flex items-start justify-between gap-3 mb-2">
-        <p className="font-body text-sm text-slate-secondary">{titulo}</p>
+        <p className="font-body text-sm text-[#B0C0D6]">{titulo}</p>
         <button
           onClick={() => setShowData((v) => {
             const next = !v
             localStorage.setItem(MOSTRAR_SALDO_KEY, next ? '1' : '0')
             return next
           })}
-          className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors shrink-0"
+          className="text-[#B0C0D6] hover:text-white transition-colors shrink-0"
           aria-label={showData ? 'Ocultar saldo' : 'Mostrar saldo'}
         >
           {showData ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -198,7 +199,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.3 }}
-            className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint' : 'text-red-500 dark:text-red-400'}`}
+            className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint' : 'text-red-400'}`}
           >
             {showData ? (
               <>{delta > 0 ? '+' : ''}{formatMoneda(delta, cuenta.moneda)}</>
@@ -211,12 +212,12 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
       </AnimatePresence>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
-        <p className="font-body text-xs text-slate-secondary">
-          TNA <span className="text-navy dark:text-white font-medium">{tasa.toFixed(2)}%</span>
+        <p className="font-body text-xs text-[#B0C0D6]">
+          TNA <span className="text-white font-medium">{tasa.toFixed(2)}%</span>
         </p>
-        <p className="font-body text-xs text-slate-secondary">
+        <p className="font-body text-xs text-[#B0C0D6]">
           Hoy ~{' '}
-          <span className="text-navy dark:text-white font-medium">
+          <span className="text-white font-medium">
             +{showData ? formatMoneda(rendimientoDiario, cuenta.moneda) : '••••'}
           </span>
         </p>
@@ -228,29 +229,29 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
         )}
       </div>
 
-      <p className="font-body text-sm text-slate-secondary mt-3">
+      <p className="font-body text-sm text-[#B0C0D6] mt-3">
         Cuenta N° {cuenta.numero_cuenta ?? '—'} · {cuenta.tipo === 'caja_ahorro' ? 'Caja de Ahorro' : 'Cuenta Corriente'}
       </p>
 
-      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center gap-3 flex-wrap">
+      <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="font-body text-xs text-slate-secondary">CBU</span>
-          <span className="font-body text-xs font-medium text-navy dark:text-white font-mono">
+          <span className="font-body text-xs text-[#B0C0D6]">CBU</span>
+          <span className="font-body text-xs font-medium text-white font-mono">
             {showData ? (cuenta.cbu ?? '—') : '•••••••••••••••••••••'}
           </span>
-          <button onClick={() => handleCopy(cuenta.cbu ?? '', 'cbu')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar CBU">
+          <button onClick={() => handleCopy(cuenta.cbu ?? '', 'cbu')} className="text-[#B0C0D6] hover:text-white transition-colors" aria-label="Copiar CBU">
             {copiedCbu ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
           </button>
         </div>
 
-        <span className="text-slate-200 dark:text-white/10 select-none">|</span>
+        <span className="text-white/10 select-none">|</span>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="font-body text-xs text-slate-secondary">Alias</span>
-          <span className="font-body text-xs font-medium text-navy dark:text-white">
+          <span className="font-body text-xs text-[#B0C0D6]">Alias</span>
+          <span className="font-body text-xs font-medium text-white">
             {showData ? (cuenta.alias ?? '—') : '••••••••••••••'}
           </span>
-          <button onClick={() => handleCopy(cuenta.alias ?? '', 'alias')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar Alias">
+          <button onClick={() => handleCopy(cuenta.alias ?? '', 'alias')} className="text-[#B0C0D6] hover:text-white transition-colors" aria-label="Copiar Alias">
             {copiedAlias ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
           </button>
         </div>
@@ -353,14 +354,14 @@ export function DashboardPage() {
               <button
                 onClick={() => toggleCuenta(-1)}
                 aria-label="Ver la otra cuenta"
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-9 h-9 rounded-full bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-center text-slate-secondary hover:text-mint hover:border-mint/30 transition-colors"
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-9 h-9 rounded-full bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-center text-slate-secondary hover:text-navy dark:hover:text-mint hover:border-mint/30 transition-colors"
               >
                 <ChevronLeft size={18} strokeWidth={1.5} />
               </button>
               <button
                 onClick={() => toggleCuenta(1)}
                 aria-label="Ver la otra cuenta"
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-9 h-9 rounded-full bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-center text-slate-secondary hover:text-mint hover:border-mint/30 transition-colors"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-9 h-9 rounded-full bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-center text-slate-secondary hover:text-navy dark:hover:text-mint hover:border-mint/30 transition-colors"
               >
                 <ChevronRight size={18} strokeWidth={1.5} />
               </button>
@@ -408,7 +409,7 @@ export function DashboardPage() {
         <motion.div variants={itemVariants} id="tour-movimientos">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Últimos movimientos</h2>
-            <button onClick={() => navigate('/historial')} className="text-sm font-body text-mint hover:text-mint-hover transition-colors">
+            <button onClick={() => navigate('/historial')} className="text-sm font-body text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
               Ver todos
             </button>
           </div>
@@ -445,7 +446,7 @@ export function DashboardPage() {
                           {new Date(mov.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </p>
                       </div>
-                      <span className={`font-display font-semibold text-base ${esEntrada ? 'text-mint' : 'text-red-500 dark:text-red-400'}`}>
+                      <span className={`font-display font-semibold text-base ${esEntrada ? 'text-navy dark:text-mint' : 'text-red-500 dark:text-red-400'}`}>
                         {text}
                       </span>
                     </Card>

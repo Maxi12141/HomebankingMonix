@@ -61,7 +61,7 @@ export function PromosPage() {
       <div className="max-w-3xl mx-auto">
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-1.5 font-body text-sm text-slate-secondary hover:text-mint transition-colors mb-4"
+          className="inline-flex items-center gap-1.5 font-body text-sm text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors mb-4"
         >
           <ArrowLeft size={16} />
           Volver al inicio
@@ -98,7 +98,7 @@ export function PromosPage() {
                       <p className="font-body text-xs text-slate-secondary">Promoción</p>
                       <p className="font-display font-semibold text-navy dark:text-white">{p.title}</p>
                       <p className="font-body text-sm text-slate-secondary mt-1">{p.desc}</p>
-                      <p className="font-body text-xs text-mint mt-2">{p.vigencia}</p>
+                      <p className="font-body text-xs text-navy dark:text-mint mt-2">{p.vigencia}</p>
                     </div>
                   </div>
                 </button>
@@ -114,7 +114,7 @@ export function PromosPage() {
                       <div className="px-4 pb-4 space-y-2 border-t border-slate-200 dark:border-white/10 pt-3">
                         {p.condiciones.map((c) => (
                           <p key={c} className="font-body text-xs text-slate-secondary flex items-start gap-2">
-                            <Check size={13} className="text-mint shrink-0 mt-0.5" />
+                            <Check size={13} className="text-navy dark:text-mint shrink-0 mt-0.5" />
                             {c}
                           </p>
                         ))}

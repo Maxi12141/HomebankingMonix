@@ -341,7 +341,7 @@ export function LoginPage() {
                   />
                   <Link
                     to="/recuperar-contrasena"
-                    className="self-end -mt-2 text-xs font-body text-mint hover:text-mint-hover transition-colors"
+                    className="self-end -mt-2 text-xs font-body text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
                   >
                     ¿Olvidaste tu contraseña?
                   </Link>
@@ -382,7 +382,7 @@ export function LoginPage() {
                 />
                 <Link
                   to="/recuperar-contrasena"
-                  className="self-end -mt-2 text-xs font-body text-mint hover:text-mint-hover transition-colors"
+                  className="self-end -mt-2 text-xs font-body text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
@@ -450,7 +450,7 @@ export function LoginPage() {
             <button
               type="button"
               onClick={() => { void handleInstalar() }}
-              className="w-full flex items-center justify-center gap-2 text-mint font-body text-sm font-medium py-3 mt-4 hover:text-mint-hover transition-colors"
+              className="w-full flex items-center justify-center gap-2 text-navy dark:text-mint font-body text-sm font-medium py-3 mt-4 hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
             >
               <Download size={16} />
               Instalar Monix
@@ -460,7 +460,7 @@ export function LoginPage() {
           {step !== 'bio-offer' && (
             <p className="text-center text-sm font-body text-slate-secondary mt-6">
               ¿No tenés cuenta?{' '}
-              <Link to="/register" className="text-mint hover:text-mint-hover transition-colors">
+              <Link to="/register" className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
                 Registrate
               </Link>
             </p>
