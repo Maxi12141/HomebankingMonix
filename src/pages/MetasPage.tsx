@@ -6,6 +6,7 @@ import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { MetasAyuda } from '../components/MetasAyuda'
 import { useCuenta } from '../hooks/useCuenta'
 import { formatMonto } from '../utils/cuenta'
 import {
@@ -258,9 +259,12 @@ export function MetasPage() {
             Todas las metas
           </button>
 
-          <h1 className="font-display text-2xl font-semibold text-navy dark:text-white">
-            {detalle.titulo}
-          </h1>
+          <div className="flex items-start justify-between gap-2">
+            <h1 className="font-display text-2xl font-semibold text-navy dark:text-white">
+              {detalle.titulo}
+            </h1>
+            <MetasAyuda />
+          </div>
           {detalle.proposito && (
             <p className="font-body text-sm text-slate-secondary mt-1">{detalle.proposito}</p>
           )}
@@ -464,12 +468,12 @@ export function MetasPage() {
   return (
     <PageWrapper>
       <div className="max-w-lg mx-auto">
-        <h1 className="font-display text-2xl font-semibold text-navy dark:text-white">
-          Metas comunes
-        </h1>
-        <p className="font-body text-sm text-slate-secondary mt-1 mb-6">
-          Juntan para un viaje, un regalo o el alquiler. La plata rinde la misma TNA que Reservas y no sale hasta que la mayoría apruebe el pago.
-        </p>
+        <div className="flex items-center gap-1 mb-6">
+          <h1 className="font-display text-2xl font-semibold text-navy dark:text-white">
+            Metas comunes
+          </h1>
+          <MetasAyuda />
+        </div>
 
         {error && <p className="font-body text-sm text-red-500 dark:text-red-400 mb-4">{error}</p>}
 
