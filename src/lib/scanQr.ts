@@ -82,17 +82,6 @@ function esPantallaChica() {
   return window.matchMedia('(max-width: 767px)').matches
 }
 
-/** Sin permiso el id viene vacío, pero el tipo sigue diciendo si hay una cámara. */
-export async function hayCamaraDeVideo(): Promise<boolean> {
-  if (!navigator.mediaDevices?.enumerateDevices) return false
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices()
-    return devices.some((d) => d.kind === 'videoinput')
-  } catch {
-    return false
-  }
-}
-
 /** iOS anula el permiso si getUserMedia no arranca en el mismo toque del botón. */
 export async function pedirStreamCamara(): Promise<MediaStream> {
   if (!navigator.mediaDevices?.getUserMedia) {

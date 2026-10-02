@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, Receipt, ChevronLeft, ChevronRight, QrCode, Share2 } from 'lucide-react'
+import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, ChevronLeft, ChevronRight, QrCode, Share2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CountUp from 'react-countup'
 import { useAuthStore } from '../store/authStore'
@@ -21,7 +21,6 @@ import { formatMonto as formatMoneda } from '../utils/cuenta'
 import type { TourStep } from '../components/OnboardingTour'
 import type { Movimiento, Cuenta } from '../types'
 import { esCelular } from '../lib/biometria'
-import { useHayCamara } from '../hooks/useHayCamara'
 import { useQrScanStore } from '../stores/qrScanStore'
 import {
   completarBienvenida,
@@ -276,7 +275,6 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const hayCamara = useHayCamara()
   const { persona, user } = useAuthStore()
   const { cuenta, cuentas, interesHoyPorCuenta } = useCuenta()
   const { movimientos, loading: loadingMov } = useMovimientos(5)
@@ -371,25 +369,22 @@ export function DashboardPage() {
         </motion.div>
 
         {/* Acciones rápidas: en celular van fijas abajo (Navbar). */}
-        <motion.div variants={itemVariants} id="tour-acciones" className={`hidden md:grid grid-cols-3 ${hayCamara ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-3 mb-8`}>
+        <motion.div variants={itemVariants} id="tour-acciones" className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
           <Button variant="primary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/transferir')}>
             <ArrowRightLeft size={20} />
             <span className="text-sm">Transferir</span>
           </Button>
-          {hayCamara && (
-            <Button
-              variant="secondary"
-              data-qr-fab
-              className="flex flex-col items-center gap-2 py-4"
-              onClick={(e) => useQrScanStore.getState().openFromElement(e.currentTarget)}
-            >
-              <QrCode size={20} />
-              <span className="text-sm">QR</span>
-            </Button>
-          )}
-          <Button variant="secondary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/pagar')}>
-            <Receipt size={20} />
-            <span className="text-sm">Pagar</span>
+          {/* En escritorio no está el botón QR flotante de la barra mobile: este
+              abre el mismo overlay (escanear con la cámara o generar tu QR para
+              cobrar), así que se muestra aunque no haya cámara. */}
+          <Button
+            variant="secondary"
+            data-qr-fab
+            className="flex flex-col items-center gap-2 py-4"
+            onClick={(e) => useQrScanStore.getState().openFromElement(e.currentTarget)}
+          >
+            <QrCode size={20} />
+            <span className="text-sm">QR</span>
           </Button>
           <Button variant="secondary" className="flex flex-col items-center gap-2 py-4" onClick={() => navigate('/historial')}>
             <History size={20} />

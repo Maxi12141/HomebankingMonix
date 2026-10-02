@@ -34,7 +34,7 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 ### Autenticación
 - Registro con datos personales (nombre, apellido, DNI, email, teléfono, dirección, fecha de nacimiento)
 - Login / logout con Supabase Auth
-- Protección de rutas: rutas privadas (`/dashboard`, `/cuentas`, `/dolares`, `/transferir`, `/historial`, `/depositar`, `/perfil`, `/contactos`, `/pagar`, `/reservas`, `/prestamos`, `/tarjeta`, `/mercado-monix`, `/promos`, `/cashback`, `/financiacion`) requieren sesión activa; rutas públicas (`/`, `/login`, `/register`) redirigen al dashboard si ya hay sesión
+- Protección de rutas: rutas privadas (`/dashboard`, `/cuentas`, `/dolares`, `/transferir`, `/historial`, `/depositar`, `/perfil`, `/contactos`, `/reservas`, `/prestamos`, `/tarjeta`, `/mercado-monix`, `/promos`, `/cashback`, `/financiacion`) requieren sesión activa; rutas públicas (`/`, `/login`, `/register`) redirigen al dashboard si ya hay sesión
 - `ErrorBoundary` alrededor de toda la app: si algo cuelga (Realtime, un hook nativo), muestra un fallback en vez de dejar la pantalla en blanco
 - Pantalla de fallback (`MissingEnvScreen`) si faltan o son inválidas las variables `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, en vez de romper la app con pantalla en blanco (ver `isSupabaseConfigured` en `src/lib/supabaseClient.ts`)
 
@@ -42,7 +42,7 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 - Saldo actual con animación CountUp al cargar y al recibir transferencias en tiempo real
 - Indicador delta (`+$ X recibido` / `-$ X enviado`) que aparece y desaparece automáticamente al detectar cambios de saldo vía Supabase Realtime
 - Últimos 5 movimientos clickeables con modal de detalle completo
-- Acciones rápidas: Transferir, Pagar, Historial, Depositar
+- Acciones rápidas: Transferir, QR, Historial, Depositar
 - Card de Reservas (`ReservasHomeCard`) con saldo del "bolsillo" de ahorro, TNA y estimación diaria
 - Banner publicitario (`AdBanner`) con acceso a mercadoMONIX y tarjetas expandibles de Ofertas, Cashback y Financiación
 - Campanita de notificaciones (`NotificationBell`) en el header, visible en todas las páginas: alerta con toast y badge de no leídas ante depósitos/transferencias entrantes
@@ -82,11 +82,10 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 ### Depósito
 - Acreditación de fondos en la cuenta propia
 
-### Pagar (cobro y pago con QR)
-- Dos modos: **Cobrar** (generás un cobro con monto y descripción, se muestra como QR) y **Escanear** (pagás un cobro escaneando su QR)
+### QR (cobro y pago)
+- Se abre con el botón QR (al centro de la barra en mobile, en las acciones rápidas de Inicio en escritorio). Dos vistas: la cámara para **pagar** escaneando un QR y **Generar QR** para cobrar (con monto opcional)
 - Cada cobro (`cobros_nfc`) tiene estado `pendiente` / `pagado` / `expirado` / `cancelado` y vence a los pocos minutos
 - El pago se resuelve en el servidor vía RPCs de Supabase (`crear_cobro_nfc`, `pagar_cobro_qr`) que debitan/acreditan las cuentas de comprador y comercio y registran el movimiento
-- Acceso directo desde el botón QR central de la barra de navegación mobile
 
 ### Reservas
 - "Bolsillo" de ahorro separado del saldo principal, con interés diario compuesto (TNA configurable, 32% por defecto)
@@ -142,7 +141,7 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 - Pantalla de carga animada con mínimo 2.4 segundos
 - Toasts de notificación con estilo de la marca
 - Responsive: sidebar en desktop, drawer hamburger en mobile
-- Barra de navegación inferior en mobile (`Navbar`, estilo Mercado Libre): accesos a Transferir/Pagar/Historial/Depositar + botón QR flotante central que lleva directo a Pagar → Cobrar
+- Barra de navegación inferior en mobile (`Navbar`, estilo Mercado Libre): accesos a Inicio/Transferir/Cuentas/Reservas + botón QR flotante central que abre la cámara y el QR propio para cobrar
 
 ---
 
@@ -172,7 +171,7 @@ src/
 │   ├── MonixCard3D.tsx            # Tarjeta de débito virtual 3D interactiva (tilt + flip)
 │   ├── MonixLogoAnimated.tsx      # Logo con animación de salto letra por letra (hover)
 │   ├── MonixLogoNavbar.tsx        # Logo compacto con shimmer para la navbar
-│   ├── NfcPayPanels.tsx           # Paneles "Cobrar" (genera QR) y "Escanear" (paga) de Pagar
+│   ├── NfcPayPanels.tsx           # Overlay de QR: escanear para pagar y "Generar QR" para cobrar
 │   ├── NotificationBell.tsx       # Campanita de notificaciones (depósitos/transferencias entrantes)
 │   ├── OnboardingTour.tsx         # Tour guiado con spotlight animado (Framer Motion)
 │   ├── QrBox.tsx                  # Genera y muestra un QR (cobro, cuenta) a partir de un payload
@@ -214,7 +213,6 @@ src/
 │   ├── LandingPage.tsx            # Página de bienvenida (no autenticado)
 │   ├── LoginPage.tsx              # Formulario de inicio de sesión
 │   ├── MercadoMonixPage.tsx       # Mini-marketplace interno (mercadoMONIX)
-│   ├── PagarPage.tsx              # Cobro y pago con QR
 │   ├── PrestamosPage.tsx          # Simulador y gestión de préstamos personales
 │   ├── ProfilePage.tsx            # Perfil y configuración del usuario
 │   ├── PromosPage.tsx             # Listado de ofertas/descuentos (demo)

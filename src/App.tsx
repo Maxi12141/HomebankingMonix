@@ -29,7 +29,6 @@ import { CompraVentaDolaresPage } from './pages/CompraVentaDolaresPage'
 import { ContactosPage } from './pages/ContactosPage'
 import { TarjetaPage } from './pages/TarjetaPage'
 import { ReservasPage } from './pages/ReservasPage'
-import { PagarPage } from './pages/PagarPage'
 import { MercadoMonixPage } from './pages/MercadoMonixPage'
 import { PromosPage } from './pages/PromosPage'
 import { CashbackPage } from './pages/CashbackPage'
@@ -95,7 +94,6 @@ function AppRoutes() {
       <Route path="/cashback" element={<RequireAuth><CashbackPage /></RequireAuth>} />
       <Route path="/prestamos" element={<RequireAuth><PrestamosPage /></RequireAuth>} />
       <Route path="/mercado-monix" element={<RequireAuth><MercadoMonixPage /></RequireAuth>} />
-      <Route path="/pagar" element={<RequireAuth><PagarPage /></RequireAuth>} />
       <Route path="/perfil" element={<RequireAuth><ProfilePage /></RequireAuth>} />
       <Route path="/contactos" element={<RequireAuth><ContactosPage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />

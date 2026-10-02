@@ -197,15 +197,13 @@ export const TOPICS: Topic[] = [
   },
   {
     id: 'pagar_qr',
-    href: '/pagar',
-    hrefLabel: 'Abrir QR',
     phrases: ['pagar con qr', 'cobrar con qr', 'codigo qr', 'escanear qr', 'mostrar qr'],
     keywords: ['qr', 'cobrar', 'cobro', 'escanear'],
     extra: ['camara', 'comercio', 'codigo'],
     weak: ['pagar', 'pago'],
     answers: () => [
-      'En Pagar mostrás tu QR para cobrar (podés ponerle monto) o tocás “Escanear para pagar”. El botón QR del centro de la barra también abre esto.',
-      'Para cobrar: Pagar → tu código. Para pagar: escaneá el QR del otro. El cobro vence a los pocos minutos si nadie paga.',
+      'Tocá el botón QR (en el centro de la barra en el celular, o en Inicio en la compu): escaneás para pagar o, con “Generar QR”, mostrás el tuyo para cobrar.',
+      'Para cobrar: QR → Generar QR. Para pagar: escaneá el QR del otro. El cobro vence a los pocos minutos si nadie paga.',
       'QR es para cobros entre personas o comercios.',
     ],
   },

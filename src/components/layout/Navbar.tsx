@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { ArrowRightLeft, Landmark, LayoutDashboard, PiggyBank, QrCode } from 'lucide-react'
 import { QR_FAB_ID, useQrScanStore } from '../../stores/qrScanStore'
 
@@ -11,10 +11,8 @@ const sideLinks = [
 ]
 
 export function Navbar() {
-  const location = useLocation()
   const fabRef = useRef<HTMLSpanElement>(null)
   const qrOpen = useQrScanStore((s) => s.open)
-  const onQrPage = location.pathname === '/pagar'
 
   function abrirQr() {
     if (qrOpen) return
@@ -59,7 +57,7 @@ export function Navbar() {
               <QrCode size={26} strokeWidth={2.2} />
             </span>
           </span>
-          <span className={`mt-0.5 text-[10px] font-body font-medium ${qrOpen || onQrPage ? 'text-mint' : 'text-navy dark:text-white'}`}>
+          <span className={`mt-0.5 text-[10px] font-body font-medium ${qrOpen ? 'text-mint' : 'text-navy dark:text-white'}`}>
             QR
           </span>
         </button>
