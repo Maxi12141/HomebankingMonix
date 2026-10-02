@@ -60,7 +60,7 @@ export function TarjetaPage() {
     <PageWrapper>
       <div className="max-w-lg mx-auto">
         <div className="mb-6">
-          <h1 className="font-display text-2xl font-semibold text-mint">
+          <h1 className="font-display text-2xl font-semibold text-navy dark:text-mint">
             Mis Tarjetas
           </h1>
           <p className="font-body text-sm text-slate-secondary mt-1">

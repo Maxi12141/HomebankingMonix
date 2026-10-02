@@ -109,7 +109,7 @@ export function DepositPage() {
         <AnimatePresence mode="wait">
           {step === 'form' && (
             <motion.div key="form" variants={stepVariants} initial="initial" animate="animate" exit="exit">
-              <Card className="p-8">
+              <Card variant="noche" className="p-8">
                 {cuentaUSD && cuentaARS && (
                   <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
                     <button
@@ -171,7 +171,7 @@ export function DepositPage() {
 
           {step === 'success' && depositado && (
             <motion.div key="success" variants={stepVariants} initial="initial" animate="animate" exit="exit">
-              <Card className="p-8 text-center">
+              <Card variant="noche" className="p-8 text-center">
                 <motion.div
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}

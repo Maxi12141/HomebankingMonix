@@ -158,8 +158,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
   }
 
   return (
-    // Siempre sobre azul noche: en modo claro #001A3D, en oscuro igual que antes.
-    <Card variant="dark" className="p-8 !bg-navy dark:!bg-navy-card">
+    <Card variant="noche" className="p-8">
       <div className="flex items-start justify-between gap-3 mb-2">
         <p className="font-body text-sm text-[#B0C0D6]">{titulo}</p>
         <button
@@ -339,6 +338,19 @@ export function DashboardPage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: direction * -20 }}
                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                // Con dos cuentas también se pasa de una a otra deslizando:
+                // hacia la izquierda la siguiente, hacia la derecha la anterior.
+                // pan-y deja el scroll vertical de la página al navegador.
+                drag={cuentaUSD ? 'x' : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.35}
+                dragDirectionLock
+                style={cuentaUSD ? { touchAction: 'pan-y' } : undefined}
+                onDragEnd={(_, info) => {
+                  const umbral = 60
+                  if (info.offset.x < -umbral || info.velocity.x < -500) toggleCuenta(1)
+                  else if (info.offset.x > umbral || info.velocity.x > 500) toggleCuenta(-1)
+                }}
               >
                 <SaldoCard
                   cuenta={cuentaMostrada}
