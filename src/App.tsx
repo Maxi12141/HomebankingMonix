@@ -38,7 +38,6 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { useBiometriaLock } from './hooks/useBiometriaLock'
 import { useCuenta } from './hooks/useCuenta'
 import { HuellaLockScreen } from './components/HuellaLockScreen'
-import { aplicarBarraDeEstado } from './native/statusBar'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -111,7 +110,6 @@ function AppShell() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
-    void aplicarBarraDeEstado(theme)
   }, [theme])
 
   useEffect(() => {

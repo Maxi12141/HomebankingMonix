@@ -1,10 +1,3 @@
-import {
-  isNative,
-  onVozNativa,
-  startVozNativa,
-  stopVozNativa,
-} from '../native/monixRadio'
-
 interface RecogResult {
   isFinal: boolean
   0: { transcript: string }
@@ -33,7 +26,7 @@ function ctorVoz(): RecogCtor | null {
 }
 
 export function soportaVozMoni() {
-  return typeof window !== 'undefined' && (isNative() || Boolean(ctorVoz()))
+  return typeof window !== 'undefined' && Boolean(ctorVoz())
 }
 
 function normalize(value: string) {
@@ -158,8 +151,6 @@ export class VozMoni {
   private timer: number | null = null
   private dictadoTimer: number | null = null
   private dictadoBuf = ''
-  private nativo = false
-  private unsub: { remove: () => Promise<void> } | null = null
   private sordoHasta = 0
   private ultimoNorm = ''
   private ultimoAt = 0
@@ -200,12 +191,6 @@ export class VozMoni {
     this.sordoHasta = 0
     this.ecoNorm = ''
     this.ecoHasta = 0
-    if (this.nativo) {
-      this.nativo = false
-      void this.unsub?.remove()
-      this.unsub = null
-      void stopVozNativa()
-    }
     try {
       this.rec?.abort()
     } catch {
@@ -328,32 +313,6 @@ export class VozMoni {
   }
 
   private arrancar() {
-    if (isNative()) {
-      void this.arrancarNativo()
-      return
-    }
-    this.arrancarWeb()
-  }
-
-  private async arrancarNativo() {
-    this.vivo = true
-    if (this.nativo) return
-    this.nativo = true
-    try {
-      this.unsub = await onVozNativa((texto, isFinal) => {
-        if (!this.vivo) return
-        this.manejarTexto(texto, isFinal)
-      })
-      await startVozNativa()
-    } catch {
-      this.nativo = false
-      void this.unsub?.remove()
-      this.unsub = null
-      this.arrancarWeb()
-    }
-  }
-
-  private arrancarWeb() {
     const Ctor = ctorVoz()
     if (!Ctor) return
     this.vivo = true

@@ -21,7 +21,7 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 | Generación de PDF | jsPDF + html2canvas |
 | API Banco Central | REST HTTP (cátedra) |
 | QR (generar / escanear) | `qrcode` + `jsqr` |
-| App nativa Android | Capacitor 7 + plugin propio `monix-radio` (Kotlin: huella, voz y cámara) |
+| App instalable | PWA (`vite-plugin-pwa`): manifest + service worker, huella con WebAuthn, voz con Web Speech API |
 
 **Tipografías** (Google Fonts, cargadas en `index.html`):
 - `Plus Jakarta Sans` — headings y montos
@@ -35,7 +35,7 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 - Registro con datos personales (nombre, apellido, DNI, email, teléfono, dirección, fecha de nacimiento)
 - Login / logout con Supabase Auth
 - Protección de rutas: rutas privadas (`/dashboard`, `/cuentas`, `/dolares`, `/transferir`, `/historial`, `/depositar`, `/perfil`, `/contactos`, `/reservas`, `/prestamos`, `/tarjeta`, `/mercado-monix`, `/promos`, `/cashback`, `/financiacion`) requieren sesión activa; rutas públicas (`/`, `/login`, `/register`) redirigen al dashboard si ya hay sesión
-- `ErrorBoundary` alrededor de toda la app: si algo cuelga (Realtime, un hook nativo), muestra un fallback en vez de dejar la pantalla en blanco
+- `ErrorBoundary` alrededor de toda la app: si algo cuelga (Realtime, un hook), muestra un fallback en vez de dejar la pantalla en blanco
 - Pantalla de fallback (`MissingEnvScreen`) si faltan o son inválidas las variables `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, en vez de romper la app con pantalla en blanco (ver `isSupabaseConfigured` en `src/lib/supabaseClient.ts`)
 
 ### Dashboard
@@ -196,10 +196,9 @@ src/
 ├── lib/
 │   ├── scanQr.ts                  # Escaneo de QR desde cámara/imagen (jsqr) + detección de iOS
 │   ├── supabaseClient.ts          # Instancia única del cliente Supabase + isSupabaseConfigured
+│   ├── permisos.ts                # Pide cámara, micrófono y notificaciones al navegador en un solo toque
+│   ├── registrarPwa.tsx           # Registro del service worker + aviso de versión nueva
 │   └── tokens.ts                  # Prefijos de los QR internos y mensajes de error de RPC
-│
-├── native/
-│   └── monixRadio.ts              # Wrapper del plugin Capacitor `monix-radio` (huella, voz y cámara nativas, Android)
 │
 ├── pages/
 │   ├── CashbackPage.tsx           # Simulador de cashback por comercio (demo)
@@ -253,8 +252,6 @@ supabase/
 ├── personas_credito.sql           # Agrega sueldo_acreditado / ingreso_mensual a `personas` (usados por Préstamos)
 ├── prestamos.sql                  # Tabla `prestamos` (monto, cuotas, tna, situación crediticia) + RLS
 └── nfc_cobros.sql                 # Tabla `cobros_nfc` + columnas de tarjeta en `cuentas` + RLS
-
-plugins/monix-radio/                # Plugin nativo de Capacitor (Android, Kotlin): huella, voz y cámara
 ```
 
 ---
@@ -453,15 +450,13 @@ npm run dev
 | `npm run dev` | Servidor de desarrollo con hot-reload |
 | `npm run build` | Build de producción (TypeScript check + Vite bundle) |
 | `npm run preview` | Preview del build de producción localmente |
-| `npm run cap:add` | Build + agrega el proyecto Android nativo (Capacitor) |
-| `npm run cap:sync` | Build + sincroniza el proyecto Android con el último build web |
-| `npm run apk:debug` | Sync + compila un APK debug (`android/gradlew assembleDebug`) — requiere Android SDK/Gradle instalados |
+| `npm run dev:celular` | Servidor de desarrollo expuesto en la red local, para probar desde el celular |
 
 ---
 
-## App nativa Android
+## App instalable (PWA)
 
-La web corre en cualquier navegador. La APK (Capacitor) suma huella, dictado por voz para Moni y cámara nativa para leer QR. El código nativo vive en `plugins/monix-radio/android` (Kotlin) y se expone al lado web mediante `src/native/monixRadio.ts`. Para generar el proyecto Android y el APK: `npm run cap:add` (una vez) → `npm run apk:debug`.
+Monix se instala como PWA desde el navegador (botón "Instalar app" en la Landing y el Login, o "Agregar a inicio" en iPhone); no hay app nativa. Todo usa APIs web: huella con WebAuthn, dictado para Moni con Web Speech API y cámara con `getUserMedia` (o una foto del QR si la cámara en vivo no está disponible).
 
 ---
 

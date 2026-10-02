@@ -1,8 +1,3 @@
-import {
-  isNative as isNativeApp,
-  verificarBiometriaNativa,
-} from '../native/monixRadio'
-
 const STORAGE_KEY = 'monix_bio_v1'
 const JUST_AUTH_KEY = 'monix_just_authed'
 const EMAIL_INDEX_KEY = 'monix_email_uid_v1'
@@ -10,7 +5,7 @@ const BIO_CRED_KEY = 'monix_bio_cred_v1'
 
 // El teléfono decide solo qué biometría mostrar (huella, cara, PIN) según lo
 // que tenga configurado el usuario en el sistema operativo — WebAuthn (y el
-// prompt nativo) no le informan al sitio cuál fue, por diseño de privacidad.
+// el prompt del teléfono) no le informan al sitio cuál fue, por diseño de privacidad.
 // Por eso acá no se distingue "huella" de "Face ID": es un único toggle de
 // biometría, activado o no.
 interface BioRecord {
@@ -54,12 +49,11 @@ function rpId() {
 
 export function esCelular() {
   if (typeof window === 'undefined') return false
-  if (isNativeApp()) return true
   return window.matchMedia('(max-width: 767px)').matches
 }
 
 export async function soportaHuella() {
-  if (isNativeApp() || esCelular()) return true
+  if (esCelular()) return true
   if (!window.PublicKeyCredential) return false
   if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== 'function') {
     return false
@@ -176,10 +170,6 @@ export function consumoIngresoConClave() {
 }
 
 async function asegurarCredencial(userId: string, nombre: string): Promise<BioRecord> {
-  if (isNativeApp()) {
-    await verificarBiometriaNativa()
-    return { credId: 'native' }
-  }
   const existing = loadAll()[userId]
   if (existing?.credId) return existing
   if (!(await soportaHuella())) {
@@ -215,7 +205,7 @@ async function asegurarCredencial(userId: string, nombre: string): Promise<BioRe
     creacion,
     new Promise<never>((_, reject) => {
       window.setTimeout(
-        () => reject(new Error('El teléfono no mostró la huella. En la app de Monix instalá la APK nueva.')),
+        () => reject(new Error('El teléfono no mostró la huella. Probá de nuevo.')),
         12_000,
       )
     }),
@@ -242,12 +232,9 @@ export function desactivarBiometria(userId: string) {
 export async function verificarHuella(userId: string) {
   const record = loadAll()[userId]
   if (!record) throw new Error('El desbloqueo biométrico no está activado')
-  if (isNativeApp()) {
-    await verificarBiometriaNativa()
-    return
-  }
+  // Registros viejos de la APK (credId 'native') no son credenciales WebAuthn.
   if (record.credId === 'native') {
-    throw new Error('Abrí Monix desde la app instalada para usar la huella')
+    throw new Error('Volvé a activar la huella en tu Perfil')
   }
   const verificacion = navigator.credentials.get({
     publicKey: {

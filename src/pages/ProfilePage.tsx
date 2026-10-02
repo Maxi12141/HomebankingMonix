@@ -23,7 +23,7 @@ import {
   huellaActiva,
   soportaHuella,
 } from '../lib/biometria'
-import { pedirTodosLosPermisos } from '../native/monixRadio'
+import { pedirTodosLosPermisos } from '../lib/permisos'
 
 export function ProfilePage() {
   const { persona, user, setPersona } = useAuthStore()
@@ -267,7 +267,7 @@ export function ProfilePage() {
     try {
       await pedirTodosLosPermisos()
       localStorage.setItem('monix_permisos_ok', '1')
-      toast.success('Listo. Si Android no preguntó, abrí Ajustes → Apps → Monix → Permisos.')
+      toast.success('Listo. Si el navegador no preguntó, habilitalos desde el candado de la barra de direcciones.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudieron pedir los permisos')
     } finally {

@@ -482,11 +482,11 @@ export const TOPICS: Topic[] = [
   },
   {
     id: 'app',
-    phrases: ['hay aplicacion', 'instalar android', 'apk monix', 'funciona en el celular'],
-    keywords: ['app', 'apk', 'android', 'ios', 'iphone', 'celular', 'aplicacion'],
-    extra: ['nativa', 'capacitor'],
+    phrases: ['hay aplicacion', 'instalar la app', 'instalar monix', 'funciona en el celular'],
+    keywords: ['app', 'apk', 'android', 'ios', 'iphone', 'celular', 'aplicacion', 'instalar'],
+    extra: ['pwa', 'inicio'],
     answers: () => [
-      'Monix corre en el navegador y como app Android. En el teléfono tenés huella y el pago con QR.',
+      'Monix se instala desde el navegador: en Android tocá “Instalar app”; en iPhone, Compartir → Agregar a inicio. Queda como una app, con huella y pago con QR.',
       'Todo el banco, incluidas las metas comunes, funciona también en la web.',
     ],
   },

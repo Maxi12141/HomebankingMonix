@@ -33,7 +33,7 @@ import {
   stopMediaStream,
   waitForVideo,
 } from '../lib/scanQr'
-import { isAbortError } from '../native/monixRadio'
+import { isAbortError } from '../lib/permisos'
 import { useQrScanStore } from '../stores/qrScanStore'
 import { useContactos } from '../hooks/useContactos'
 import { buscarDestinatarioBC } from '../services/bancoCentral'

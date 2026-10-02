@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode, type RefObject, type TransitionEvent } from 'react'
 import { QrCode, X, Zap, ZapOff } from 'lucide-react'
-import { useThemeStore } from '../stores/themeStore'
 import { originFromFab, useQrScanStore } from '../stores/qrScanStore'
-import { aplicarBarraDeEstado, aplicarBarraDeEstadoCamara } from '../native/statusBar'
 
 const FAB_PX = 56
 
@@ -47,7 +45,6 @@ export function QrScannerFullscreen({
   // este botón la única salida era cerrar el escáner.
   onReintentar?: () => void
 }) {
-  const theme = useThemeStore((s) => s.theme)
   const originX = useQrScanStore((s) => s.originX)
   const originY = useQrScanStore((s) => s.originY)
   const onClosedRef = useRef(onClosed)
@@ -105,7 +102,6 @@ export function QrScannerFullscreen({
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    void aplicarBarraDeEstadoCamara()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -113,9 +109,8 @@ export function QrScannerFullscreen({
     return () => {
       document.body.style.overflow = prev
       window.removeEventListener('keydown', onKey)
-      void aplicarBarraDeEstado(theme)
     }
-  }, [onClose, theme])
+  }, [onClose])
 
   useEffect(() => {
     if (!closing) return

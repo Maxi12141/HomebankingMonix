@@ -30,9 +30,8 @@ export default defineConfig({
     react(),
     monixBuildId(),
     VitePWA({
-      // Registro manual (main.tsx) para poder no registrarlo dentro de la
-      // APK de Capacitor y para enganchar el aviso de actualización al mismo
-      // patrón de toast que ya usa recargarSiHayBuildNuevo.tsx.
+      // Registro manual (lib/registrarPwa.tsx) para enganchar el aviso de
+      // actualización a un toast propio.
       injectRegister: null,
       registerType: 'prompt',
       manifest: {

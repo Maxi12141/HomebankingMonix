@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Capacitor } from '@capacitor/core'
 import {
   consumirPromptCapturado, getPromptCapturado, getYaInstalada, suscribirPwaInstall,
 } from '../lib/pwaInstallPrompt'
@@ -23,8 +22,7 @@ export type ResultadoInstalarPwa = 'instalada' | 'rechazada' | 'manual-ios' | 'n
  * Botón "Instalar Monix" — Chrome/Android disparan `beforeinstallprompt` y
  * ahí sí se puede instalar con un solo tap; Safari/iOS nunca lo dispara (no
  * lo soporta), así que ahí sólo se puede indicar el paso manual (Compartir →
- * Agregar a inicio). Nunca se muestra dentro de la APK de Capacitor (ya está
- * instalada) ni si el navegador ya la tiene instalada como PWA.
+ * Agregar a inicio). No se muestra si el navegador ya la tiene instalada como PWA.
  *
  * El evento en sí se captura fuera de React (ver `lib/pwaInstallPrompt.ts`,
  * importado bien temprano desde main.tsx) para no perderlo si dispara
@@ -35,14 +33,13 @@ export function usePwaInstall() {
   const [instalada, setInstalada] = useState(() => esStandalone() || getYaInstalada())
 
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) return
     return suscribirPwaInstall(() => {
       if (getYaInstalada()) setInstalada(true)
       setTick((n) => n + 1)
     })
   }, [])
 
-  const mostrarBoton = !Capacitor.isNativePlatform() && !instalada
+  const mostrarBoton = !instalada
 
   const instalar = useCallback(async (): Promise<ResultadoInstalarPwa> => {
     const evento = getPromptCapturado()
