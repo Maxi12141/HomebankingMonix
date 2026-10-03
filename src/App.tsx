@@ -51,10 +51,10 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
   return user && !provisioning ? <Navigate to="/dashboard" replace /> : <>{children}</>
 }
 
-// Carga las cuentas (y su Realtime) una vez para toda la app logueada. Antes
-// lo hacía AhoraProvider; al sacarlo, las páginas que no llaman a useCuenta()
-// por su cuenta (Historial) quedaban en "Cargando..." al entrar directo o
-// recargar, porque useMovimientos espera a que la store tenga cuentas.
+// Carga las cuentas (y su Realtime) una vez para toda la app logueada: sin
+// esto, las páginas que no llaman a useCuenta() por su cuenta (Historial)
+// quedan en "Cargando..." al entrar directo o recargar, porque useMovimientos
+// espera a que la store tenga cuentas.
 function CuentasGlobales() {
   useCuenta()
   return null
@@ -84,7 +84,6 @@ function AppRoutes() {
       <Route path="/dolares" element={<RequireAuth><CompraVentaDolaresPage /></RequireAuth>} />
       <Route path="/transferir" element={<RequireAuth><TransferPage /></RequireAuth>} />
       <Route path="/metas" element={<RequireAuth><MetasPage /></RequireAuth>} />
-      <Route path="/ahora" element={<Navigate to="/metas" replace />} />
       <Route path="/historial" element={<RequireAuth><HistorialPage /></RequireAuth>} />
       <Route path="/depositar" element={<RequireAuth><DepositPage /></RequireAuth>} />
       <Route path="/tarjeta" element={<RequireAuth><TarjetaPage /></RequireAuth>} />

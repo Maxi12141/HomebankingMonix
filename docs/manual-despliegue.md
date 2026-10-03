@@ -1,253 +1,366 @@
 # Manual de despliegue — Monix
 
-**Fecha:** 2026-09-30
+**Versión:** 1.1 · **Fecha:** 2026-10-02 · **Alumnos:** Maximiliano Turaglio y Diego Urenda · **Materia:** Práctica Profesionalizante I
 
-Guía de referencia para levantar, desplegar y mantener Monix en producción — y para entender cómo está armado el sistema, más allá del deploy en sí. Pensada para cualquiera del rubro que la agarre por primera vez (un compañero, el profesor, alguien externo) y necesite entender qué hacer sin reconstruir el contexto desde cero.
+Guía para levantar, desplegar y mantener Monix en producción desde este repositorio, en una cuenta nueva de Supabase y Vercel. Versión publicada (con diagramas): https://claude.ai/artifact/7f3fiyZ8qzC7kkYFazzStE
 
-> Investigado como inspiración: la metodología [The Twelve-Factor App](https://12factor.net/) (el estándar de facto para apps desplegables en la nube), y estructuras de runbook de incident response / disaster recovery de SRE. La diferencia principal frente a un manual de deploy genérico: un runbook real no sólo dice "cómo desplegar", sino "qué hacer si algo sale mal" y "quién es dueño de qué" — por eso este manual suma un glosario, diagramas de los flujos de negocio críticos (no sólo de infraestructura), una tabla de accesos, y marca explícitamente qué prácticas estándar de la industria Monix sigue y cuáles no (a propósito, por ser un proyecto académico).
+Monix es una aplicación web (React + TypeScript + Vite) con backend en Supabase. Un único build se despliega en Vercel y se instala como PWA en desktop, iOS y Android. No hay app nativa.
 
-Monix es 100% web: un mismo build de Vite se despliega una sola vez y se instala como PWA en desktop, iOS y Android. No hay build nativo ni distribución por APK.
+Referencias: [The Twelve-Factor App](https://12factor.net/), estructura de runbooks de respuesta a incidentes, `README.md`, `docs/qr-interbancario-jwt.md` y `docs/auditoria-completa-2026-09-21.md`.
 
 ## 1. Glosario
 
-Términos que aparecen todo el tiempo en este manual y en el código:
-
-| Término | Qué significa |
+| Término | Definición |
 | --- | --- |
-| **CBU** | Clave Bancaria Uniforme — identifica una cuenta bancaria en Argentina (22 dígitos) |
-| **Alias** | Nombre corto y legible que reemplaza al CBU para transferir (ej. `cima.alba.isla`) |
-| **BCRA** | Banco Central de la República Argentina (real); acá lo simula la API de la cátedra, "Banco Central" |
-| **Situación crediticia** | Categoría 1 a 5 (BCRA) que indica qué tan al día está una persona con sus deudas informadas al sistema financiero; determina la oferta de préstamo |
-| **TNA** | Tasa Nominal Anual — la tasa de interés de un préstamo expresada en términos anuales |
-| **RLS** (Row Level Security) | Reglas a nivel de fila en Postgres: deciden qué puede leer/escribir cada usuario. Sin esto, cualquiera con la clave pública vería toda la tabla |
-| **Edge Function** | Función serverless (Deno) que corre del lado de Supabase, para lógica que no puede vivir en el frontend (ej. firmar un JWT con una clave privada) |
-| **JWT** | JSON Web Token — formato estándar de token firmado digitalmente; usado acá para el QR interbancario |
-| **PWA** | Progressive Web App — una página web instalable, con ícono propio y pantalla completa, como si fuera nativa |
-| **Service Worker** | Script que el navegador corre en segundo plano para cachear archivos y habilitar la PWA, incluida la detección de actualizaciones |
+| **CBU** | Clave Bancaria Uniforme. Identificador de cuenta bancaria en Argentina (22 dígitos). |
+| **Alias** | Identificador alfanumérico asociado a un CBU (ej. `cima.alba.isla`). |
+| **BCRA** | Banco Central de la República Argentina. En el proyecto, simulado por la API de la cátedra ("Banco Central"). |
+| **bankCode** | Código de banco asignado por el Banco Central. Monix: `3` (entorno `test`). |
+| **Situación crediticia** | Categoría 1 a 5 (BCRA) que clasifica el cumplimiento de deudas de una persona. Determina la oferta de préstamo. |
+| **TNA** | Tasa Nominal Anual. |
+| **RLS** | Row Level Security. Políticas de Postgres que restringen lectura y escritura por fila según el usuario autenticado. |
+| **RPC** | Función de Postgres invocada desde el cliente (`supabase.rpc()`). En Monix, funciones `SECURITY DEFINER` que ejecutan operaciones de saldo de forma atómica. |
+| **Edge Function** | Función serverless (Deno) ejecutada en Supabase. Aloja lógica que requiere secretos. |
+| **JWT** | JSON Web Token. Token con firma digital. Se usa en la sesión de Supabase y en el QR interbancario (ES256). |
+| **Proxy** | Intermediario que reenvía solicitudes. Vercel reenvía `/bc-api/...` al Banco Central. |
+| **CORS** | Política del navegador que bloquea solicitudes a otro dominio no autorizado. Motivo del proxy. |
+| **PWA** | Progressive Web App. Aplicación web instalable, con ícono propio y ejecución a pantalla completa. |
+| **Service Worker** | Script en segundo plano del navegador. Gestiona la caché y habilita la PWA. |
+| **WebAuthn** | API del navegador para autenticarse con la huella, la cara o el PIN del dispositivo. La usa el ingreso con biometría. |
+| **Aviso de lectura** | Notificación que un banco envía al banco emisor cuando lee uno de sus QR. Cierra el QR (un solo uso) y le avisa al dueño. |
 
 ## 2. Arquitectura
 
+Monix no tiene servidor de aplicación propio. Vercel sirve los archivos estáticos; a partir de la carga, la aplicación se ejecuta en el navegador y es el único componente que se comunica con el resto.
+
 ```mermaid
 flowchart LR
-  U[Usuario<br/>desktop / iOS / Android] -->|HTTPS, instala la PWA| V[Vercel<br/>estático + PWA]
-  V -->|REST/Realtime| S[(Supabase<br/>Postgres + Auth + RLS)]
-  V -->|invoke| EF[Supabase Edge Functions<br/>Deno]
-  V -->|/bc-api proxy| BC[Banco Central<br/>API compartida de la cátedra]
+  V[Vercel] -->|carga inicial: archivos estáticos| A[App Monix<br/>navegador]
+  A -->|auth, consultas, RPC, Realtime| S[(Supabase)]
+  A -->|invoke: firmar-qr| EF[Edge Functions]
+  A -->|/bc-api| P[Vercel proxy]
+  P -->|reenvío| BC[Banco Central]
+  A -->|HTTPS| C[APIs de cotización]
+  OB[Otros bancos del curso] -->|aviso de lectura| EF
 ```
 
-| Pieza | Qué es | Dónde vive |
+Vercel figura dos veces porque cumple dos funciones: hosting y proxy. Supabase no se comunica con el Banco Central.
+
+| Componente | Tecnología | Ubicación |
 | --- | --- | --- |
-| Frontend | React + TypeScript + Vite, PWA con Workbox | este repo, `src/` |
-| Hosting | Vercel (deploy automático al pushear a `main`) | proyecto Vercel enlazado al repo de GitHub |
-| Backend | Supabase: Postgres con RLS, Auth, Realtime, Edge Functions | proyecto Supabase (ver `src/lib/supabaseClient.ts`) |
-| API externa | "Banco Central" de la cátedra, simula el BCRA real | `https://centralbank.brocoly.cc`, vía el proxy `/bc-api` (nunca directo desde el navegador) |
+| Frontend | React 18 + TypeScript + Vite 6, Tailwind, Zustand, PWA con Workbox | `src/` |
+| Hosting | Vercel, deploy automático en push a `main` | `vercel.json`, `.vercel/project.json` |
+| Backend | Supabase: Postgres + RLS, Auth, Realtime, RPC | `supabase/*.sql`, `src/lib/supabaseClient.ts` |
+| Edge Functions | `firmar-qr` y `qr-lectura` (Deno) | `supabase/functions/` (§7.6) |
+| API externa | Banco Central de la cátedra | `src/services/bancoCentral.ts` |
+| Cotizaciones | `dolarapi.com` y `api.argentinadatos.com`, sin credenciales | `src/services/mercadoFinanciero.ts` |
 
-Un solo entorno: no hay staging, `main` **es** producción. Para probar algo riesgoso (una migración destructiva) conviene crear una rama de base de datos temporal en Supabase antes de tocar la real.
+Un solo entorno: no hay staging, `main` es producción. Para probar una migración riesgosa, usar una rama de base de datos temporal en Supabase.
 
-### 2.1 Qué sigue Monix de "The Twelve-Factor App" (y qué no, a propósito)
+### 2.1 Adhesión a The Twelve-Factor App
 
-| Principio | Cómo lo hace Monix |
+| Principio | Implementación en Monix |
 | --- | --- |
-| **Config** | Todo vive en variables de entorno (`VITE_*`), nunca hardcodeado en el código |
-| **Backing services** | Supabase y el Banco Central se tratan como recursos externos intercambiables (URL + key), no están embebidos |
-| **Build, release, run** | Etapas separadas: `npm run build` (build) → deploy de Vercel (release) → CDN sirviendo estático (run) |
-| **Disposability** | El frontend es estático y sin estado de servidor propio — cualquier instancia puede caerse sin drama |
-| **Logs** | Divergencia consciente: no hay logs centralizados ni error tracking (ver §9) — es la deuda técnica más reconocida del proyecto, no un descuido |
+| **Config** | Configuración en variables de entorno (`VITE_*`). Excepción: `x-environment` fijo en `test` (§6). |
+| **Backing services** | Supabase, Banco Central y APIs de cotización como recursos externos intercambiables. |
+| **Build, release, run** | Etapas separadas: `npm run build` → deploy en Vercel → CDN. |
+| **Dev/prod parity** | Parcial: el proxy `/bc-api` se resuelve con `vite.config.ts` en local y con `vercel.json` en producción. |
+| **Disposability** | Frontend estático sin estado en servidor. Las instancias son descartables. |
+| **Logs** | No cumple: sin logs centralizados (§11). Deuda técnica registrada. |
 
 ## 3. Flujos de negocio críticos
 
-No sólo "cómo se despliega" — esto ayuda a entender qué pasa realmente cuando alguien usa la app.
-
-**Transferencia (interna o a otro banco):**
+### 3.1 Transferencia (interna o interbancaria)
 
 ```mermaid
 sequenceDiagram
   participant U as Usuario
-  participant F as Frontend
-  participant S as Supabase (RPC)
+  participant A as App Monix
+  participant P as Vercel /bc-api
   participant BC as Banco Central
-  U->>F: Confirma transferencia
-  F->>S: transferir_entre_cuentas() / debitar_transferencia_externa()
-  alt destino es Monix
-    S->>S: Débito y crédito atómico (misma transacción SQL)
-  else destino es otro banco
-    S->>BC: Notifica la transferencia saliente
-    BC-->>S: Confirmación
+  participant S as Supabase (RPC)
+  U->>A: Confirma la transferencia
+  A->>P: POST /transactions
+  P->>BC: Reenvío
+  alt aceptada
+    BC-->>A: OK + id de transacción
+    A->>S: transferir_entre_cuentas() (destino Monix) o debitar_transferencia_externa()
+    S-->>A: Débito (y crédito si es Monix) en una sola transacción
+    A-->>U: Comprobante + saldo actualizado
+  else rechazada
+    BC-->>A: Error
+    A-->>U: Mensaje de error, sin débito
   end
-  S-->>F: Resultado
-  F-->>U: Comprobante + confirmación
 ```
 
-**Pago con QR interbancario:**
+Toda transferencia se registra primero en el Banco Central, también entre cuentas Monix. Cada operación lleva un `operacion_id`: si el paso de Supabase falla, un reintento no reenvía la orden al Banco Central y la RPC aplica el débito una sola vez (índice único sobre `movimientos.operacion_id`, `transferencia_atomica.sql`). Si la página se cierra entre los dos pasos, la operación queda aceptada en el Banco Central y sin débito local: ante diferencias de saldo, verificar este caso primero.
+
+Las transferencias que llegan de otros bancos se acreditan con `useSyncTransferenciasEntrantes` (consulta al Banco Central cada 2 minutos). El `bc_transaccion_id` evita acreditar dos veces la misma operación.
+
+### 3.2 Pago con QR interbancario
 
 ```mermaid
 sequenceDiagram
   participant A as App banco A (cobra)
-  participant EF as Edge Function firmar-qr
+  participant EF as Edge Function firmar-qr (banco A)
   participant B as App banco B (paga)
-  A->>EF: POST /firmar-qr {cbu, monto}
+  participant L as Aviso de lectura (banco A)
+  A->>EF: POST /firmar-qr {cbu, monto, moneda}
   EF-->>A: JWT firmado (ES256)
-  A->>A: Codifica el JWT en el QR
-  B->>A: Escanea el QR
-  B->>B: Verifica la firma con la clave pública del banco A
-  B->>B: Ejecuta la transferencia con los datos ya verificados
+  A->>A: Muestra el JWT como QR
+  B->>B: Escanea y verifica la firma con la clave pública de A
+  B->>L: Aviso de lectura
+  alt primera lectura
+    L-->>B: OK
+    B->>B: Transfiere con los datos verificados
+  else ya leído
+    L-->>B: 409, no se deja pagar
+  end
 ```
 
-Detalle completo de este flujo en `docs/qr-interbancario-jwt.md`.
+Especificación: `docs/qr-interbancario-jwt.md`. Verificación en `src/lib/qrJwt.ts` contra `BANCOS_CONOCIDOS`. Monix recibe los avisos en la Edge Function `qr-lectura`, que los guarda en `qr_lecturas`; el dueño del QR los ve por Realtime. Las direcciones de aviso de cada banco están en `BANCOS_AVISO`.
 
-## 4. Puesta en marcha en local
+## 4. Requisitos previos
+
+| Requisito | Detalle |
+| --- | --- |
+| Node.js / npm | Node ≥ 18, npm ≥ 9. Sin `engines` ni `.nvmrc` en el repositorio. |
+| Cuenta de GitHub | Acceso de lectura al repositorio. Escritura para disparar deploys. |
+| Cuenta de Supabase | Un proyecto (plan gratuito suficiente). |
+| Cuenta de Vercel | Vinculada a GitHub. |
+| Supabase CLI | Vía `npx supabase`. Necesaria sólo para desplegar Edge Functions. |
+| API key del Banco Central | Provista por la cátedra para el banco Monix. |
+
+## 5. Entorno local
 
 ```bash
 git clone https://github.com/Maxi12141/HomebankingMonix.git
 cd HomebankingMonix
 npm install
-cp .env.example .env.local   # completar con los valores reales, ver §5
+cp .env.example .env.local   # completar valores, ver §6
 npm run dev                  # http://localhost:5173
 ```
 
-| Comando | Para qué |
+| Comando | Función |
 | --- | --- |
 | `npm run dev` | Servidor de desarrollo con hot reload |
-| `npm run build` | `tsc && vite build` — build de producción en `dist/` |
-| `npm run preview` | Sirve el resultado de `npm run build` localmente, para probar el build real antes de pushear |
+| `npm run build` | `tsc && vite build`. Build de producción en `dist/` |
+| `npm run preview` | Sirve el build de producción en local (con service worker, para probar la PWA) |
+| `npm run dev:celular` | Servidor de desarrollo expuesto en la red local, para probar desde el teléfono |
+| `node --env-file=.env.local scripts/seed-central-deudores.mjs` | Opcional. Informa deudas ficticias a la Central de Deudores para probar Préstamos |
 
-No hay suite de tests automatizada ni CI configurado (no existe `.github/workflows`) — la única red de seguridad antes de un deploy es que `tsc` falle si hay un error de tipos, y el checklist manual de §11. Por eso ese checklist importa: hoy es la única verificación real de que una release no rompió nada.
+En local, el proxy `/bc-api` lo resuelve `vite.config.ts` (sólo en `dev` y `preview`). Si faltan `VITE_SUPABASE_URL` o `VITE_SUPABASE_ANON_KEY`, la aplicación muestra `MissingEnvScreen`. No hay tests automatizados ni CI (no existe `.github/workflows`): el único control previo al deploy es el chequeo de tipos de `tsc`, más el checklist de §13.
 
-## 5. Variables de entorno
+## 6. Variables de entorno
 
-Están documentadas en `.env.example` — copiarlo a `.env.local` para desarrollo:
-
-| Variable | Para qué | De dónde sale |
+| Variable | Uso | Origen |
 | --- | --- | --- |
-| `VITE_SUPABASE_URL` | URL del proyecto Supabase | Dashboard de Supabase → Project Settings → API |
-| `VITE_SUPABASE_ANON_KEY` | Clave pública (anon) del cliente | Idem — nunca usar la `service_role` acá, esa sólo va del lado servidor |
-| `VITE_BC_URL` | Base para llamar al Banco Central | `/bc-api` en producción (rewrite de `vercel.json`) o el proxy de `vite.config.ts` en local |
-| `VITE_BC_API_KEY` | Autenticación contra el Banco Central de la cátedra | la entrega el profesor |
-| `VITE_BC_ENV` | Ambiente del Banco Central (`test`/`prod`) | normalmente `test` |
+| `VITE_SUPABASE_URL` | URL del proyecto | Supabase → Project Settings → API |
+| `VITE_SUPABASE_ANON_KEY` | Clave pública del cliente | Ídem. Nunca la `service_role` |
+| `VITE_BC_URL` | URL base del Banco Central | Siempre `/bc-api`. Nunca la URL absoluta |
+| `VITE_BC_API_KEY` | Header `x-api-key` del Banco Central | Provista por la cátedra |
+| `VITE_BC_ENV` | Ambiente del Banco Central | `test` |
 
-**En Vercel** estas mismas variables se cargan en Project Settings → Environment Variables (no alcanza con tenerlas sólo en `.env.local`, eso no viaja al build de Vercel). `.env.local` está en `.gitignore` — si alguna vez se commitea una clave por error, se rota desde el Dashboard correspondiente, no alcanza con borrarla del commit.
+Replicar en Vercel → Project Settings → Environment Variables (Production y Preview). `.env` y `.env.local` están en `.gitignore`. Si una clave se commitea, rotarla: borrar el commit no alcanza.
 
-Aparte de estas, hay secrets que viven **sólo del lado de Supabase Edge Functions**, nunca en el frontend — ver §7.3.
+`VITE_BC_ENV` no se lee actualmente: el header `x-environment` está fijo en `test` en `src/services/bancoCentral.ts`. El pase a `prod` requiere modificar ese archivo.
 
-## 6. Despliegue del frontend (Vercel)
+Aparte, hay un secret que vive sólo en las Edge Functions de Supabase: `QR_JWT_PRIVATE_KEY` (§7.6).
 
-1. Cada push a `main` dispara un deploy automático (Vercel ya está enlazado al repo de GitHub `Maxi12141/HomebankingMonix`). Un PR genera un preview deploy con su propia URL.
-2. Build command: `npm run build` (que en realidad corre `tsc && vite build` — un error de tipos rompe el build a propósito, es la red de seguridad antes de subir nada).
-3. Output dir: `dist/` (default de Vite, no hace falta configurarlo a mano).
-4. `vercel.json` hace tres cosas que **no son opcionales**, si se reescribe hay que preservarlas:
-   - Reescribe `/bc-api/:path*` hacia `https://centralbank.brocoly.cc/api/:path*` — sin esto, el banco central no responde en producción aunque funcione en local (el proxy de `vite.config.ts` sólo corre en `npm run dev`).
-   - Fuerza `Cache-Control: no-cache` en `/` y `/index.html` — el service worker de la PWA necesita que el shell HTML siempre se pida fresco, sino la gente queda pegada en una versión vieja de la app indefinidamente.
-   - `Permissions-Policy` habilitando cámara/micrófono/NFC/WebAuthn — sin esto el navegador bloquea esos permisos aunque el usuario los acepte (afecta escaneo de QR, huella y pago con tarjeta).
-5. Verificar el deploy: abrir la preview/production URL y correr el checklist de §11 antes de dar por buena una release.
-6. **Rollback**: en el dashboard de Vercel, pestaña Deployments, elegir un deploy anterior que haya sido bueno y "Promote to Production". Es inmediato y no requiere revertir nada en git (aunque revertir el commit igual es buena práctica para que `main` no mienta sobre qué está en producción).
+## 7. Backend en Supabase
 
-## 7. Backend (Supabase)
+### 7.1 Proyecto
 
-### 7.1 Migraciones SQL
+Crear un proyecto en Supabase. Registrar la URL y la clave `anon` (§6). Habilitar el proveedor Email + Password en Authentication → Providers.
 
-Las migraciones viven como archivos sueltos en `supabase/*.sql` (no hay todavía un runner tipo `supabase migration up` integrado al flujo — se aplican a mano). Para aplicar una:
+### 7.2 Esquema base
 
-- Desde Supabase Studio → SQL Editor, pegar y correr el archivo, o
-- Con el MCP de Supabase (`mcp__supabase__apply_migration`) si se está trabajando con un agente que tenga esa conexión.
+Aplicar primero el esquema base (tablas `personas`, `cuentas` y `movimientos`), exportado del proyecto en uso. Los archivos de §7.3 agregan columnas, tablas y funciones sobre esas tablas.
 
-Orden recomendado en un proyecto nuevo: `policies.sql` primero (RLS), después el resto según el orden en que se fueron creando las features, y `transferencia_atomica.sql` al final (reemplaza funciones que dependen de las tablas anteriores).
+### 7.3 Orden de migraciones
 
-**Backups antes de una migración destructiva**: el plan gratuito de Supabase no tiene point-in-time recovery. Antes de un `DROP`/`ALTER` que pueda perder datos, hacer un dump manual (Dashboard → Database → Backups, o `pg_dump` con la connection string del proyecto) o probarlo primero en una rama de base de datos temporal.
+Archivos en `supabase/*.sql`, aplicados a mano en el SQL Editor (no hay runner de migraciones). Orden derivado de las dependencias entre archivos; no validado sobre un proyecto vacío.
 
-### 7.2 Row Level Security
+| # | Archivo | Contenido |
+| --- | --- | --- |
+| 0 | _esquema base_ | §7.2 |
+| 1 | `reservas.sql` | Tabla `reservas` + RLS |
+| 2 | `cuentas_interes.sql` | `tasa_anual`, `ultima_interes_at` en `cuentas` |
+| 3 | `cuentas_moneda.sql` | `moneda` (ARS/USD) en `cuentas` |
+| 4 | `personas_credito.sql` | `sueldo_acreditado`, `ingreso_mensual` |
+| 5 | `personas_situacion_crediticia.sql` | Situación informada al Banco Central |
+| 6 | `prestamos.sql` | Tabla `prestamos` + RLS |
+| 7 | `policies.sql` | RLS de `personas`, `cuentas`, `movimientos`, `reservas` |
+| 8 | `nfc_cobros.sql` | Esquema `private`, `cobros_nfc` (cobros con QR), rate limiting (`private.enforce_rate`), RPC de cobro y pago con QR, `tarjeta_congelada` en `cuentas`; agrega `cuentas` y `cobros_nfc` a Realtime |
+| 9 | `depositar.sql` | RPC `depositar_en_cuenta` |
+| 10 | `transferencia_atomica.sql` | `operacion_id`, `transferir_entre_cuentas`, `debitar_transferencia_externa`, `convertir_moneda_propia` |
+| 11 | `metas_comunes.sql` | Metas comunes: tablas de metas, miembros, aportes y votaciones + RPC (crear, invitar, unirse, aportar, proponer desembolso, votar). El dinero sale sólo con mayoría |
+| 12 | `qr_lecturas.sql` | Tabla `qr_lecturas` (avisos de lectura de QR); agrega a Realtime |
 
-Todas las tablas tienen RLS activado (`policies.sql`). Si algo "no aparece" del lado del cliente pero sí existe en la tabla, sospechar primero de una política faltante antes de asumir un bug de la app.
+Verificación: Database → Publications → `supabase_realtime` debe incluir `cuentas`, `cobros_nfc` y `qr_lecturas`. Sin `cuentas`, el saldo no se actualiza en tiempo real.
 
-### 7.3 Edge Functions
+**Migraciones destructivas:** el plan gratuito no incluye point-in-time recovery. Generar un dump previo (Database → Backups, o `pg_dump`) o validar en una rama de base de datos temporal.
 
-Hoy corren funciones Deno como `firmar-qr` (firma JWT para el QR interbancario). **Pendiente conocido:** el código fuente de estas funciones no está commiteado en este repo — se desplegaron directo al proyecto de Supabase. Recomendación para el que retome esto: crear `supabase/functions/<nombre>/index.ts` en el repo y desplegar desde ahí, para que el código de producción no viva sólo en el dashboard de Supabase.
+### 7.4 Auth
 
-Para desplegar una función:
-```bash
-npx supabase functions deploy <nombre> --project-ref <ref>
-```
-(requiere `supabase login` interactivo — si se está en un entorno no interactivo, usar el MCP `mcp__supabase__deploy_edge_function`).
+- Desactivar "Confirm email" (Authentication → Settings). `signUp()` debe dejar sesión inmediata; con confirmación activa el registro queda sin sesión.
+- Redirect URLs: agregar `<url-de-producción>/restablecer-contrasena` y `http://localhost:5173/restablecer-contrasena` (Authentication → URL Configuration).
+- Plantilla de mail: `docs/email-recuperar-contrasena.html` en Authentication → Email Templates → Reset Password.
 
-**CORS**: Supabase no agrega headers CORS automáticamente a funciones propias. Toda función nueva que reciba `fetch` desde el navegador necesita manejar `OPTIONS` y devolver `Access-Control-Allow-Origin` a mano, o el preflight la bloquea en silencio (se vio este caso con `firmar-qr`, ver `docs/qr-interbancario-jwt.md`).
+### 7.5 Datos iniciales en el Banco Central
 
-**Secrets**: se configuran en Dashboard → Edge Functions → Secrets (`Deno.env.get('NOMBRE')` del lado de la función). Ejemplo pendiente: `QR_JWT_PRIVATE_KEY` — hoy `firmar-qr` tiene un fallback embebido en el código porque no hubo forma de setear el secret desde un entorno no interactivo; migrarlo es sólo cargar el secret en el Dashboard, la función ya lo prioriza si existe.
+El registro de usuarios crea la persona en el Banco Central (`POST /persons`) y obtiene CBU y alias. No se requiere carga manual. El script `seed-central-deudores.mjs` es opcional y sólo afecta la Central de Deudores del entorno `test`.
 
-### 7.4 Configuración de Auth (importante en un proyecto Supabase nuevo)
+### 7.6 Edge Functions `firmar-qr` y `qr-lectura`
 
-Si se levanta este proyecto contra un Supabase nuevo (no el que ya está en uso), dos cosas de **Authentication → Settings / URL Configuration** rompen el flujo si no se tocan:
+`firmar-qr` firma los QR interbancarios (JWT ES256); el cliente la invoca desde `src/lib/qrJwt.ts`, que también verifica los QR recibidos. `qr-lectura` recibe los avisos de lectura que mandan los bancos (y la propia app) cuando leen un QR de Monix. El código de las dos está en `supabase/functions/`.
 
-- **"Confirm email" debe estar desactivado** (o el flujo de registro adaptado): `RegisterPage.tsx` llama a `supabase.auth.signUp()` esperando que el usuario quede logueado al toque (dispara `onAuthStateChange` de inmediato). Si la confirmación por mail está activa, el usuario queda sin sesión hasta que confirma, y el alta se ve "rota".
-- **Redirect URLs**: agregar `<url-de-producción>/restablecer-contrasena` (y el equivalente de `localhost:5173` para desarrollo) a la lista de URLs permitidas — si no está, el link de "olvidé mi contraseña" (`ForgotPasswordPage.tsx`) redirige a un lugar no autorizado y Supabase lo rechaza.
-- La plantilla de mail de recuperación de contraseña con la identidad de Monix vive en `docs/email-recuperar-contrasena.html` — pegarla en Authentication → Email Templates → Reset Password.
+1. Generar un par de claves ES256 (P-256) en formato JWK.
+2. Cargar la clave privada como secret `QR_JWT_PRIVATE_KEY` (Edge Functions → Secrets). El código no tiene clave embebida: sin el secret, `firmar-qr` responde error.
+3. Aplicar `qr_lecturas.sql` (§7.3). `qr-lectura` escribe ahí con la `service_role`, que Supabase le inyecta sola como variable de entorno.
+4. Desplegar. `qr-lectura` va sin verificación de JWT, porque los otros bancos no tienen usuarios en nuestro Supabase:
 
-## 8. PWA — el único camino de instalación (desktop, iOS y Android)
+   ```bash
+   npx supabase login
+   npx supabase functions deploy firmar-qr --project-ref <ref>
+   npx supabase functions deploy qr-lectura --no-verify-jwt --project-ref <ref>
+   ```
 
-- Manifest e iconos generados por `vite-plugin-pwa` (`vite.config.ts`), assets en `public/` (`pwa-64x64.png`, `pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png`).
-- `registerType: 'prompt'` con registro manual en `src/main.tsx` (no automático) para poder controlar el aviso de actualización con el mismo patrón de toast que usa el resto de la app (`src/native/registrarPwa.tsx`).
-- El botón de instalar (`src/hooks/usePwaInstall.ts` + `src/lib/pwaInstallPrompt.ts`) depende de que el navegador dispare `beforeinstallprompt` — eso requiere HTTPS real (Vercel ya lo da) y que el manifest + service worker pasen los criterios de instalabilidad de Chrome.
-- Para verificar que una build es instalable: Chrome DevTools → Application → Manifest (sin errores) y → Service Workers (activo y controlando la página), o correr Lighthouse → PWA.
+5. Actualizar la clave pública de Monix en dos lugares: `publicKeyJwk` y `kid` en `BANCOS_CONOCIDOS` (`src/lib/qrJwt.ts`) y `MONIX_PUBLIC_JWK` en `supabase/functions/qr-lectura/index.ts`. Si no corresponden a la clave privada, los QR propios no verifican y los avisos se rechazan.
+6. Distribuir al resto de los bancos del curso: `bankCode`, `kid`, la clave pública (JWK) y la dirección de aviso `<VITE_SUPABASE_URL>/functions/v1/qr-lectura`.
 
-**Compatibilidad real del botón "Instalar":**
+**CORS:** Supabase no agrega CORS a las funciones propias. Toda función que se llame desde el navegador tiene que responder `OPTIONS` y devolver `Access-Control-Allow-Origin`.
+
+Contrato de las funciones: `docs/qr-interbancario-jwt.md` §4 (firma) y §12–13 (aviso de lectura).
+
+## 8. Frontend en Vercel
+
+### 8.1 Alta del proyecto
+
+| Parámetro | Valor |
+| --- | --- |
+| Origen | Add New → Project → importar el repositorio de GitHub |
+| Framework Preset | Vite |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Install Command | `npm install` |
+| Node.js Version | 18 o superior |
+| Environment Variables | Las cinco de §6, en Production y Preview |
+| Production Branch | `main` |
+
+`.vercelignore` excluye `dist/` y `node_modules/` del upload. Proyecto actual: `monix-homebanking` (`.vercel/project.json`).
+
+### 8.2 Pipeline
+
+Cada push a `main` dispara un deploy de producción; los pull requests generan preview deploys. `npm run build` ejecuta `tsc && vite build`: un error de tipos cancela el deploy. El build publicado se identifica en `/monix-build.txt` (timestamp del build).
+
+### 8.3 Configuración obligatoria en `vercel.json`
+
+- **Rewrite** `/bc-api/:path*` → `https://centralbank.brocoly.cc/api/:path*`. Sin él, el Banco Central no responde en producción.
+- **Rewrite** `/(.*)` → `/index.html`. Fallback de SPA para las rutas de React Router.
+- **`Cache-Control: no-cache`** en `/`, `/index.html` y `/monix-build.txt`. Sin él, se retienen versiones anteriores.
+- **`Permissions-Policy`** para cámara, micrófono y WebAuthn (huella). Sin él, el navegador bloquea esos permisos.
+
+### 8.4 Rollback
+
+Vercel → Deployments → seleccionar un deploy anterior estable → **Promote to Production**. Efecto inmediato. Revertir además el commit en `main` para mantener consistencia con producción. El rollback no revierte migraciones de base de datos.
+
+## 9. PWA
+
+Monix se distribuye sólo como PWA: no hay app nativa. Las funciones del dispositivo se resuelven con APIs del navegador.
+
+### Instalación y actualización
+
+- Manifest e íconos generados por `vite-plugin-pwa` (`vite.config.ts`). Assets en `public/`.
+- `registerType: 'prompt'` con registro manual en `src/lib/registrarPwa.tsx` (llamado desde `main.tsx`). Una versión nueva se aplica sola en los primeros segundos de abrir la app; después se avisa con un toast "Actualizar".
+- `index.html` excluido del precache (`globIgnores`) y servido con `NetworkFirst`.
+- Botón "Instalar" (`usePwaInstall.ts` + `pwaInstallPrompt.ts`) en la Landing y el Login: depende de `beforeinstallprompt`. Requiere HTTPS y cumplir los criterios de instalabilidad de Chrome. Se oculta si la app ya está instalada.
+- Verificación: DevTools → Application → Manifest / Service Workers, o Lighthouse → PWA.
+
+### Funciones del dispositivo
+
+| Función | API del navegador | Dónde |
+| --- | --- | --- |
+| Ingreso con huella, cara o PIN | WebAuthn (autenticador de plataforma) | `src/lib/biometria.ts` |
+| Leer QR | `getUserMedia` (cámara en vivo) o una foto del QR | `src/lib/scanQr.ts` |
+| Dictado a Moni | Web Speech API (Chrome y Edge) | `src/lib/vozMoni.ts` |
+| Pedir permisos de una vez | Cámara, micrófono y notificaciones | `src/lib/permisos.ts` (botón en Perfil) |
+
+### Compatibilidad del botón "Instalar"
 
 | Navegador | Comportamiento |
 | --- | --- |
-| Chrome / Edge (Android y desktop) | Dispara `beforeinstallprompt`, instalación con un tap |
-| Safari (iOS y macOS) | Nunca dispara el evento — se indica el paso manual (Compartir → Agregar a Inicio) |
-| Firefox (cualquier plataforma) | No soporta `beforeinstallprompt` — el botón cae a "no disponible", no hay forma de instalar con un tap |
+| Chrome / Edge (Android y desktop) | Emite `beforeinstallprompt`. Instalación directa. |
+| Safari (iOS y macOS) | No emite el evento. Instalación manual: Compartir → Agregar a Inicio. |
+| Firefox | No soporta el evento. El botón muestra "no disponible". |
 
-## 9. Seguridad — qué no romper
+## 10. Seguridad
 
-- **RLS siempre activo** en toda tabla nueva (`policies.sql` es el lugar). Una tabla sin política es una tabla que cualquier usuario autenticado puede leer/escribir entera.
-- **`service_role` nunca va al frontend.** Sólo `anon` (pública, protegida por RLS) sale en `VITE_SUPABASE_ANON_KEY`. Si `service_role` se necesita en algún momento (para saltar RLS a propósito), sólo dentro de una Edge Function.
-- **`Permissions-Policy`** en `vercel.json` es lo que permite pedir cámara/NFC/WebAuthn — no sacarla al tocar ese archivo.
-- **Rate limiting es sólo del lado del cliente** (backoff progresivo en `LoginPage.tsx` tras intentos fallidos) — no hay límite real del lado del servidor. Es una limitación conocida, no un bug a arreglar acá.
-- Nunca commitear `.env.local` ni ninguna clave — está en `.gitignore`, y si igual pasa, rotar la clave, no sólo borrar el commit.
+- **RLS obligatorio** en toda tabla nueva. Una tabla sin política queda expuesta a lectura y escritura para cualquier usuario autenticado.
+- **Operaciones de saldo sólo por RPC.** Las funciones `SECURITY DEFINER` (`search_path = ''`, `FOR UPDATE`) son el único medio para modificar cuentas de terceros. Incluyen rate limiting por usuario (`private.enforce_rate`).
+- **`service_role` no se expone en el frontend.** El cliente usa sólo la clave `anon`, sujeta a RLS.
+- **Clave privada del QR:** sólo como secret `QR_JWT_PRIVATE_KEY` de `firmar-qr`. El código no tiene clave embebida. La clave pública sí está en el código (`qrJwt.ts` y `qr-lectura`) y no es secreta.
+- **`service_role` sólo dentro de `qr-lectura`**, como variable de entorno que inyecta Supabase. La función acepta un aviso sólo si el QR trae la firma de Monix.
+- **`Permissions-Policy`** en `vercel.json`: no eliminar al editar el archivo.
+- **Rate limiting de login sólo en cliente** (backoff progresivo en `LoginPage.tsx`). Sin límite del lado del servidor. Limitación conocida.
+- **Credenciales:** no commitear `.env`, `.env.local` ni claves. Ante una filtración, rotar la clave.
 
-## 10. Monitoreo y logs
+## 11. Monitoreo y logs
 
-No hay un servicio de error tracking integrado (Sentry o similar) — hoy el diagnóstico en producción es manual:
+Sin error tracking integrado (Sentry o similar). Diagnóstico manual:
 
-| Qué pasó | Dónde mirar |
+| Evento | Fuente |
 | --- | --- |
-| El build falló en Vercel | Vercel → Deployments → el deploy en rojo → Build Logs |
-| Algo falla ya desplegado (runtime) | Consola del navegador (F12) — es una SPA estática, no hay logs de servidor del lado del frontend |
-| Una Edge Function falla | Supabase Dashboard → Edge Functions → Logs, o `mcp__supabase__query_logs` si se trabaja con un agente |
-| Dudas sobre RLS/datos | Supabase Dashboard → Table Editor / SQL Editor, o `mcp__supabase__get_advisors` para chequeos de seguridad automáticos |
+| Falla de build en Vercel | Vercel → Deployments → deploy fallido → Build Logs |
+| Error en runtime | Consola del navegador. SPA estática, sin logs de servidor. |
+| Error en RPC o RLS | Supabase → Logs → Postgres / API |
+| Falla de Edge Function | Supabase → Edge Functions → `firmar-qr` / `qr-lectura` → Logs |
+| Avisos de seguridad | Supabase → Advisors → Security |
+| Build en ejecución | `/monix-build.txt` (timestamp del build) |
 
-## 11. Accesos y roles
+## 12. Accesos y roles
 
-Quién administra cada recurso — completar/actualizar a medida que cambie el equipo:
+Maximiliano Turaglio y Diego Urenda coadministran todos los recursos del proyecto. Para pedir acceso, alcanza con hablar con cualquiera de los dos.
 
-| Recurso | Quién lo administra | Cómo pedir acceso |
+| Recurso | Administran | Solicitud de acceso |
 | --- | --- | --- |
-| Repositorio GitHub | `Maxi12141` (dueño) | Pedir que agregue como colaborador, o abrir un PR |
-| Proyecto Vercel | _(completar)_ | _(completar)_ |
-| Proyecto Supabase | _(completar)_ | _(completar)_ |
-| API Banco Central (cátedra) | El profesor | Se entrega la API key por curso/comisión |
+| Repositorio GitHub | Maximiliano Turaglio y Diego Urenda | Alta como colaborador, o abrir un PR |
+| Proyecto Vercel `monix-homebanking` | Maximiliano Turaglio y Diego Urenda | Alta como miembro del proyecto |
+| Proyecto Supabase | Maximiliano Turaglio y Diego Urenda | Alta como miembro de la organización |
+| API Banco Central | Cátedra | API key asignada por curso/comisión |
 
-## 12. Checklist post-despliegue (smoke test)
+## 13. Checklist post-despliegue
 
-Antes de dar una release por buena, probar en la URL de producción (no sólo en local):
+Antes de dar una release por buena, probar en la URL de producción:
 
-- [ ] Registro de una cuenta nueva completa el wizard y llega al dashboard.
-- [ ] Login con email/contraseña y, en un celular, con huella.
-- [ ] Transferencia interna (Monix → Monix) y externa (CBU de otro banco vía Banco Central) se acreditan y aparecen en el historial.
-- [ ] QR propio se genera y un escaneo lo paga correctamente (tanto el flujo interno con seguimiento en tiempo real como el interbancario firmado).
-- [ ] Simulador de Préstamos calcula cuota/total y permite solicitar uno.
-- [ ] El botón "Instalar app" funciona en Chrome/Android (no cae siempre a "no disponible").
-- [ ] Abrir la app instalada como PWA y confirmar que detecta una versión nueva sin necesidad de desinstalar/reinstalar.
+- [ ] El registro completa los tres pasos y llega al dashboard.
+- [ ] Login con email y contraseña y, en un celular, con huella.
+- [ ] Transferencia interna (Monix → Monix) y externa (CBU de otro banco) se acreditan y aparecen en el historial.
+- [ ] El QR propio se genera ("Generar QR") y un escaneo lo paga; un segundo escaneo del mismo QR se rechaza.
+- [ ] El simulador de Préstamos calcula cuota y total y permite solicitar uno.
+- [ ] Una meta común se crea, recibe aportes y pide votación para retirar.
+- [ ] El botón "Instalar app" funciona en Chrome/Android.
+- [ ] La app instalada detecta una versión nueva sin reinstalar.
 
-## 13. Troubleshooting conocido
+## 14. Troubleshooting
 
-| Síntoma | Causa típica | Dónde mirar |
-| --- | --- | --- |
-| El Banco Central da 404/CORS en producción pero anda en local | Falta el rewrite `/bc-api` en `vercel.json`, o se llamó directo a `centralbank.brocoly.cc` desde el navegador | `vercel.json`, `services/bancoCentral.ts` |
-| Una Edge Function nueva falla con "blocked by CORS policy" | Falta manejar `OPTIONS` + `Access-Control-Allow-Origin` en la función | código de la función en Supabase, ver ejemplo en `docs/qr-interbancario-jwt.md` |
-| La PWA instalada queda en una versión vieja | El service worker no fuerza el chequeo de actualización seguido, o el HTML quedó cacheado | `src/native/registrarPwa.tsx`, headers `no-cache` de `vercel.json` |
-| El botón de instalar siempre dice "no disponible" en Chrome | El evento `beforeinstallprompt` se perdió porque nadie lo escuchaba a tiempo (splash screen inicial) | `src/lib/pwaInstallPrompt.ts` — debe importarse eager desde `main.tsx` |
-| Un usuario nuevo se registra pero queda sin sesión / "colgado" | Falta desactivar "Confirm email" en un proyecto Supabase nuevo (ver §7.4) | Supabase Dashboard → Authentication → Settings |
-| El link de "olvidé mi contraseña" no funciona | La URL de redirect no está en la lista permitida (ver §7.4) | Supabase Dashboard → Authentication → URL Configuration |
+| Síntoma | Causa probable |
+| --- | --- |
+| Pantalla `MissingEnvScreen` | Faltan o son inválidas `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` en el build |
+| Banco Central devuelve 404/CORS en producción | Falta el rewrite `/bc-api` en `vercel.json`, o `VITE_BC_URL` apunta a la URL absoluta |
+| 404 al recargar una ruta interna | Falta el rewrite de SPA `/(.*)` → `/index.html` |
+| Error "function ... does not exist" en una operación | Migración de §7.3 no aplicada |
+| Saldo no se actualiza en tiempo real | `cuentas` fuera de la publicación `supabase_realtime` |
+| Edge Function bloqueada por CORS | No maneja `OPTIONS` ni devuelve el header |
+| QR propio "no válido" | `publicKeyJwk`/`kid` de `qrJwt.ts` no corresponden a la clave de `firmar-qr` |
+| Otro banco no puede avisar la lectura de un QR (401) | `qr-lectura` desplegada sin `--no-verify-jwt` |
+| "Este QR ya fue escaneado" al pagar | Comportamiento esperado: el QR es de un solo uso. Generar uno nuevo |
+| No aparece la opción de huella | El dispositivo no tiene autenticador de plataforma (WebAuthn) o la página no está en HTTPS |
+| PWA instalada no se actualiza | Revisar `src/lib/registrarPwa.tsx` y los headers `no-cache` |
+| "Instalar" siempre no disponible | Evento `beforeinstallprompt` no capturado (`pwaInstallPrompt.ts`, importado desde `main.tsx`) |
+| Usuario registrado sin sesión | "Confirm email" activo en Supabase (§7.4) |
+| Enlace de recuperación de contraseña rechazado | Falta la Redirect URL en Supabase (§7.4) |
 
 ---
 
-Los pendientes de todo el proyecto (no sólo de despliegue) se llevan en `docs/auditoria-completa-2026-09-21.md`.
+Pendientes del proyecto: `docs/auditoria-completa-2026-09-21.md`.
