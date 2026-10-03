@@ -84,8 +84,8 @@ Aplicación de homebanking completa construida con **React + TypeScript + Vite**
 
 ### QR (cobro y pago)
 - Se abre con el botón QR (al centro de la barra en mobile, en las acciones rápidas de Inicio en escritorio). Dos vistas: la cámara para **pagar** escaneando un QR y **Generar QR** para cobrar (con monto opcional)
-- Cada cobro (`cobros_nfc`) tiene estado `pendiente` / `pagado` / `expirado` / `cancelado` y vence a los pocos minutos
-- El pago se resuelve en el servidor vía RPCs de Supabase (`crear_cobro_nfc`, `pagar_cobro_qr`) que debitan/acreditan las cuentas de comprador y comercio y registran el movimiento
+- Cada cobro (`cobros_qr`) tiene estado `pendiente` / `pagado` / `expirado` / `cancelado` y vence a los pocos minutos
+- El pago se resuelve en el servidor vía RPCs de Supabase (`crear_cobro_qr`, `pagar_cobro_qr`) que debitan/acreditan las cuentas de comprador y comercio y registran el movimiento
 
 ### Reservas
 - "Bolsillo" de ahorro separado del saldo principal, con interés diario compuesto (TNA configurable, 32% por defecto)
@@ -171,7 +171,7 @@ src/
 │   ├── MonixCard3D.tsx            # Tarjeta de débito virtual 3D interactiva (tilt + flip)
 │   ├── MonixLogoAnimated.tsx      # Logo con animación de salto letra por letra (hover)
 │   ├── MonixLogoNavbar.tsx        # Logo compacto con shimmer para la navbar
-│   ├── NfcPayPanels.tsx           # Overlay de QR: escanear para pagar y "Generar QR" para cobrar
+│   ├── QrPanels.tsx           # Overlay de QR: escanear para pagar y "Generar QR" para cobrar
 │   ├── NotificationBell.tsx       # Campanita de notificaciones (depósitos/transferencias entrantes)
 │   ├── OnboardingTour.tsx         # Tour guiado con spotlight animado (Framer Motion)
 │   ├── QrBox.tsx                  # Genera y muestra un QR (cobro, cuenta) a partir de un payload
@@ -222,7 +222,7 @@ src/
 │
 ├── services/
 │   ├── bancoCentral.ts            # Cliente HTTP para la API del Banco Central
-│   └── nfcPago.ts                 # RPCs de Supabase para cobros y pagos con QR
+│   └── cobrosQr.ts                 # RPCs de Supabase para cobros y pagos con QR
 │
 ├── store/
 │   ├── authStore.ts               # Estado de sesión (user + persona)
@@ -251,7 +251,7 @@ supabase/
 ├── cuentas_moneda.sql             # Agrega `moneda` (ARS/USD) a `cuentas`
 ├── personas_credito.sql           # Agrega sueldo_acreditado / ingreso_mensual a `personas` (usados por Préstamos)
 ├── prestamos.sql                  # Tabla `prestamos` (monto, cuotas, tna, situación crediticia) + RLS
-└── nfc_cobros.sql                 # Tabla `cobros_nfc` + columnas de tarjeta en `cuentas` + RLS
+└── cobros_qr.sql                 # Tabla `cobros_qr` + columnas de tarjeta en `cuentas` + RLS
 ```
 
 ---
@@ -293,7 +293,7 @@ Una cuenta bancaria por usuario.
 | `alias` | text (unique) | Generado aleatoriamente (tres palabras con punto) |
 | `tasa_anual` | numeric | TNA de la cuenta principal, default 32% (agregada en `supabase/cuentas_interes.sql`) |
 | `ultima_interes_at` | timestamptz | Última vez que se acreditó interés (agregada en `supabase/cuentas_interes.sql`) |
-| `tarjeta_congelada` | boolean | Tarjeta congelada por el usuario (agregada en `supabase/nfc_cobros.sql`) |
+| `tarjeta_congelada` | boolean | Tarjeta congelada por el usuario (agregada en `supabase/cobros_qr.sql`) |
 | `created_at` | timestamptz | Auto |
 
 ### `reservas`
@@ -326,8 +326,8 @@ Préstamos personales en pesos (definida en `supabase/prestamos.sql`).
 | `proxima_cuota_at` | timestamptz | Fecha de la próxima cuota a cobrar |
 | `created_at` | timestamptz | Auto |
 
-### `cobros_nfc`
-Cobros con QR, generados por el comercio y pagados por el cliente (definida en `supabase/nfc_cobros.sql`).
+### `cobros_qr`
+Cobros con QR, generados por el comercio y pagados por el cliente (definida en `supabase/cobros_qr.sql`).
 
 | Columna | Tipo | Descripción |
 |---|---|---|
@@ -490,7 +490,7 @@ ON cuentas FOR UPDATE
 USING (persona_id = auth.uid());
 ```
 
-> El repo incluye SQL ya escrito para correr directamente en el SQL Editor de Supabase: `supabase/policies.sql` (políticas RLS de `personas`, `cuentas`, `movimientos` y `reservas`), `supabase/reservas.sql` (crea la tabla `reservas`), `supabase/cuentas_interes.sql` (agrega `tasa_anual` / `ultima_interes_at` a `cuentas`), `supabase/cuentas_moneda.sql` (agrega `moneda` a `cuentas`), `supabase/personas_credito.sql` (agrega `sueldo_acreditado` / `ingreso_mensual` a `personas`), `supabase/prestamos.sql` (crea la tabla `prestamos`, con sus propias políticas RLS incluidas) y `supabase/nfc_cobros.sql` (crea `cobros_nfc`, agrega `tarjeta_congelada` a `cuentas`, con sus propias políticas RLS incluidas). Ejecutar en ese orden: `reservas.sql` → `cuentas_interes.sql` → `cuentas_moneda.sql` → `personas_credito.sql` → `prestamos.sql` → `nfc_cobros.sql` → `policies.sql`.
+> El repo incluye SQL ya escrito para correr directamente en el SQL Editor de Supabase: `supabase/policies.sql` (políticas RLS de `personas`, `cuentas`, `movimientos` y `reservas`), `supabase/reservas.sql` (crea la tabla `reservas`), `supabase/cuentas_interes.sql` (agrega `tasa_anual` / `ultima_interes_at` a `cuentas`), `supabase/cuentas_moneda.sql` (agrega `moneda` a `cuentas`), `supabase/personas_credito.sql` (agrega `sueldo_acreditado` / `ingreso_mensual` a `personas`), `supabase/prestamos.sql` (crea la tabla `prestamos`, con sus propias políticas RLS incluidas) y `supabase/cobros_qr.sql` (crea `cobros_qr`, agrega `tarjeta_congelada` a `cuentas`, con sus propias políticas RLS incluidas). Ejecutar en ese orden: `reservas.sql` → `cuentas_interes.sql` → `cuentas_moneda.sql` → `personas_credito.sql` → `prestamos.sql` → `cobros_qr.sql` → `policies.sql`.
 
 ### Realtime
 

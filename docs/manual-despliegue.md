@@ -6,7 +6,7 @@ Guía para levantar, desplegar y mantener Monix en producción desde este reposi
 
 Monix es una aplicación web (React + TypeScript + Vite) con backend en Supabase. Un único build se despliega en Vercel y se instala como PWA en desktop, iOS y Android. No hay app nativa.
 
-Referencias: [The Twelve-Factor App](https://12factor.net/), estructura de runbooks de respuesta a incidentes, `README.md`, `docs/qr-interbancario-jwt.md` y `docs/auditoria-completa-2026-09-21.md`.
+Referencias: [The Twelve-Factor App](https://12factor.net/), estructura de runbooks de respuesta a incidentes, `README.md` y `docs/qr-interbancario-jwt.md`.
 
 ## 1. Glosario
 
@@ -191,13 +191,13 @@ Archivos en `supabase/*.sql`, aplicados a mano en el SQL Editor (no hay runner d
 | 5 | `personas_situacion_crediticia.sql` | Situación informada al Banco Central |
 | 6 | `prestamos.sql` | Tabla `prestamos` + RLS |
 | 7 | `policies.sql` | RLS de `personas`, `cuentas`, `movimientos`, `reservas` |
-| 8 | `nfc_cobros.sql` | Esquema `private`, `cobros_nfc` (cobros con QR), rate limiting (`private.enforce_rate`), RPC de cobro y pago con QR, `tarjeta_congelada` en `cuentas`; agrega `cuentas` y `cobros_nfc` a Realtime |
+| 8 | `cobros_qr.sql` | Esquema `private`, `cobros_qr` (cobros con QR), rate limiting (`private.enforce_rate`), RPC de cobro y pago con QR, `tarjeta_congelada` en `cuentas`; agrega `cuentas` y `cobros_qr` a Realtime |
 | 9 | `depositar.sql` | RPC `depositar_en_cuenta` |
 | 10 | `transferencia_atomica.sql` | `operacion_id`, `transferir_entre_cuentas`, `debitar_transferencia_externa`, `convertir_moneda_propia` |
 | 11 | `metas_comunes.sql` | Metas comunes: tablas de metas, miembros, aportes y votaciones + RPC (crear, invitar, unirse, aportar, proponer desembolso, votar). El dinero sale sólo con mayoría |
 | 12 | `qr_lecturas.sql` | Tabla `qr_lecturas` (avisos de lectura de QR); agrega a Realtime |
 
-Verificación: Database → Publications → `supabase_realtime` debe incluir `cuentas`, `cobros_nfc` y `qr_lecturas`. Sin `cuentas`, el saldo no se actualiza en tiempo real.
+Verificación: Database → Publications → `supabase_realtime` debe incluir `cuentas`, `cobros_qr` y `qr_lecturas`. Sin `cuentas`, el saldo no se actualiza en tiempo real.
 
 **Migraciones destructivas:** el plan gratuito no incluye point-in-time recovery. Generar un dump previo (Database → Backups, o `pg_dump`) o validar en una rama de base de datos temporal.
 
@@ -360,7 +360,3 @@ Antes de dar una release por buena, probar en la URL de producción:
 | "Instalar" siempre no disponible | Evento `beforeinstallprompt` no capturado (`pwaInstallPrompt.ts`, importado desde `main.tsx`) |
 | Usuario registrado sin sesión | "Confirm email" activo en Supabase (§7.4) |
 | Enlace de recuperación de contraseña rechazado | Falta la Redirect URL en Supabase (§7.4) |
-
----
-
-Pendientes del proyecto: `docs/auditoria-completa-2026-09-21.md`.

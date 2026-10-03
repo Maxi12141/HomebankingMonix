@@ -20,7 +20,7 @@ export interface QrJwtClaims {
   iat?: number
   // Id único del QR: se devuelve en el aviso de lectura (spec, sección 12).
   jti?: string
-  // Id de un cobro interno (cobros_nfc) — sólo Monix lo escribe y sólo Monix
+  // Id de un cobro interno (cobros_qr) — sólo Monix lo escribe y sólo Monix
   // lo entiende; cualquier otro banco lo ignora sin problema.
   cid?: string
 }

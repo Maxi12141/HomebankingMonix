@@ -15,7 +15,7 @@ export function encodeCuentaQr(cuentaId: string) {
   return `${MONIX_CUENTA_QR_PREFIX}${cuentaId}`
 }
 
-export function parseRadioPayload(raw: string): { kind: 'cobro' | 'cuenta'; value: string } | null {
+export function parseQrPayload(raw: string): { kind: 'cobro' | 'cuenta'; value: string } | null {
   const value = raw.trim()
   if (value.startsWith(MONIX_CUENTA_QR_PREFIX)) {
     const id = value.slice(MONIX_CUENTA_QR_PREFIX.length)

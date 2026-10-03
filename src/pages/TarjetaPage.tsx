@@ -7,7 +7,7 @@ import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { MonixCard3D, buildPan, buildCvv } from '../components/MonixCard3D'
-import { setTarjetaFlags } from '../services/nfcPago'
+import { setTarjetaFlags } from '../services/cobrosQr'
 
 function freezeKey(cuentaId: string) {
   return `monix_card_frozen_${cuentaId}`

@@ -8,8 +8,8 @@ create extension if not exists pgcrypto with schema extensions;
 alter table public.cuentas
   add column if not exists tarjeta_congelada boolean not null default false;
 
--- ─── Cobros NFC / QR ────────────────────────────────────────────────────────
-create table if not exists public.cobros_nfc (
+-- ─── Cobros con QR ────────────────────────────────────────────────────────
+create table if not exists public.cobros_qr (
   id uuid primary key default gen_random_uuid(),
   comercio_cuenta_id uuid not null references public.cuentas(id) on delete cascade,
   comercio_persona_id uuid not null references public.personas(id) on delete cascade,
@@ -23,24 +23,24 @@ create table if not exists public.cobros_nfc (
   created_at timestamptz not null default now()
 );
 
-create index if not exists cobros_nfc_comercio_cuenta_id_idx
-  on public.cobros_nfc (comercio_cuenta_id);
+create index if not exists cobros_qr_comercio_cuenta_id_idx
+  on public.cobros_qr (comercio_cuenta_id);
 
-create index if not exists cobros_nfc_comercio_persona_id_idx
-  on public.cobros_nfc (comercio_persona_id);
+create index if not exists cobros_qr_comercio_persona_id_idx
+  on public.cobros_qr (comercio_persona_id);
 
-create index if not exists cobros_nfc_pagador_cuenta_id_idx
-  on public.cobros_nfc (pagador_cuenta_id);
+create index if not exists cobros_qr_pagador_cuenta_id_idx
+  on public.cobros_qr (pagador_cuenta_id);
 
-create index if not exists cobros_nfc_estado_expires_idx
-  on public.cobros_nfc (estado, expires_at);
+create index if not exists cobros_qr_estado_expires_idx
+  on public.cobros_qr (estado, expires_at);
 
-alter table public.cobros_nfc enable row level security;
-alter table public.cobros_nfc force row level security;
+alter table public.cobros_qr enable row level security;
+alter table public.cobros_qr force row level security;
 
-drop policy if exists cobros_nfc_select_own on public.cobros_nfc;
-create policy cobros_nfc_select_own
-  on public.cobros_nfc for select
+drop policy if exists cobros_qr_select_own on public.cobros_qr;
+create policy cobros_qr_select_own
+  on public.cobros_qr for select
   to authenticated
   using (
     (select auth.uid()) = comercio_persona_id
@@ -50,11 +50,11 @@ create policy cobros_nfc_select_own
     )
   );
 
-alter table public.cobros_nfc replica identity full;
+alter table public.cobros_qr replica identity full;
 
-revoke all on table public.cobros_nfc from anon, public;
-grant select on table public.cobros_nfc to authenticated;
-grant all on table public.cobros_nfc to service_role;
+revoke all on table public.cobros_qr from anon, public;
+grant select on table public.cobros_qr to authenticated;
+grant all on table public.cobros_qr to service_role;
 
 -- ─── Rate limiting (no expuesto a la Data API) ─────────────────────────────
 create table if not exists private.rpc_rate (
@@ -161,7 +161,7 @@ $$;
 revoke all on function private.cuenta_propia(uuid) from public, anon, authenticated;
 
 -- ─── Cobros ─────────────────────────────────────────────────────────────────
-create or replace function private.crear_cobro_nfc(
+create or replace function private.crear_cobro_qr(
   p_cuenta_id uuid,
   p_monto numeric,
   p_descripcion text
@@ -182,7 +182,7 @@ begin
     raise exception 'Monto inválido';
   end if;
 
-  insert into public.cobros_nfc (
+  insert into public.cobros_qr (
     comercio_cuenta_id,
     comercio_persona_id,
     monto,
@@ -204,7 +204,7 @@ begin
 end;
 $$;
 
-create or replace function public.crear_cobro_nfc(
+create or replace function public.crear_cobro_qr(
   p_cuenta_id uuid,
   p_monto numeric,
   p_descripcion text
@@ -214,10 +214,10 @@ language sql
 security definer
 set search_path = ''
 as $$
-  select private.crear_cobro_nfc(p_cuenta_id, p_monto, p_descripcion);
+  select private.crear_cobro_qr(p_cuenta_id, p_monto, p_descripcion);
 $$;
 
-create or replace function private.obtener_cobro_nfc(p_cobro_id uuid)
+create or replace function private.obtener_cobro_qr(p_cobro_id uuid)
 returns table(
   id uuid,
   monto numeric,
@@ -235,7 +235,7 @@ set search_path = ''
 as $$
 declare
   v_uid uuid := auth.uid();
-  v_cobro public.cobros_nfc;
+  v_cobro public.cobros_qr;
   v_persona public.personas;
   v_cuenta public.cuentas;
 begin
@@ -247,15 +247,15 @@ begin
     raise exception 'Cobro inválido';
   end if;
 
-  select * into v_cobro from public.cobros_nfc where public.cobros_nfc.id = p_cobro_id;
+  select * into v_cobro from public.cobros_qr where public.cobros_qr.id = p_cobro_id;
   if not found then
     raise exception 'No encontramos ese cobro';
   end if;
 
   if v_cobro.estado = 'pendiente' and v_cobro.expires_at <= now() then
-    update public.cobros_nfc
+    update public.cobros_qr
     set estado = 'expirado'
-    where public.cobros_nfc.id = v_cobro.id
+    where public.cobros_qr.id = v_cobro.id
       and estado = 'pendiente';
     v_cobro.estado := 'expirado';
   end if;
@@ -276,7 +276,7 @@ begin
 end;
 $$;
 
-create or replace function public.obtener_cobro_nfc(p_cobro_id uuid)
+create or replace function public.obtener_cobro_qr(p_cobro_id uuid)
 returns table(
   id uuid,
   monto numeric,
@@ -292,10 +292,10 @@ language sql
 security definer
 set search_path = ''
 as $$
-  select * from private.obtener_cobro_nfc(p_cobro_id);
+  select * from private.obtener_cobro_qr(p_cobro_id);
 $$;
 
-create or replace function private.cancelar_cobro_nfc(p_cobro_id uuid)
+create or replace function private.cancelar_cobro_qr(p_cobro_id uuid)
 returns void
 language plpgsql
 security definer
@@ -309,7 +309,7 @@ begin
     raise exception 'No autenticado';
   end if;
 
-  update public.cobros_nfc
+  update public.cobros_qr
   set estado = 'cancelado'
   where id = p_cobro_id
     and comercio_persona_id = v_uid
@@ -322,13 +322,13 @@ begin
 end;
 $$;
 
-create or replace function public.cancelar_cobro_nfc(p_cobro_id uuid)
+create or replace function public.cancelar_cobro_qr(p_cobro_id uuid)
 returns void
 language sql
 security definer
 set search_path = ''
 as $$
-  select private.cancelar_cobro_nfc(p_cobro_id);
+  select private.cancelar_cobro_qr(p_cobro_id);
 $$;
 
 create or replace function private.resolver_qr_cuenta(p_cuenta_id uuid)
@@ -527,7 +527,7 @@ set search_path = ''
 as $$
 declare
   v_uid uuid := auth.uid();
-  v_cobro public.cobros_nfc;
+  v_cobro public.cobros_qr;
   v_pagador public.cuentas;
   v_comercio public.cuentas;
   v_pagador_persona public.personas;
@@ -545,7 +545,7 @@ begin
     raise exception 'Cobro inválido';
   end if;
 
-  select * into v_cobro from public.cobros_nfc where id = p_cobro_id;
+  select * into v_cobro from public.cobros_qr where id = p_cobro_id;
   if not found then
     raise exception 'No encontramos ese cobro';
   end if;
@@ -555,7 +555,7 @@ begin
   end if;
 
   if v_cobro.expires_at <= now() then
-    update public.cobros_nfc
+    update public.cobros_qr
     set estado = 'expirado'
     where id = v_cobro.id and estado = 'pendiente';
     raise exception 'El cobro expiró';
@@ -645,7 +645,7 @@ begin
     v_pagador.alias
   );
 
-  update public.cobros_nfc
+  update public.cobros_qr
   set estado = 'pagado',
       pagador_cuenta_id = v_pagador.id,
       pagado_at = now()
@@ -679,7 +679,7 @@ begin
     where n.nspname = 'private'
       and p.proname in (
         'hash_token','assert_token','enforce_rate','cuenta_propia',
-        'crear_cobro_nfc','obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_qr',
+        'crear_cobro_qr','obtener_cobro_qr','cancelar_cobro_qr','pagar_cobro_qr',
         'resolver_qr_cuenta','pagar_qr_cuenta'
       )
   loop
@@ -692,7 +692,7 @@ begin
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname in (
-        'crear_cobro_nfc','obtener_cobro_nfc','cancelar_cobro_nfc','pagar_cobro_qr',
+        'crear_cobro_qr','obtener_cobro_qr','cancelar_cobro_qr','pagar_cobro_qr',
         'resolver_qr_cuenta','pagar_qr_cuenta'
       )
   loop
@@ -709,9 +709,9 @@ begin
     from pg_publication_tables
     where pubname = 'supabase_realtime'
       and schemaname = 'public'
-      and tablename = 'cobros_nfc'
+      and tablename = 'cobros_qr'
   ) then
-    execute 'alter publication supabase_realtime add table public.cobros_nfc';
+    execute 'alter publication supabase_realtime add table public.cobros_qr';
   end if;
 
   if not exists (

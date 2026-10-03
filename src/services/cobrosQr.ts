@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabaseClient'
 import { rpcMessage } from '../lib/tokens'
 
-export interface CobroNfc {
+export interface CobroQr {
   id: string
   monto: number
   descripcion: string | null
@@ -13,12 +13,12 @@ export interface CobroNfc {
   moneda: 'ARS' | 'USD'
 }
 
-function mapCobro(row: Record<string, unknown>): CobroNfc {
+function mapCobro(row: Record<string, unknown>): CobroQr {
   return {
     id: String(row.id),
     monto: Number(row.monto),
     descripcion: (row.descripcion as string | null) ?? null,
-    estado: row.estado as CobroNfc['estado'],
+    estado: row.estado as CobroQr['estado'],
     expires_at: String(row.expires_at),
     comercio_nombre: String(row.comercio_nombre ?? ''),
     comercio_apellido: String(row.comercio_apellido ?? ''),
@@ -27,8 +27,8 @@ function mapCobro(row: Record<string, unknown>): CobroNfc {
   }
 }
 
-export async function crearCobroNfc(cuentaId: string, monto: number, descripcion: string) {
-  const { data, error } = await supabase.rpc('crear_cobro_nfc', {
+export async function crearCobroQr(cuentaId: string, monto: number, descripcion: string) {
+  const { data, error } = await supabase.rpc('crear_cobro_qr', {
     p_cuenta_id: cuentaId,
     p_monto: monto,
     p_descripcion: descripcion,
@@ -37,16 +37,16 @@ export async function crearCobroNfc(cuentaId: string, monto: number, descripcion
   return String(data)
 }
 
-export async function obtenerCobroNfc(cobroId: string): Promise<CobroNfc> {
-  const { data, error } = await supabase.rpc('obtener_cobro_nfc', { p_cobro_id: cobroId })
+export async function obtenerCobroQr(cobroId: string): Promise<CobroQr> {
+  const { data, error } = await supabase.rpc('obtener_cobro_qr', { p_cobro_id: cobroId })
   if (error) throw new Error(rpcMessage(error, 'No se pudo leer el cobro'))
   const row = Array.isArray(data) ? data[0] : data
   if (!row) throw new Error('No encontramos ese cobro')
   return mapCobro(row as Record<string, unknown>)
 }
 
-export async function cancelarCobroNfc(cobroId: string) {
-  const { error } = await supabase.rpc('cancelar_cobro_nfc', { p_cobro_id: cobroId })
+export async function cancelarCobroQr(cobroId: string) {
+  const { error } = await supabase.rpc('cancelar_cobro_qr', { p_cobro_id: cobroId })
   if (error) throw new Error(rpcMessage(error, 'No se pudo cancelar el cobro'))
 }
 

@@ -117,10 +117,10 @@ Orden de intentos al escanear, para no romper nada:
 - [ ] Generar par de claves ES256.
 - [ ] Guardar la clave privada como *secret* de una Edge Function en Supabase.
 - [ ] Crear la Edge Function `firmar-qr`.
-- [ ] Cambiar `MiCodigoQr` (`src/components/NfcPayPanels.tsx`) para pedir el JWT a la Edge Function en vez de usar el id interno de cobro/cuenta.
+- [ ] Cambiar `MiCodigoQr` (`src/components/QrPanels.tsx`) para pedir el JWT a la Edge Function en vez de usar el id interno de cobro/cuenta.
 - [ ] Agregar la librería `jose` al frontend.
 - [ ] Agregar la tabla local de claves públicas conocidas (`bankCode → clave pública`).
-- [ ] Extender `aplicarQr`/`parseRadioPayload` (`src/lib/tokens.ts`, `src/components/NfcPayPanels.tsx`) para detectar y verificar JWT antes de los formatos actuales.
+- [ ] Extender `aplicarQr`/`parseQrPayload` (`src/lib/tokens.ts`, `src/components/QrPanels.tsx`) para detectar y verificar JWT antes de los formatos actuales.
 - [ ] Correr el checklist de testing de la sección 8.
 
 ## 10. Checklist de tareas — para cada banco que se sume

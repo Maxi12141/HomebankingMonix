@@ -11,7 +11,7 @@ import { Input } from './ui/Input'
 import { QrBox } from './QrBox'
 import { QrScannerFullscreen } from './QrScannerFullscreen'
 import { formatMonto } from '../utils/cuenta'
-import { encodeCobroQr, encodeCuentaQr, parseRadioPayload } from '../lib/tokens'
+import { encodeCobroQr, encodeCuentaQr, parseQrPayload } from '../lib/tokens'
 import { decodeJwt } from 'jose'
 import {
   MONIX_BANK_CODE,
@@ -38,15 +38,15 @@ import { useQrScanStore } from '../stores/qrScanStore'
 import { useContactos } from '../hooks/useContactos'
 import { buscarDestinatarioBC } from '../services/bancoCentral'
 import {
-  cancelarCobroNfc,
-  crearCobroNfc,
-  obtenerCobroNfc,
+  cancelarCobroQr,
+  crearCobroQr,
+  obtenerCobroQr,
   pagarCobroQr,
   pagarQrCuenta,
   resolverQrCuenta,
-  type CobroNfc,
+  type CobroQr,
   type DestinoQr,
-} from '../services/nfcPago'
+} from '../services/cobrosQr'
 
 async function aplicarQr(
   raw: string,
@@ -84,7 +84,7 @@ async function aplicarQr(
     }
   }
 
-  const parsed = parseRadioPayload(raw)
+  const parsed = parseQrPayload(raw)
   if (parsed?.kind === 'cobro') {
     await cargarCobro(parsed.value)
     return
@@ -135,10 +135,10 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   const cuentaUsd = cuentas.find((c) => c.moneda === 'USD')
   const [monedaQr, setMonedaQr] = useState<'ARS' | 'USD'>('ARS')
   // useCuenta().cuenta es siempre la de pesos: el QR se arma sobre la cuenta
-  // de la moneda elegida, así el cobro (cobros_nfc) y el JWT quedan en USD.
+  // de la moneda elegida, así el cobro (cobros_qr) y el JWT quedan en USD.
   const cuenta = monedaQr === 'USD' && cuentaUsd ? cuentaUsd : cuentaArs
   const [monto, setMonto] = useState('')
-  const [cobro, setCobro] = useState<CobroNfc | null>(null)
+  const [cobro, setCobro] = useState<CobroQr | null>(null)
   const [error, setError] = useState('')
   // Se guarda junto con la clave de lo que firmó: al cambiar de moneda (o de
   // monto) el JWT anterior no se muestra mientras llega el nuevo.
@@ -146,7 +146,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   // Clave cuya firma falló: sólo entonces se cae al formato interno viejo.
   const [firmaFallida, setFirmaFallida] = useState<string | null>(null)
   const cobroIdRef = useRef<string | null>(null)
-  // Sube en cada descarte de cobro: un crearCobroNfc que estaba en vuelo
+  // Sube en cada descarte de cobro: un crearCobroQr que estaba en vuelo
   // cuando el usuario cambió de moneda no debe pisar el QR nuevo.
   const generacionRef = useRef(0)
   // ronda sube con "Generar nuevo QR": fuerza una firma nueva (otro jti)
@@ -226,7 +226,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         .on('postgres_changes', {
           event: 'UPDATE',
           schema: 'public',
-          table: 'cobros_nfc',
+          table: 'cobros_qr',
           filter: `id=eq.${cobro.id}`,
         }, (payload) => {
           const estado = (payload.new as { estado?: string }).estado
@@ -258,7 +258,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       void (async () => {
         if (!raw || isNaN(n) || n <= 0) {
           if (cobroIdRef.current) {
-            await cancelarCobroNfc(cobroIdRef.current).catch(() => undefined)
+            await cancelarCobroQr(cobroIdRef.current).catch(() => undefined)
             cobroIdRef.current = null
             setCobro(null)
           }
@@ -267,15 +267,15 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         }
         try {
           if (cobroIdRef.current) {
-            await cancelarCobroNfc(cobroIdRef.current).catch(() => undefined)
+            await cancelarCobroQr(cobroIdRef.current).catch(() => undefined)
           }
-          const id = await crearCobroNfc(cuenta.id, n, '')
+          const id = await crearCobroQr(cuenta.id, n, '')
           if (generacion !== generacionRef.current) {
-            await cancelarCobroNfc(id).catch(() => undefined)
+            await cancelarCobroQr(id).catch(() => undefined)
             return
           }
           cobroIdRef.current = id
-          setCobro(await obtenerCobroNfc(id))
+          setCobro(await obtenerCobroQr(id))
           setError('')
         } catch (err) {
           setError(err instanceof Error ? err.message : 'No se pudo armar el cobro')
@@ -288,7 +288,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   useEffect(() => {
     return () => {
       if (cobroIdRef.current) {
-        void cancelarCobroNfc(cobroIdRef.current).catch(() => undefined)
+        void cancelarCobroQr(cobroIdRef.current).catch(() => undefined)
       }
     }
   }, [])
@@ -311,7 +311,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
     // El estado se limpia en el acto; la cancelación del cobro viejo corre de
     // fondo para que el QR y el monto no queden un instante desfasados.
     if (cobroIdRef.current) {
-      void cancelarCobroNfc(cobroIdRef.current).catch(() => undefined)
+      void cancelarCobroQr(cobroIdRef.current).catch(() => undefined)
     }
     cobroIdRef.current = null
     setCobro(null)
@@ -594,7 +594,7 @@ export function EscanearYPagar({
 }) {
   const navigate = useNavigate()
   const { refreshCuenta } = useCuenta()
-  const [cobro, setCobro] = useState<CobroNfc | null>(null)
+  const [cobro, setCobro] = useState<CobroQr | null>(null)
   const [destino, setDestino] = useState<DestinoQr | null>(null)
   const [montoLibre, setMontoLibre] = useState('')
   const [loading, setLoading] = useState(false)
@@ -642,7 +642,7 @@ export function EscanearYPagar({
     setLoading(true)
     setError('')
     try {
-      setCobro(await obtenerCobroNfc(id))
+      setCobro(await obtenerCobroQr(id))
       setDestino(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se encontró el cobro')
@@ -787,7 +787,7 @@ export function EscanearYPagar({
     setError('')
     try {
       await pagarCobroQr(cobro.id)
-      const fresh = await obtenerCobroNfc(cobro.id)
+      const fresh = await obtenerCobroQr(cobro.id)
       await refreshCuenta()
       setPagado({
         nombre: fresh.comercio_nombre,

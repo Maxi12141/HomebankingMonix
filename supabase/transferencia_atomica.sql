@@ -1,4 +1,4 @@
--- Arregla dos bugs reales de la auditoría 2026-09-21 (docs/auditoria-completa-2026-09-21.md):
+-- Arregla dos bugs reales encontrados en la revisión del 21/09/2026:
 --
 -- 1) Transferencias Monix→Monix nunca se acreditaban del lado del cliente: la
 --    política RLS de `cuentas` sólo permite UPDATE donde persona_id=auth.uid(),
@@ -9,7 +9,7 @@
 --    guardado local fallaba después, no había forma de evitar reenviarla.
 --
 -- Se resuelve con el mismo patrón que ya usa `pagar_qr_cuenta` en
--- nfc_cobros.sql: una función SECURITY DEFINER con FOR UPDATE sobre las
+-- cobros_qr.sql: una función SECURITY DEFINER con FOR UPDATE sobre las
 -- cuentas involucradas, que hace el débito/crédito y los movimientos en una
 -- sola transacción atómica del lado del servidor. Se agrega además una
 -- columna `operacion_id` para poder pedirle a esta función "aplicá esta

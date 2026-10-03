@@ -58,8 +58,8 @@ function Chip({ x, y }: { x: number; y: number }) {
   )
 }
 
-/* ─── Símbolo NFC reutilizable ──────────────────────────────────── */
-function NFC({ cx, cy }: { cx: number; cy: number }) {
+/* ─── Símbolo de pago sin contacto ──────────────────────────────────── */
+function SimboloContactless({ cx, cy }: { cx: number; cy: number }) {
   return (
     <g>
       <circle cx={cx} cy={cy} r="2.8" fill="white" fillOpacity="0.7" />
@@ -110,7 +110,7 @@ function DebitCardSVG() {
       <text x="45" y="63" fontFamily="'Inter', sans-serif" fontSize="8" fontWeight="600" fill="#26ffc1" textAnchor="middle" letterSpacing="1">DÉBITO</text>
 
       <Chip x={26} y={86} />
-      <NFC cx={84} cy={103} />
+      <SimboloContactless cx={84} cy={103} />
 
       {/* Número */}
       <text x="26" y="148" fontFamily="'Courier New', Courier, monospace" fontSize="19" fill="white" letterSpacing="3" fillOpacity="0.9">
@@ -173,7 +173,7 @@ function UsdCardSVG() {
       <text x="39" y="63" fontFamily="'Inter', sans-serif" fontSize="8" fontWeight="600" fill="#c9a227" textAnchor="middle" letterSpacing="1">USD</text>
 
       <Chip x={26} y={86} />
-      <NFC cx={84} cy={103} />
+      <SimboloContactless cx={84} cy={103} />
 
       {/* Número */}
       <text x="26" y="148" fontFamily="'Courier New', Courier, monospace" fontSize="19" fill="white" letterSpacing="3" fillOpacity="0.9">
@@ -235,7 +235,7 @@ function CreditCardSVG() {
       <text x="47" y="63" fontFamily="'Inter', sans-serif" fontSize="8" fontWeight="600" fill="#26ffc1" textAnchor="middle" letterSpacing="1">CRÉDITO</text>
 
       <Chip x={26} y={86} />
-      <NFC cx={84} cy={103} />
+      <SimboloContactless cx={84} cy={103} />
 
       {/* Número */}
       <text x="26" y="148" fontFamily="'Courier New', Courier, monospace" fontSize="19" fill="white" letterSpacing="3" fillOpacity="0.9">

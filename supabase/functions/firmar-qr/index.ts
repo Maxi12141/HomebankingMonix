@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
   const claims: Record<string, unknown> = { iss: MONIX_BANK_CODE, cbu, moneda }
   if (alias) claims.alias = alias
   if (typeof monto === "number") claims.monto = monto
-  // cid: id del cobro interno (cobros_nfc) — sólo lo usa la propia app Monix
+  // cid: id del cobro interno (cobros_qr) — sólo lo usa la propia app Monix
   // para mantener el seguimiento en tiempo real; cualquier otro banco lo ignora.
   if (cid) claims.cid = cid
 
