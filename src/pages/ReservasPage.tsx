@@ -137,7 +137,7 @@ export function ReservasPage() {
               <p className="font-body text-xs text-slate-secondary uppercase tracking-wider">
                 En reserva
               </p>
-              <p className="font-display text-3xl font-bold text-mint mt-1">
+              <p className="font-display text-3xl font-bold text-mint-tinta dark:text-mint mt-1">
                 {loading ? '—' : formatARS(saldoReserva)}
               </p>
             </div>
@@ -171,7 +171,7 @@ export function ReservasPage() {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="mt-3 flex items-center gap-1.5 font-body text-xs text-navy dark:text-mint"
+                className="mt-3 flex items-center gap-1.5 font-body text-xs text-mint-tinta-fuerte dark:text-mint"
               >
                 <TrendingUp size={14} />
                 Se acreditaron {formatARS(interesHoy)} de rendimiento

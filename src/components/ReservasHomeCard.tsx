@@ -37,7 +37,7 @@ export function ReservasHomeCard({ cuentaId }: Props) {
       </div>
 
       <p className="font-body text-xs text-slate-secondary mb-1">Saldo en reserva</p>
-      <p className="font-display text-2xl font-bold text-mint mb-3">
+      <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mb-3">
         {loading ? '—' : formatARS(saldo)}
       </p>
 
@@ -49,7 +49,7 @@ export function ReservasHomeCard({ cuentaId }: Props) {
           Hoy ~ <span className="text-navy dark:text-white font-medium">+{formatARS(diario)}</span>
         </p>
         {interesHoy > 0 && (
-          <p className="font-body text-xs text-navy dark:text-mint inline-flex items-center gap-1">
+          <p className="font-body text-xs text-mint-tinta-fuerte dark:text-mint inline-flex items-center gap-1">
             <TrendingUp size={12} />
             +{formatARS(interesHoy)} acreditados
           </p>

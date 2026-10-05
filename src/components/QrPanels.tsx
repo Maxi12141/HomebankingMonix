@@ -379,7 +379,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         <h2 className={`font-display text-lg font-semibold ${overlay ? 'text-white' : 'text-navy dark:text-white'}`} role="status">
           {recibido.nombre ? `Recibiste de ${recibido.nombre}` : 'Pago recibido'}
         </h2>
-        <p className="font-display text-2xl font-bold text-mint mt-2">
+        <p className={`font-display text-2xl font-bold mt-2 ${overlay ? 'text-mint' : 'text-mint-tinta dark:text-mint'}`}>
           {formatMonto(recibido.monto, cuenta.moneda)}
         </p>
         <Button className={`w-full mt-6 ${overlay ? 'max-w-xs' : ''}`} type="button" onClick={nuevoQr}>
@@ -416,7 +416,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       <Card className="p-8 text-center">
         <CheckCircle size={48} className="text-mint mx-auto mb-3" />
         <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Cobro acreditado</h2>
-        <p className="font-display text-2xl font-bold text-mint mt-2">
+        <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mt-2">
           {formatMonto(cobro.monto, cobro.moneda)}
         </p>
         <Button className="w-full mt-6" type="button" onClick={nuevoCobro}>
@@ -582,7 +582,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         </p>
       )}
       {cobro && (
-        <p className="font-display text-xl font-bold text-mint text-center mt-2">
+        <p className="font-display text-xl font-bold text-mint-tinta dark:text-mint text-center mt-2">
           {formatMonto(cobro.monto, cobro.moneda)}
         </p>
       )}
@@ -953,7 +953,7 @@ export function EscanearYPagar({
         <p className="font-body text-sm text-slate-secondary mt-1">
           Le pagaste a {pagado.nombre} {pagado.apellido}
         </p>
-        <p className="font-display text-2xl font-bold text-mint mt-2">{formatMonto(pagado.monto, pagado.moneda)}</p>
+        <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mt-2">{formatMonto(pagado.monto, pagado.moneda)}</p>
         {accionesPostPago(pagado.nombre, pagado.apellido, pagado.alias)}
       </Card>,
     )
@@ -967,7 +967,7 @@ export function EscanearYPagar({
         <p className="font-body text-sm text-slate-secondary mt-1">
           Le pagaste a {cobro.comercio_nombre} {cobro.comercio_apellido}
         </p>
-        <p className="font-display text-2xl font-bold text-mint mt-2">{formatMonto(cobro.monto, cobro.moneda)}</p>
+        <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mt-2">{formatMonto(cobro.monto, cobro.moneda)}</p>
         {accionesPostPago(cobro.comercio_nombre, cobro.comercio_apellido, cobro.comercio_alias)}
       </Card>,
     )
@@ -981,7 +981,7 @@ export function EscanearYPagar({
           {cobro.comercio_nombre} {cobro.comercio_apellido}
         </p>
         {cobro.comercio_alias && <p className="font-body text-xs text-slate-secondary">@{cobro.comercio_alias}</p>}
-        <p className="font-display text-2xl font-bold text-mint my-3">{formatMonto(cobro.monto, cobro.moneda)}</p>
+        <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint my-3">{formatMonto(cobro.monto, cobro.moneda)}</p>
         {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
         <Button className="w-full" type="button" loading={loading} onClick={() => { void pagarCobro() }}>
           Pagar

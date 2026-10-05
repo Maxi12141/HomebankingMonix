@@ -608,7 +608,7 @@ export function TransferPage() {
                   )}
 
                   <p className="font-body text-sm text-slate-secondary mb-1">Saldo disponible</p>
-                  <p className="font-display text-2xl font-bold text-mint mb-6">{saldoFormateado}</p>
+                  <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mb-6">{saldoFormateado}</p>
 
                   <form onSubmit={handleDetalleSubmit} className="flex flex-col gap-4">
                     <Input label={`Monto en ${monedaActual === 'USD' ? 'dólares' : 'pesos'}`} type="number" min="0.01" step="0.01" placeholder="0.00"
@@ -712,7 +712,7 @@ export function TransferPage() {
                     <div className="h-px bg-slate-200 dark:bg-white/10" />
                     <div className="flex justify-between">
                       <span className="font-body text-slate-secondary text-sm">Enviás</span>
-                      <span className="font-display font-bold text-navy dark:text-mint text-lg">{montoFormateado}</span>
+                      <span className="font-display font-bold text-mint-tinta-fuerte dark:text-mint text-lg">{montoFormateado}</span>
                     </div>
                     {esConversion && (
                       <>
@@ -776,7 +776,7 @@ export function TransferPage() {
                       {esConversion && <> ({destinatario?.nombre} recibió {montoDestinoFormateado})</>}
                     </p>
                     <p className="font-body text-sm text-slate-secondary mb-8">
-                      Nuevo saldo: <span className="text-navy dark:text-mint font-medium">{saldoFormateado}</span>
+                      Nuevo saldo: <span className="text-mint-tinta-fuerte dark:text-mint font-medium">{saldoFormateado}</span>
                     </p>
                     <div className="flex flex-col gap-3">
                       {vinoDeQr && (

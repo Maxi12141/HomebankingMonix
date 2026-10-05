@@ -111,7 +111,7 @@ export function TransactionDetailModal({ movimiento, bankName, onClose }: Props)
             <p className="font-body text-xs text-slate-secondary uppercase tracking-wider mb-1">
               {tipoLabel[movimiento.tipo]}
             </p>
-            <p className={`font-display text-3xl font-semibold ${entrada ? 'text-mint' : 'text-red-500 dark:text-red-400'}`}>
+            <p className={`font-display text-3xl font-semibold ${entrada ? 'text-mint-tinta dark:text-mint' : 'text-red-500 dark:text-red-400'}`}>
               {entrada ? '+' : '-'}{montoFormateado}
             </p>
           </div>

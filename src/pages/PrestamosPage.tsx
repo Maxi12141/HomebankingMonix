@@ -265,7 +265,7 @@ export function PrestamosPage() {
               <div className="rounded-xl bg-slate-input dark:bg-white/5 px-4 py-3 space-y-2 mt-4">
                 <div className="flex justify-between gap-3">
                   <span className="font-body text-sm text-slate-secondary">Cuota mensual</span>
-                  <span className="font-display font-bold text-navy dark:text-mint">{formatARS(cuota)}</span>
+                  <span className="font-display font-bold text-mint-tinta-fuerte dark:text-mint">{formatARS(cuota)}</span>
                 </div>
                 <p className="font-body text-[11px] text-slate-secondary leading-relaxed flex items-start gap-1.5">
                   <Info size={12} className="shrink-0 mt-0.5" />

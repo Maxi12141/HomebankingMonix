@@ -326,7 +326,7 @@ export function MercadoMonixPage() {
                 <p className="font-body text-xs text-slate-secondary mb-2">
                   Cantidad: {cantidad}
                 </p>
-                <p className="font-display text-xl font-bold text-mint mb-4">
+                <p className="font-display text-xl font-bold text-mint-tinta dark:text-mint mb-4">
                   {formatARS(total)}
                 </p>
                 <p className="font-body text-xs text-slate-secondary mb-5">
@@ -416,7 +416,7 @@ export function MercadoMonixPage() {
                   <div className="h-px bg-slate-200 dark:bg-white/10" />
                   <div className="flex justify-between gap-3">
                     <span className="font-body text-sm text-slate-secondary">Saldo después</span>
-                    <span className={`font-display text-sm font-bold ${total > saldo ? 'text-red-500' : 'text-navy dark:text-mint'}`}>
+                    <span className={`font-display text-sm font-bold ${total > saldo ? 'text-red-500' : 'text-mint-tinta-fuerte dark:text-mint'}`}>
                       {formatARS(roundMoney(saldo - total))}
                     </span>
                   </div>

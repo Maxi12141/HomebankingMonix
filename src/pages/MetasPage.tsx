@@ -284,7 +284,7 @@ export function MetasPage() {
 
           <Card className="p-6 mt-5 mb-4">
             <p className="font-body text-xs text-slate-secondary uppercase tracking-wider">En custodia</p>
-            <p className="font-display text-3xl font-bold text-mint mt-1">{ars(detalle.saldo)}</p>
+            <p className="font-display text-3xl font-bold text-mint-tinta dark:text-mint mt-1">{ars(detalle.saldo)}</p>
             {progreso != null && (
               <div className="mt-3">
                 <div className="h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
@@ -387,7 +387,7 @@ export function MetasPage() {
                       <span className="text-slate-secondary"> · armó la meta</span>
                     )}
                   </span>
-                  <span className="font-body text-sm text-navy dark:text-mint">{ars(m.aporteTotal)}</span>
+                  <span className="font-body text-sm text-mint-tinta-fuerte dark:text-mint">{ars(m.aporteTotal)}</span>
                 </li>
               ))}
             </ul>
@@ -475,7 +475,7 @@ export function MetasPage() {
                   className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-navy-card px-4 py-3"
                 >
                   <span className="font-body text-sm text-navy dark:text-white">{etiquetaAporte(a)}</span>
-                  <span className={`font-body text-sm ${a.monto < 0 ? 'text-slate-secondary' : 'text-navy dark:text-mint'}`}>
+                  <span className={`font-body text-sm ${a.monto < 0 ? 'text-slate-secondary' : 'text-mint-tinta-fuerte dark:text-mint'}`}>
                     {a.monto < 0 ? ars(Math.abs(a.monto)) : `+${ars(a.monto)}`}
                   </span>
                 </li>
@@ -584,7 +584,7 @@ export function MetasPage() {
                       {m.miembros} {m.miembros === 1 ? 'persona' : 'personas'} · {estadoMeta(m.estado)}
                     </span>
                   </span>
-                  <span className="font-body text-sm text-navy dark:text-mint shrink-0">{ars(m.saldo)}</span>
+                  <span className="font-body text-sm text-mint-tinta-fuerte dark:text-mint shrink-0">{ars(m.saldo)}</span>
                 </button>
               </li>
             ))}

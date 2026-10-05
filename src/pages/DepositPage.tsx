@@ -138,7 +138,7 @@ export function DepositPage() {
                 )}
 
                 <p className="font-body text-sm text-slate-secondary mb-1">Saldo actual</p>
-                <p className="font-display text-2xl font-bold text-mint mb-6">{saldoFormateado}</p>
+                <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mb-6">{saldoFormateado}</p>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                   <Input
@@ -184,7 +184,7 @@ export function DepositPage() {
                   Depositaste {formatMonto(depositado.monto, depositado.moneda)}
                 </p>
                 <p className="font-body text-sm text-slate-secondary mb-8">
-                  Nuevo saldo: <span className="text-navy dark:text-mint font-medium">{formatMonto(depositado.saldo, depositado.moneda)}</span>
+                  Nuevo saldo: <span className="text-mint-tinta-fuerte dark:text-mint font-medium">{formatMonto(depositado.saldo, depositado.moneda)}</span>
                 </p>
                 <Button className="w-full" onClick={handleReset}>Nuevo depósito</Button>
               </Card>

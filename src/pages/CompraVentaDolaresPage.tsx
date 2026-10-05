@@ -183,7 +183,7 @@ export function CompraVentaDolaresPage() {
                     <p className="font-body text-xs text-slate-secondary">
                       {modo === 'comprar' ? 'Vas a pagar' : 'Vas a recibir'}
                     </p>
-                    <p className="font-display text-xl font-bold text-mint mt-0.5">
+                    <p className="font-display text-xl font-bold text-mint-tinta-fuerte dark:text-mint mt-0.5">
                       {formatMonto(montoArs, 'ARS')}
                     </p>
                   </div>

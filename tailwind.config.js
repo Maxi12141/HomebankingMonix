@@ -15,6 +15,12 @@ export default {
         mint: {
           DEFAULT: '#26FFC1',
           hover: '#1FE6AF',
+          // Mint tinta: el mint oscurecido para montos sobre fondo claro en
+          // modo claro, donde #26FFC1 no se lee (1.3:1 sobre blanco).
+          // tinta: montos grandes (text-xl en negrita o más), 3:1 sobre blanco.
+          // tinta-fuerte: montos chicos o sobre el gris de la app, 4.5:1 o más.
+          tinta: '#00A87A',
+          'tinta-fuerte': '#007A5A',
         },
         slate: {
           secondary: 'var(--slate-secondary)',

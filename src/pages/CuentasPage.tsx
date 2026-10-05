@@ -46,7 +46,7 @@ function CuentaCard({ cuenta, titulo, persona }: { cuenta: Cuenta; titulo: strin
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <p className="font-body text-xs text-slate-secondary uppercase tracking-wider">{titulo}</p>
-          <p className="font-display text-3xl font-bold text-mint mt-1">
+          <p className="font-display text-3xl font-bold text-mint-tinta dark:text-mint mt-1">
             {formatMonto(Number(cuenta.saldo), cuenta.moneda)}
           </p>
         </div>

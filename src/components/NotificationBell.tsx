@@ -131,7 +131,7 @@ export function NotificationBell() {
                           })}
                         </p>
                       </div>
-                      <span className="font-display text-sm font-semibold text-navy dark:text-mint shrink-0">
+                      <span className="font-display text-sm font-semibold text-mint-tinta-fuerte dark:text-mint shrink-0">
                         +{currency(n.monto)}
                       </span>
                     </button>

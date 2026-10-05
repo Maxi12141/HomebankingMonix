@@ -173,7 +173,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
           {showData ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
       </div>
-      <p className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-mint leading-none min-w-0">
+      <p className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-mint-tinta dark:text-mint leading-none min-w-0">
         {showData ? (
           <CountUp
             key={animKey}
@@ -198,7 +198,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.3 }}
-            className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint' : 'text-red-500 dark:text-red-400'}`}
+            className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint-tinta-fuerte dark:text-mint' : 'text-red-500 dark:text-red-400'}`}
           >
             {showData ? (
               <>{delta > 0 ? '+' : ''}{formatMoneda(delta, cuenta.moneda)}</>
@@ -221,7 +221,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
           </span>
         </p>
         {interesHoy > 0 && (
-          <p className="font-body text-xs text-mint inline-flex items-center gap-1">
+          <p className="font-body text-xs text-mint-tinta-fuerte dark:text-mint inline-flex items-center gap-1">
             <TrendingUp size={12} />
             +{showData ? formatMoneda(interesHoy, cuenta.moneda) : '••••'} acreditados
           </p>
@@ -458,7 +458,7 @@ export function DashboardPage() {
                           {new Date(mov.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </p>
                       </div>
-                      <span className={`font-display font-semibold text-base ${esEntrada ? 'text-navy dark:text-mint' : 'text-red-500 dark:text-red-400'}`}>
+                      <span className={`font-display font-semibold text-base ${esEntrada ? 'text-mint-tinta-fuerte dark:text-mint' : 'text-red-500 dark:text-red-400'}`}>
                         {text}
                       </span>
                     </Card>
