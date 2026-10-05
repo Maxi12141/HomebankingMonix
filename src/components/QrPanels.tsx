@@ -23,6 +23,7 @@ import {
   type QrJwtClaims,
 } from '../lib/qrJwt'
 import { useAuthStore } from '../store/authStore'
+import { sincronizarTransferenciasEntrantes } from '../hooks/useSyncTransferenciasEntrantes'
 import {
   detectQrUntil,
   engancharCamara,
@@ -158,6 +159,11 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   // aviso de que escanearon EL QR que está en pantalla, se cierra.
   const [cerradoPor, setCerradoPor] = useState<string | null>(null)
   const jtiActualRef = useRef<string | null>(null)
+  // Cuándo se cerró el QR: sólo cuentan transferencias que entraron después.
+  const cerradoDesdeRef = useRef<string | null>(null)
+  // Pago que llegó por transferencia (otro banco, o Monix sin cobro interno):
+  // el cobro de cobros_qr nunca pasa a 'pagado' en esos casos.
+  const [recibido, setRecibido] = useState<{ monto: number; nombre: string | null } | null>(null)
 
   // QR interbancario firmado (docs/qr-interbancario-jwt.md): se pide a la
   // Edge Function apenas hay cuenta/cobro para mostrar. Si falla (sin red, la
@@ -181,7 +187,10 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
     return () => { vivo = false }
   }, [cuenta?.cbu, cuenta?.alias, cuenta?.moneda, cobro?.id, cobro?.monto, cobro?.moneda, ronda])
 
-  useEffect(() => { setCerradoPor(null) }, [claveQr])
+  useEffect(() => {
+    setCerradoPor(null)
+    setRecibido(null)
+  }, [claveQr])
 
   // Aviso de lectura: la Edge Function qr-lectura inserta una fila cada vez
   // que un banco (Monix u otro) nos avisa que escaneó un QR nuestro.
@@ -201,7 +210,11 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
           const quien = fila.nombre_lector ?? 'Alguien'
           const banco = fila.banco_lector === MONIX_BANK_CODE ? '' : ` desde ${nombreBanco(fila.banco_lector)}`
           const texto = `${quien} escaneó tu QR${banco}`
-          if (fila.jti && fila.jti === jtiActualRef.current) setCerradoPor(texto)
+          if (fila.jti && fila.jti === jtiActualRef.current) {
+            // Margen de 1 minuto por relojes desfasados entre el teléfono y la base.
+            cerradoDesdeRef.current = new Date(Date.now() - 60_000).toISOString()
+            setCerradoPor(texto)
+          }
           toast(texto, { icon: '👀' })
         })
         .subscribe()
@@ -216,6 +229,46 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       }, 400)
     }
   }, [userId])
+
+  // Con el QR cerrado, se espera la transferencia: las de otros bancos sólo
+  // entran a Monix cuando se sincroniza con el Banco Central (cada 2 min en el
+  // resto de la app), así que acá se fuerza cada 5 s mientras dure el QR.
+  const esperaPago = !!cerradoPor && !recibido && cobro?.estado !== 'pagado'
+  useEffect(() => {
+    if (!esperaPago || !cuenta?.id) return
+    const cuentaId = cuenta.id
+    const montoEsperado = cobro?.monto ?? null
+    let vivo = true
+    const hasta = Date.now() + 10 * 60_000
+    async function revisar() {
+      if (!vivo || Date.now() > hasta) return
+      await sincronizarTransferenciasEntrantes().catch(() => undefined)
+      if (!vivo) return
+      const { data } = await supabase
+        .from('movimientos')
+        .select('monto, destinatario_nombre, destinatario_apellido')
+        .eq('cuenta_id', cuentaId)
+        .eq('tipo', 'transferencia_entrada')
+        .gte('created_at', cerradoDesdeRef.current ?? new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(10)
+      if (!vivo || !data) return
+      const pago = data.find((m) => montoEsperado == null || Math.abs(Number(m.monto) - montoEsperado) < 0.005)
+      if (!pago) return
+      const nombre = [pago.destinatario_nombre, pago.destinatario_apellido].filter(Boolean).join(' ') || null
+      setRecibido({ monto: Number(pago.monto), nombre })
+      // El cobro interno ya no tiene sentido: se pagó por transferencia.
+      if (cobroIdRef.current) {
+        void cancelarCobroQr(cobroIdRef.current).catch(() => undefined)
+        cobroIdRef.current = null
+      }
+      void refreshCuenta()
+      toast.success('Pago recibido')
+    }
+    void revisar()
+    const t = window.setInterval(() => { void revisar() }, 5000)
+    return () => { vivo = false; window.clearInterval(t) }
+  }, [esperaPago, cuenta?.id, cobro?.monto, refreshCuenta])
 
   useEffect(() => {
     if (!cobro || cobro.estado !== 'pendiente') return
@@ -318,6 +371,32 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
     setMonto('')
   }
 
+  if (recibido && cuenta) {
+    const overlay = variante === 'overlay'
+    const contenido = (
+      <>
+        <CheckCircle size={48} className="text-mint mx-auto mb-3" />
+        <h2 className={`font-display text-lg font-semibold ${overlay ? 'text-white' : 'text-navy dark:text-white'}`} role="status">
+          {recibido.nombre ? `Recibiste de ${recibido.nombre}` : 'Pago recibido'}
+        </h2>
+        <p className="font-display text-2xl font-bold text-mint mt-2">
+          {formatMonto(recibido.monto, cuenta.moneda)}
+        </p>
+        <Button className={`w-full mt-6 ${overlay ? 'max-w-xs' : ''}`} type="button" onClick={nuevoQr}>
+          Nuevo QR
+        </Button>
+      </>
+    )
+    if (overlay) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center px-6 pb-28 pt-16 text-center">
+          {contenido}
+        </div>
+      )
+    }
+    return <Card className="p-8 text-center">{contenido}</Card>
+  }
+
   if (cobro?.estado === 'pagado') {
     if (variante === 'overlay') {
       return (
@@ -384,8 +463,9 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
             Esperando el pago de {formatMonto(cobro.monto, cobro.moneda)}…
           </p>
         ) : (
-          <p className={`font-body text-sm mt-2 ${overlay ? 'text-white/70' : 'text-slate-secondary'}`}>
-            Este QR ya no se puede volver a usar.
+          <p className={`font-body text-sm mt-2 inline-flex items-center gap-2 ${overlay ? 'text-white/70' : 'text-slate-secondary'}`}>
+            <Loader2 size={14} className="animate-spin text-mint" />
+            Esperando la transferencia…
           </p>
         )}
         <Button className={`w-full mt-6 ${overlay ? 'max-w-xs' : ''}`} type="button" onClick={nuevoQr}>

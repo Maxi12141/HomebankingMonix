@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
 import { useAuthStore } from '../store/authStore'
@@ -99,17 +99,102 @@ function useCuentaRealtime() {
   }, [cuentaIds])
 }
 
+// Una sola carga a la vez por persona, compartida entre todos los useCuenta()
+// montados (el global de App + el de cada página). Antes cada instancia
+// cargaba y acreditaba el interés por su cuenta: con dos montadas a la vez se
+// insertaba dos veces el mismo "Rendimiento de Reserva".
+interface CargaCuentas {
+  todas: Cuenta[]
+  interesPorCuenta: Record<string, number>
+}
+let cargaEnCurso: { personaId: string; promesa: Promise<CargaCuentas | null> } | null = null
+
+function cargarCuentasCompartido(personaId: string): Promise<CargaCuentas | null> {
+  if (cargaEnCurso?.personaId === personaId) return cargaEnCurso.promesa
+  const promesa = cargarCuentas(personaId).finally(() => {
+    if (cargaEnCurso?.promesa === promesa) cargaEnCurso = null
+  })
+  cargaEnCurso = { personaId, promesa }
+  return promesa
+}
+
+async function cargarCuentas(personaId: string): Promise<CargaCuentas | null> {
+  const { data, error } = await supabase
+    .from('cuentas')
+    .select('*')
+    .eq('persona_id', personaId)
+    .eq('activa', true)
+  if (error) {
+    console.error('Error al cargar cuentas:', error.message)
+    return null
+  }
+  const accrued = await Promise.all(((data ?? []) as Cuenta[]).map(accrueInterest))
+  return {
+    todas: accrued.map((a) => a.cuenta),
+    interesPorCuenta: Object.fromEntries(accrued.map((a) => [a.cuenta.id, a.interes])),
+  }
+}
+
+async function accrueInterest(current: Cuenta): Promise<{ cuenta: Cuenta; interes: number }> {
+  const tasa = Number(current.tasa_anual ?? TASA_DEFAULT)
+  const lastRaw = current.ultima_interes_at
+  const last = lastRaw ? new Date(lastRaw).getTime() : Date.now()
+  const days = Math.floor((Date.now() - last) / MS_PER_DAY)
+  const interest = calcInterestForDays(Number(current.saldo), tasa, days)
+
+  if (interest <= 0) {
+    // Ensure tasa is set for older rows / display
+    if (current.tasa_anual == null) {
+      return { cuenta: { ...current, tasa_anual: TASA_DEFAULT }, interes: 0 }
+    }
+    return { cuenta: current, interes: 0 }
+  }
+
+  const nuevoSaldo = roundMoney(Number(current.saldo) + interest)
+  const nuevaFecha = new Date(last + days * MS_PER_DAY).toISOString()
+
+  // Candado optimista: sólo acredita si nadie tocó la cuenta desde que se
+  // leyó (otra pestaña, otro celular, o una transferencia que entró en el
+  // medio). Si cambió algo, no se escribe nada: la próxima carga acredita
+  // con los datos frescos y el interés nunca se duplica ni pisa un saldo.
+  let update = supabase
+    .from('cuentas')
+    .update({
+      saldo: nuevoSaldo,
+      ultima_interes_at: nuevaFecha,
+      tasa_anual: tasa || TASA_DEFAULT,
+    })
+    .eq('id', current.id)
+    .eq('saldo', current.saldo)
+  update = lastRaw ? update.eq('ultima_interes_at', lastRaw) : update.is('ultima_interes_at', null)
+  const { data: updated, error } = await update.select('*').maybeSingle()
+
+  if (error) {
+    console.error('Error al acreditar interés del saldo:', error.message)
+    return { cuenta: current, interes: 0 }
+  }
+  if (!updated) {
+    const { data: fresca } = await supabase.from('cuentas').select('*').eq('id', current.id).maybeSingle()
+    return { cuenta: (fresca as Cuenta | null) ?? current, interes: 0 }
+  }
+
+  await supabase.from('movimientos').insert({
+    cuenta_id: current.id,
+    tipo: 'deposito',
+    monto: interest,
+    saldo_resultante: nuevoSaldo,
+    descripcion: 'Rendimiento de Reserva',
+  })
+
+  return { cuenta: updated as Cuenta, interes: interest }
+}
+
 export function useCuenta() {
   const { cuenta, setCuenta, cuentas, setCuentas, setCuentasLoaded } = useCuentaStore()
   const { user } = useAuthStore()
   const userId = user?.id
   const [interesHoy, setInteresHoy] = useState(0)
   const [interesHoyPorCuenta, setInteresHoyPorCuenta] = useState<Record<string, number>>({})
-  // React.StrictMode dispara este efecto dos veces en desarrollo — sin este
-  // guard, dos fetchCuentas concurrentes podían acreditar el mismo interés
-  // dos veces (dos inserts de movimiento duplicados) al no leer nada nuevo
-  // hasta que el primero termina de escribir.
-  const fetchingRef = useRef(false)
 
   useCuentaRealtime()
 
@@ -118,80 +203,24 @@ export function useCuenta() {
   }, [userId])
 
   async function fetchCuentas(personaId: string) {
-    if (fetchingRef.current) return
-    fetchingRef.current = true
     try {
-      const { data, error } = await supabase
-        .from('cuentas')
-        .select('*')
-        .eq('persona_id', personaId)
-        .eq('activa', true)
-      if (error) {
-        console.error('Error al cargar cuentas:', error.message)
-        return
-      }
-      if (!data || data.length === 0) {
+      const carga = await cargarCuentasCompartido(personaId)
+      if (!carga) return
+      if (carga.todas.length === 0) {
         setCuentas([])
         setCuenta(null)
         setInteresHoy(0)
         return
       }
-
-      const accrued = await Promise.all((data as Cuenta[]).map(accrueInterest))
-      const todas = accrued.map((a) => a.cuenta)
+      const { todas, interesPorCuenta } = carga
+      const ars = todas.find((c) => c.moneda === 'ARS')
       setCuentas(todas)
-      setCuenta(todas.find((c) => c.moneda === 'ARS') ?? todas[0])
-      setInteresHoy(accrued.find((a) => a.cuenta.moneda === 'ARS')?.interes ?? 0)
-      setInteresHoyPorCuenta(Object.fromEntries(accrued.map((a) => [a.cuenta.id, a.interes])))
+      setCuenta(ars ?? todas[0])
+      setInteresHoy(ars ? interesPorCuenta[ars.id] ?? 0 : 0)
+      setInteresHoyPorCuenta(interesPorCuenta)
     } finally {
-      fetchingRef.current = false
       setCuentasLoaded(true)
     }
-  }
-
-  async function accrueInterest(current: Cuenta): Promise<{ cuenta: Cuenta; interes: number }> {
-    const tasa = Number(current.tasa_anual ?? TASA_DEFAULT)
-    const lastRaw = current.ultima_interes_at
-    const last = lastRaw ? new Date(lastRaw).getTime() : Date.now()
-    const days = Math.floor((Date.now() - last) / MS_PER_DAY)
-    const interest = calcInterestForDays(Number(current.saldo), tasa, days)
-
-    if (interest <= 0) {
-      // Ensure tasa is set for older rows / display
-      if (current.tasa_anual == null) {
-        return { cuenta: { ...current, tasa_anual: TASA_DEFAULT }, interes: 0 }
-      }
-      return { cuenta: current, interes: 0 }
-    }
-
-    const nuevoSaldo = roundMoney(Number(current.saldo) + interest)
-    const nuevaFecha = new Date(last + days * MS_PER_DAY).toISOString()
-
-    const { data: updated, error } = await supabase
-      .from('cuentas')
-      .update({
-        saldo: nuevoSaldo,
-        ultima_interes_at: nuevaFecha,
-        tasa_anual: tasa || TASA_DEFAULT,
-      })
-      .eq('id', current.id)
-      .select('*')
-      .single()
-
-    if (error || !updated) {
-      console.error('Error al acreditar interés del saldo:', error?.message)
-      return { cuenta: current, interes: 0 }
-    }
-
-    await supabase.from('movimientos').insert({
-      cuenta_id: current.id,
-      tipo: 'deposito',
-      monto: interest,
-      saldo_resultante: nuevoSaldo,
-      descripcion: 'Rendimiento de Reserva',
-    })
-
-    return { cuenta: updated as Cuenta, interes: interest }
   }
 
   async function refreshCuenta() {
