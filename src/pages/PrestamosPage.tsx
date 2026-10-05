@@ -200,12 +200,14 @@ export function PrestamosPage() {
         )}
 
         {ingresoDeclarado == null && situacionLista && nivel.disponible && (
-          <p className="font-body text-xs text-slate-secondary mb-4 flex items-center gap-1.5">
-            <Info size={13} className="shrink-0" />
-            <Link to="/perfil" className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
-              Declará tu ingreso mensual en Perfil
-            </Link>
-            &nbsp;para poder solicitar el préstamo.
+          <p className="font-body text-xs text-slate-secondary mb-4 flex items-start gap-1.5">
+            <Info size={13} className="shrink-0 mt-px" />
+            <span>
+              <Link to="/perfil" className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
+                Declará tu ingreso mensual en Perfil
+              </Link>
+              {' '}para poder solicitar el préstamo.
+            </span>
           </p>
         )}
 
