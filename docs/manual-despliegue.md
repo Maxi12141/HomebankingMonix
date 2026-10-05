@@ -1,6 +1,6 @@
 # Manual de despliegue — Monix
 
-**Versión:** 1.1 · **Fecha:** 2026-10-02 · **Alumnos:** Maximiliano Turaglio y Diego Urenda · **Materia:** Práctica Profesionalizante I
+**Versión:** 1.2 · **Fecha:** 2026-10-05 · **Alumnos:** Maximiliano Turaglio y Diego Urenda · **Materia:** Práctica Profesionalizante I
 
 Guía para levantar, desplegar y mantener Monix en producción desde este repositorio, en una cuenta nueva de Supabase y Vercel. Versión publicada (con diagramas): https://claude.ai/artifact/7f3fiyZ8qzC7kkYFazzStE
 
@@ -95,7 +95,7 @@ sequenceDiagram
 
 Toda transferencia se registra primero en el Banco Central, también entre cuentas Monix. Cada operación lleva un `operacion_id`: si el paso de Supabase falla, un reintento no reenvía la orden al Banco Central y la RPC aplica el débito una sola vez (índice único sobre `movimientos.operacion_id`, `transferencia_atomica.sql`). Si la página se cierra entre los dos pasos, la operación queda aceptada en el Banco Central y sin débito local: ante diferencias de saldo, verificar este caso primero.
 
-Las transferencias que llegan de otros bancos se acreditan con `useSyncTransferenciasEntrantes` (consulta al Banco Central cada 2 minutos). El `bc_transaccion_id` evita acreditar dos veces la misma operación.
+Las transferencias que llegan de otros bancos se acreditan con `useSyncTransferenciasEntrantes` (consulta al Banco Central cada 2 minutos). El `bc_transaccion_id` se guarda sólo en el movimiento de salida (`movimientos` tiene un índice único sobre esa columna, `movimientos_bc_id_unique`); las transferencias que vienen de una cuenta Monix se saltean (`es_cuenta_interna`), porque ya se acreditaron en la misma operación.
 
 ### 3.2 Pago con QR interbancario
 
@@ -119,6 +119,8 @@ sequenceDiagram
 ```
 
 Especificación: `docs/qr-interbancario-jwt.md`. Verificación en `src/lib/qrJwt.ts` contra `BANCOS_CONOCIDOS`. Monix recibe los avisos en la Edge Function `qr-lectura`, que los guarda en `qr_lecturas`; el dueño del QR los ve por Realtime. Las direcciones de aviso de cada banco están en `BANCOS_AVISO`.
+
+Si el que lee el QR paga con una transferencia (otro banco, o un Monix sin cobro interno), el cobro de `cobros_qr` nunca pasa a pagado. Por eso, después de la lectura, `QrPanels.tsx` sincroniza las transferencias entrantes cada 5 segundos y, cuando entra una por el monto esperado, la muestra como "Pago recibido" y cancela el cobro interno.
 
 ## 4. Requisitos previos
 
@@ -196,6 +198,9 @@ Archivos en `supabase/*.sql`, aplicados a mano en el SQL Editor (no hay runner d
 | 10 | `transferencia_atomica.sql` | `operacion_id`, `transferir_entre_cuentas`, `debitar_transferencia_externa`, `convertir_moneda_propia` |
 | 11 | `metas_comunes.sql` | Metas comunes: tablas de metas, miembros, aportes y votaciones + RPC (crear, invitar, unirse, aportar, proponer desembolso, votar). El dinero sale sólo con mayoría |
 | 12 | `qr_lecturas.sql` | Tabla `qr_lecturas` (avisos de lectura de QR); agrega a Realtime |
+| 13 | `fix_transferencia_bc_id.sql` | Redefine `private.transferir_entre_cuentas`: la entrada de una transferencia Monix → Monix va sin `bc_transaccion_id`. Sin esto, toda transferencia entre cuentas Monix falla con 409. Va después de `transferencia_atomica.sql` |
+
+**Base que viene de una versión anterior** (con Monix Cerca, el pago NFC con la tarjeta o la tabla `cobros_nfc`): correr una vez `docs/monix-limpieza-base.sql` antes de publicar el código. Borra lo retirado y renombra `cobros_nfc` a `cobros_qr` conservando datos, RLS y Realtime, en una sola transacción. En un proyecto nuevo no hace falta. En la base actual ya está aplicado (2026-10-05), igual que el n.º 13.
 
 Verificación: Database → Publications → `supabase_realtime` debe incluir `cuentas`, `cobros_qr` y `qr_lecturas`. Sin `cuentas`, el saldo no se actualiza en tiempo real.
 
@@ -359,4 +364,7 @@ Antes de dar una release por buena, probar en la URL de producción:
 | PWA instalada no se actualiza | Revisar `src/lib/registrarPwa.tsx` y los headers `no-cache` |
 | "Instalar" siempre no disponible | Evento `beforeinstallprompt` no capturado (`pwaInstallPrompt.ts`, importado desde `main.tsx`) |
 | Usuario registrado sin sesión | "Confirm email" activo en Supabase (§7.4) |
+| Transferencia entre cuentas Monix falla con 409 | `fix_transferencia_bc_id.sql` no aplicado (§7.3). El Banco Central la registra pero el saldo no se mueve |
+| "relation cobros_qr does not exist" | Base de una versión anterior sin `docs/monix-limpieza-base.sql` (§7.3) |
+| El QR no muestra "Pago recibido" cuando pagan desde otro banco | La transferencia todavía no llegó al Banco Central, o el monto no coincide con el del QR. Se revisa cada 5 segundos mientras el QR está abierto |
 | Enlace de recuperación de contraseña rechazado | Falta la Redirect URL en Supabase (§7.4) |
