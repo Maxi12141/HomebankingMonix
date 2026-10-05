@@ -182,7 +182,7 @@ export function PrestamosPage() {
         </div>
 
         {situacionError && (
-          <Card variant="noche" className="p-4 mb-4 flex items-center gap-3">
+          <Card className="p-4 mb-4 flex items-center gap-3">
             <ShieldAlert size={18} className="text-red-500 dark:text-red-400 shrink-0" />
             <p className="font-body text-sm text-slate-secondary">
               No pudimos verificar tu situación crediticia. Podés seguir simulando mientras tanto.
@@ -191,7 +191,7 @@ export function PrestamosPage() {
         )}
 
         {situacionLista && !nivel.disponible && (
-          <Card variant="noche" className="p-4 mb-4 flex items-center gap-3">
+          <Card className="p-4 mb-4 flex items-center gap-3">
             <ShieldAlert size={18} className="text-red-500 dark:text-red-400 shrink-0" />
             <p className="font-body text-sm text-slate-secondary">
               Por ahora no podemos ofrecerte un préstamo. Igual podés simular cuánto pagarías.
@@ -210,7 +210,7 @@ export function PrestamosPage() {
         )}
 
         {/* Simulador: siempre visible y usable, se pueda o no pedir el préstamo todavía */}
-          <Card variant="noche" className="p-6 mb-6">
+          <Card className="p-6 mb-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="rounded-xl bg-mint/15 text-navy dark:text-mint p-2.5">
                 <HandCoins size={20} />
@@ -362,7 +362,7 @@ function PrestamoCard({ prestamo }: { prestamo: Prestamo }) {
   }, [prestamo.monto, prestamo.tna, prestamo.cuotas_totales, prestamo.cuotas_pagadas])
 
   return (
-    <Card variant="noche" className="p-5">
+    <Card className="p-5">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <p className="font-display text-lg font-bold text-navy dark:text-white">{formatARS(prestamo.monto)}</p>

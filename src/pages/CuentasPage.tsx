@@ -42,7 +42,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
 function CuentaCard({ cuenta, titulo, persona }: { cuenta: Cuenta; titulo: string; persona: Persona | null }) {
   const Icon = cuenta.moneda === 'USD' ? DollarSign : Landmark
   return (
-    <Card variant="noche" className="p-6">
+    <Card className="p-6">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <p className="font-body text-xs text-slate-secondary uppercase tracking-wider">{titulo}</p>
@@ -142,7 +142,7 @@ export function CuentasPage() {
           {cuentaUSD ? (
             <CuentaCard cuenta={cuentaUSD} titulo="Caja de ahorro en dólares" persona={persona} />
           ) : (
-            <Card variant="noche" className="p-6">
+            <Card className="p-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="rounded-xl bg-slate-input dark:bg-white/5 p-2.5 text-slate-secondary">
                   <Lock size={20} />

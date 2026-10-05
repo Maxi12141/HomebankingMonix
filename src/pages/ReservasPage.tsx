@@ -131,7 +131,7 @@ export function ReservasPage() {
           Separá plata de tu saldo y hacé rendir tu ahorro todos los días.
         </p>
 
-        <Card variant="noche" className="p-6 mb-6">
+        <Card className="p-6 mb-6">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
               <p className="font-body text-xs text-slate-secondary uppercase tracking-wider">
@@ -184,7 +184,7 @@ export function ReservasPage() {
           </p>
         </Card>
 
-        <Card variant="noche" className="p-6">
+        <Card className="p-6">
           <div className="grid grid-cols-2 gap-2 mb-5 p-1 rounded-xl bg-slate-input dark:bg-white/5">
             <button
               type="button"

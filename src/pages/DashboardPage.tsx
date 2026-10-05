@@ -158,16 +158,16 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
   }
 
   return (
-    <Card variant="noche" className="p-8">
+    <Card className="p-8">
       <div className="flex items-start justify-between gap-3 mb-2">
-        <p className="font-body text-sm text-[#B0C0D6]">{titulo}</p>
+        <p className="font-body text-sm text-slate-secondary">{titulo}</p>
         <button
           onClick={() => setShowData((v) => {
             const next = !v
             localStorage.setItem(MOSTRAR_SALDO_KEY, next ? '1' : '0')
             return next
           })}
-          className="text-[#B0C0D6] hover:text-white transition-colors shrink-0"
+          className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors shrink-0"
           aria-label={showData ? 'Ocultar saldo' : 'Mostrar saldo'}
         >
           {showData ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -198,7 +198,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.3 }}
-            className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint' : 'text-red-400'}`}
+            className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint' : 'text-red-500 dark:text-red-400'}`}
           >
             {showData ? (
               <>{delta > 0 ? '+' : ''}{formatMoneda(delta, cuenta.moneda)}</>
@@ -211,12 +211,12 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
       </AnimatePresence>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
-        <p className="font-body text-xs text-[#B0C0D6]">
-          TNA <span className="text-white font-medium">{tasa.toFixed(2)}%</span>
+        <p className="font-body text-xs text-slate-secondary">
+          TNA <span className="text-navy dark:text-white font-medium">{tasa.toFixed(2)}%</span>
         </p>
-        <p className="font-body text-xs text-[#B0C0D6]">
+        <p className="font-body text-xs text-slate-secondary">
           Hoy ~{' '}
-          <span className="text-white font-medium">
+          <span className="text-navy dark:text-white font-medium">
             +{showData ? formatMoneda(rendimientoDiario, cuenta.moneda) : '••••'}
           </span>
         </p>
@@ -228,29 +228,29 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
         )}
       </div>
 
-      <p className="font-body text-sm text-[#B0C0D6] mt-3">
+      <p className="font-body text-sm text-slate-secondary mt-3">
         Cuenta N° {cuenta.numero_cuenta ?? '—'} · {cuenta.tipo === 'caja_ahorro' ? 'Caja de Ahorro' : 'Cuenta Corriente'}
       </p>
 
-      <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-3 flex-wrap">
+      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="font-body text-xs text-[#B0C0D6]">CBU</span>
-          <span className="font-body text-xs font-medium text-white font-mono">
+          <span className="font-body text-xs text-slate-secondary">CBU</span>
+          <span className="font-body text-xs font-medium text-navy dark:text-white font-mono">
             {showData ? (cuenta.cbu ?? '—') : '•••••••••••••••••••••'}
           </span>
-          <button onClick={() => handleCopy(cuenta.cbu ?? '', 'cbu')} className="text-[#B0C0D6] hover:text-white transition-colors" aria-label="Copiar CBU">
+          <button onClick={() => handleCopy(cuenta.cbu ?? '', 'cbu')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar CBU">
             {copiedCbu ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
           </button>
         </div>
 
-        <span className="text-white/10 select-none">|</span>
+        <span className="text-slate-200 dark:text-white/10 select-none">|</span>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="font-body text-xs text-[#B0C0D6]">Alias</span>
-          <span className="font-body text-xs font-medium text-white">
+          <span className="font-body text-xs text-slate-secondary">Alias</span>
+          <span className="font-body text-xs font-medium text-navy dark:text-white">
             {showData ? (cuenta.alias ?? '—') : '••••••••••••••'}
           </span>
-          <button onClick={() => handleCopy(cuenta.alias ?? '', 'alias')} className="text-[#B0C0D6] hover:text-white transition-colors" aria-label="Copiar Alias">
+          <button onClick={() => handleCopy(cuenta.alias ?? '', 'alias')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar Alias">
             {copiedAlias ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
           </button>
         </div>
