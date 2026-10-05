@@ -261,7 +261,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             onClick={() => {
               void compartirTexto({ titulo: 'Mis datos de Monix', texto: textoDatosCuenta(cuenta, persona) })
             }}
-            className="ml-auto inline-flex items-center gap-1.5 font-body text-xs font-medium text-mint hover:text-mint-hover transition-colors"
+            className="ml-auto inline-flex items-center gap-1.5 font-body text-xs font-medium text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
             aria-label="Compartir mis datos"
           >
             <Share2 size={13} />
