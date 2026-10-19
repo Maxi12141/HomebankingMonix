@@ -294,6 +294,28 @@ prueba('Sin scroll horizontal a 320 px', async (b) => {
   await page.context().close()
 })
 
+prueba('Login y Registro: autocompletado y pegado habilitados', async (b) => {
+  const page = await nuevaPagina(b, { logueado: false })
+  await page.goto('/login')
+  await pasarLoader(page)
+  const email = page.locator('input[type="email"]')
+  assert.equal(await email.getAttribute('autocomplete'), 'username')
+  // Pegar no se bloquea (WCAG 2.2, autenticación accesible: gestores de contraseñas).
+  await email.focus()
+  // dispatchEvent devuelve false si algún handler hizo preventDefault().
+  const pegadoPermitido = await page.evaluate(() => {
+    const dt = new DataTransfer()
+    dt.setData('text/plain', 'sol@monix.test')
+    return document.activeElement.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+  })
+  assert.equal(pegadoPermitido, true, 'el campo de email bloquea el pegado')
+  await page.goto('/register')
+  await pasarLoader(page)
+  assert.equal(await page.locator('input[name="email"]').getAttribute('autocomplete'), 'email')
+  assert.equal(await page.locator('input[name="password"]').getAttribute('autocomplete'), 'new-password')
+  await page.context().close()
+})
+
 // ── Controles con números (CONSTRAINTS.md): miden y no dejan empeorar ────────
 // Línea de base medida el 2026-10-18. Si un número mejora, bajalo acá; nunca subirlo.
 const BASE_AXE_SERIAS = 0

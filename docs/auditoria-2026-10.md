@@ -87,7 +87,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | P0-1 | `npm audit fix` | V1 | Hecho: 1 alta y 5 moderadas pasaron a 0 altas y 2 moderadas |
 | P0-2 | Áreas táctiles de 44 px sin cambiar el aspecto | H1 | Hecho: 46 pasaron a 0 |
 | P0-3 | Nombres accesibles y link subrayado | H2 | Hecho: 14 pasaron a 0 |
-| P0-4 | `autocomplete` en Login y Registro | H3 | Pendiente |
+| P0-4 | `autocomplete` en Login y Registro | H3 | Hecho |
 | P0-5 | Montos con `inputMode="decimal"` y un parser único | H4 | Pendiente |
 | P0-6 | Sacar la entrada desde opacidad 0 del contenedor | H5 | Pendiente |
 | P1-7 | Cargar jsPDF y html2canvas al generar el comprobante | H7 | Pendiente |
@@ -128,3 +128,14 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
 
 - **Verificación:** axe pasó de 14 a 0 en 9 pantallas y la línea de base de `CONSTRAINTS.md` quedó en 0. 14/14 pruebas. Revisé las capturas de la Landing en móvil, en desktop y en modo oscuro.
 - **Ajuste del test:** ahora imprime el selector de cada violación, para poder ubicarla sin una segunda corrida.
+
+### P0-4 · Autocompletado de credenciales (2026-10-19)
+
+- **Qué se hizo:** `autocomplete` en los 19 campos de credenciales y datos personales.
+  - **Login:** `username` y `current-password`.
+  - **Registro:** `email`, `new-password`, `given-name`, `family-name`, `tel` y `street-address`.
+  - **Recuperar y restablecer contraseña:** `email` y `new-password`.
+  - **Desbloqueo, cambio de contraseña y confirmaciones del Perfil:** `current-password` y `new-password`.
+  - **Alias del Perfil:** `off`, para que el navegador no ofrezca guardarlo como contraseña.
+- **Por qué importa en un banco:** el gestor de contraseñas del celular completa usuario y clave, y propone una clave fuerte al registrarse. Cumple WCAG 2.2, autenticación accesible: no obliga a recordar ni a transcribir.
+- **Verificación:** prueba nueva "Login y Registro: autocompletado y pegado habilitados". Comprueba los atributos y que ningún handler cancele el pegado en el email. 15/15 pruebas.

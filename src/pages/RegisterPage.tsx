@@ -350,6 +350,7 @@ export function RegisterPage() {
               >
                 <Input
                   label="Email"
+                  autoComplete="email"
                   type="email"
                   name="email"
                   placeholder="juan@email.com"
@@ -362,6 +363,7 @@ export function RegisterPage() {
                 />
                 <PasswordInput
                   label="Contraseña"
+                  autoComplete="new-password"
                   name="password"
                   placeholder="Mínimo 6 caracteres"
                   value={form.password}
@@ -394,8 +396,8 @@ export function RegisterPage() {
                 transition={{ duration: 0.25 }}
               >
                 <div className="grid grid-cols-2 gap-4">
-                  <Input label="Nombre" name="nombre" placeholder="Juan" value={form.nombre} onChange={handleChange} required autoFocus />
-                  <Input label="Apellido" name="apellido" placeholder="Pérez" value={form.apellido} onChange={handleChange} required />
+                  <Input label="Nombre" name="nombre" autoComplete="given-name" placeholder="Juan" value={form.nombre} onChange={handleChange} required autoFocus />
+                  <Input label="Apellido" name="apellido" autoComplete="family-name" placeholder="Pérez" value={form.apellido} onChange={handleChange} required />
                 </div>
 
                 <Input
@@ -408,13 +410,13 @@ export function RegisterPage() {
                   error={dniDuplicado ? 'Ese DNI ya está registrado' : undefined}
                   required
                 />
-                <Input label="Teléfono" type="tel" name="telefono" placeholder="1112345678" value={form.telefono} onChange={handleChange} />
+                <Input label="Teléfono" type="tel" name="telefono" autoComplete="tel" placeholder="1112345678" value={form.telefono} onChange={handleChange} />
                 <DatePicker
                   label="Fecha de nacimiento"
                   value={form.fecha_nac}
                   onChange={(iso) => setForm(prev => ({ ...prev, fecha_nac: iso }))}
                 />
-                <Input label="Domicilio" name="direccion" placeholder="Av. Corrientes 1234" value={form.direccion} onChange={handleChange} />
+                <Input label="Domicilio" name="direccion" autoComplete="street-address" placeholder="Av. Corrientes 1234" value={form.direccion} onChange={handleChange} />
 
                 {error && (
                   <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3">

@@ -85,6 +85,7 @@ export function ResetPasswordPage() {
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <PasswordInput
                 label="Contraseña nueva"
+                autoComplete="new-password"
                 placeholder="Mínimo 6 caracteres"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -95,6 +96,7 @@ export function ResetPasswordPage() {
               <PasswordStrengthMeter password={password} />
               <PasswordInput
                 label="Repetí la contraseña nueva"
+                autoComplete="new-password"
                 placeholder="Mínimo 6 caracteres"
                 value={confirmar}
                 onChange={(e) => setConfirmar(e.target.value)}

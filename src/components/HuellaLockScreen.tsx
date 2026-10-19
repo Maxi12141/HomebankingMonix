@@ -116,6 +116,7 @@ export function HuellaLockScreen({ onUnlock }: Props) {
       <form onSubmit={(e) => { void entrarConClave(e) }} className="w-full max-w-xs flex flex-col gap-3">
         <Input
           label="Contraseña de Monix"
+          autoComplete="current-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

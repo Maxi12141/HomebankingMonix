@@ -415,8 +415,8 @@ export function ProfilePage() {
 
           {editMode ? (
             <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
-              <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              <Input label="Teléfono" type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+              <Input label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input label="Teléfono" type="tel" autoComplete="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
               <div className="flex gap-3">
                 <Button variant="secondary" className="flex-1" type="button" onClick={() => setEditMode(false)} disabled={savingProfile}>
                   Cancelar
@@ -464,6 +464,7 @@ export function ProfilePage() {
             <div>
               <Input
                 label="Alias"
+                autoComplete="off"
                 type={showData ? 'text' : 'password'}
                 value={aliasInput}
                 onChange={(e) => setAliasInput(e.target.value)}
@@ -527,6 +528,7 @@ export function ProfilePage() {
           <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
             <Input
               label="Contraseña actual"
+              autoComplete="current-password"
               type="password"
               placeholder="••••••••"
               value={currentPass}
@@ -535,6 +537,7 @@ export function ProfilePage() {
             />
             <Input
               label="Nueva contraseña"
+              autoComplete="new-password"
               type="password"
               placeholder="Mínimo 6 caracteres"
               value={newPass}
@@ -564,6 +567,7 @@ export function ProfilePage() {
           >
             <Input
               label="Contraseña de Monix"
+              autoComplete="current-password"
               type="password"
               value={confirmPass}
               onChange={(e) => setConfirmPass(e.target.value)}

@@ -258,6 +258,7 @@ export function LoginPage() {
               <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
                 <Input
                   label="Email"
+                  autoComplete="username"
                   type="email"
                   placeholder="tu@email.com"
                   value={email}
@@ -332,6 +333,7 @@ export function LoginPage() {
                 <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-3">
                   <Input
                     label="Contraseña"
+                  autoComplete="current-password"
                     type="password"
                     placeholder="••••••••"
                     value={password}
@@ -373,6 +375,7 @@ export function LoginPage() {
               <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
                 <Input
                   label="Contraseña"
+                  autoComplete="current-password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
