@@ -129,22 +129,14 @@ export function MercadoMonixPage() {
     setError('')
 
     try {
-      const nuevoSaldo = roundMoney(cuenta.saldo - total)
-
-      const { error: errSaldo } = await supabase
-        .from('cuentas')
-        .update({ saldo: nuevoSaldo })
-        .eq('id', cuenta.id)
-      if (errSaldo) throw new Error('No pudimos descontar el saldo')
-
-      const { error: errMov } = await supabase.from('movimientos').insert({
-        cuenta_id: cuenta.id,
-        tipo: 'extraccion',
-        monto: total,
-        saldo_resultante: nuevoSaldo,
-        descripcion: `mercadoMONIX|${producto.titulo} x${cantidad}`,
+      // Débito y movimiento en el servidor (S-1): el navegador ya no escribe saldos.
+      const { data, error: errRpc } = await supabase.rpc('comprar_mercado', {
+        p_cuenta_id: cuenta.id,
+        p_monto: total,
+        p_detalle: `${producto.titulo} x${cantidad}`,
       })
-      if (errMov) throw new Error('No pudimos registrar la compra')
+      if (errRpc) throw new Error(errRpc.message)
+      const nuevoSaldo = Number(data)
 
       updateSaldo(nuevoSaldo)
       await refreshCuenta()

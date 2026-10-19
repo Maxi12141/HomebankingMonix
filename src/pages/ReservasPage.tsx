@@ -19,10 +19,6 @@ function formatARS(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
 }
 
-function roundMoney(n: number) {
-  return Math.round((n + Number.EPSILON) * 100) / 100
-}
-
 export function ReservasPage() {
   const { cuenta, refreshCuenta } = useCuenta()
   const { updateSaldo } = useCuentaStore()
@@ -50,67 +46,16 @@ export function ReservasPage() {
     setError('')
 
     try {
-      if (mode === 'ingresar') {
-        if (montoNum > cuenta.saldo) {
-          throw new Error('No tenés saldo suficiente en tu cuenta')
-        }
-        const nuevoSaldoCuenta = roundMoney(cuenta.saldo - montoNum)
-        const nuevoSaldoReserva = roundMoney(saldoReserva + montoNum)
-
-        const { error: errCuenta } = await supabase
-          .from('cuentas')
-          .update({ saldo: nuevoSaldoCuenta })
-          .eq('id', cuenta.id)
-        if (errCuenta) throw new Error('No pudimos descontar el saldo')
-
-        const { error: errReserva } = await supabase
-          .from('reservas')
-          .update({ saldo: nuevoSaldoReserva })
-          .eq('id', reserva.id)
-        if (errReserva) throw new Error('No pudimos acreditar en la reserva')
-
-        const { error: errMov } = await supabase.from('movimientos').insert({
-          cuenta_id: cuenta.id,
-          tipo: 'extraccion',
-          monto: montoNum,
-          saldo_resultante: nuevoSaldoCuenta,
-          descripcion: 'Reserva|Ingreso a ahorro MONIX',
-        })
-        if (errMov) throw new Error('No pudimos registrar el movimiento')
-
-        updateSaldo(nuevoSaldoCuenta)
-        toast.success('Dinero ingresado a tu reserva')
-      } else {
-        if (montoNum > saldoReserva) {
-          throw new Error('No te alcanza lo que tenés en la reserva para retirar ese monto.')
-        }
-        const nuevoSaldoCuenta = roundMoney(cuenta.saldo + montoNum)
-        const nuevoSaldoReserva = roundMoney(saldoReserva - montoNum)
-
-        const { error: errReserva } = await supabase
-          .from('reservas')
-          .update({ saldo: nuevoSaldoReserva })
-          .eq('id', reserva.id)
-        if (errReserva) throw new Error('No pudimos debitar la reserva')
-
-        const { error: errCuenta } = await supabase
-          .from('cuentas')
-          .update({ saldo: nuevoSaldoCuenta })
-          .eq('id', cuenta.id)
-        if (errCuenta) throw new Error('No pudimos acreditar el saldo')
-
-        const { error: errMov } = await supabase.from('movimientos').insert({
-          cuenta_id: cuenta.id,
-          tipo: 'deposito',
-          monto: montoNum,
-          saldo_resultante: nuevoSaldoCuenta,
-          descripcion: 'Reserva|Retiro de ahorro MONIX',
-        })
-        if (errMov) throw new Error('No pudimos registrar el movimiento')
-
-        updateSaldo(nuevoSaldoCuenta)
-        toast.success('Dinero vuelto a tu saldo disponible')
-      }
+      // Débito, crédito y movimiento en una sola transacción del servidor (S-1):
+      // antes eran tres llamadas y una falla a mitad dejaba la plata en el aire.
+      const { data, error: errRpc } = await supabase.rpc('mover_reserva', {
+        p_cuenta_id: cuenta.id,
+        p_monto: montoNum,
+        p_modo: mode,
+      })
+      if (errRpc) throw new Error(errRpc.message)
+      updateSaldo(Number((data as { saldo_cuenta: number }).saldo_cuenta))
+      toast.success(mode === 'ingresar' ? 'Dinero ingresado a tu reserva' : 'Dinero vuelto a tu saldo disponible')
 
       setMonto('')
       await Promise.all([refreshCuenta(), refreshReserva()])

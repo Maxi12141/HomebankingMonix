@@ -101,17 +101,13 @@ export function CuentasPage() {
       // real no coincide con el que le informamos al banco.
       await asignarAliasCuenta(bcCuenta.cbu, alias)
 
-      const { error: insertError } = await supabase.from('cuentas').insert({
-        persona_id: persona.id,
-        numero_cuenta: generateNumeroCuenta(),
-        tipo: 'caja_ahorro',
-        moneda: 'USD',
-        saldo: 0,
-        activa: true,
-        cbu: bcCuenta.cbu,
-        alias,
+      // La cuenta la crea el servidor (S-1): el navegador ya no inserta cuentas.
+      const { error: insertError } = await supabase.rpc('abrir_cuenta_usd', {
+        p_numero_cuenta: generateNumeroCuenta(),
+        p_cbu: bcCuenta.cbu,
+        p_alias: alias,
       })
-      if (insertError) throw insertError
+      if (insertError) throw new Error(insertError.message)
 
       await refreshCuenta()
       setEstado('idle')

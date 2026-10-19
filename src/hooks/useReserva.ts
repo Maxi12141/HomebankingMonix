@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import type { Reserva } from '../types'
 
-const MS_PER_DAY = 86_400_000
-
 function roundMoney(n: number) {
   return Math.round((n + Number.EPSILON) * 100) / 100
 }
@@ -27,66 +25,13 @@ export function useReserva(cuentaId?: string | null) {
   const ensureAndAccrue = useCallback(async (id: string) => {
     setLoading(true)
     try {
-      let { data, error } = await supabase
-        .from('reservas')
-        .select('*')
-        .eq('cuenta_id', id)
-        .maybeSingle()
-
+      // Alta (si no existe) y rendimiento del día, en el servidor (S-1,
+      // docs/auditoria-2026-10.md): el navegador ya no escribe la reserva.
+      const { data, error } = await supabase.rpc('preparar_reserva', { p_cuenta_id: id })
       if (error) throw error
-
-      if (!data) {
-        // upsert + refetch en vez de insert directo: React StrictMode dispara este
-        // efecto dos veces en desarrollo, y dos inserts concurrentes para el mismo
-        // cuenta_id chocan contra la unique constraint. ignoreDuplicates hace que el
-        // que pierde la carrera no falle, sólo no haga nada.
-        const { error: errUpsert } = await supabase
-          .from('reservas')
-          .upsert({ cuenta_id: id, saldo: 0, tasa_anual: 32 }, { onConflict: 'cuenta_id', ignoreDuplicates: true })
-        if (errUpsert) throw errUpsert
-
-        const { data: refetched, error: errRefetch } = await supabase
-          .from('reservas')
-          .select('*')
-          .eq('cuenta_id', id)
-          .single()
-        if (errRefetch) throw errRefetch
-        data = refetched
-      }
-
-      const current = data as Reserva
-      const last = new Date(current.ultima_interes_at).getTime()
-      const days = Math.floor((Date.now() - last) / MS_PER_DAY)
-      const interest = calcInterestForDays(Number(current.saldo), Number(current.tasa_anual), days)
-
-      if (interest > 0) {
-        const nuevoSaldo = roundMoney(Number(current.saldo) + interest)
-        const nuevaFecha = new Date(last + days * MS_PER_DAY).toISOString()
-        const { data: updated, error: errUp } = await supabase
-          .from('reservas')
-          .update({
-            saldo: nuevoSaldo,
-            ultima_interes_at: nuevaFecha,
-          })
-          .eq('id', current.id)
-          .select('*')
-          .single()
-        if (errUp) throw errUp
-
-        await supabase.from('movimientos').insert({
-          cuenta_id: current.cuenta_id,
-          tipo: 'deposito',
-          monto: interest,
-          saldo_resultante: nuevoSaldo,
-          descripcion: 'Rendimiento de Reserva',
-        })
-
-        setReserva(updated as Reserva)
-        setInteresHoy(interest)
-      } else {
-        setReserva(current)
-        setInteresHoy(0)
-      }
+      const { reserva, interes } = data as { reserva: Reserva; interes: number }
+      setReserva(reserva)
+      setInteresHoy(Number(interes))
     } catch (err) {
       console.error('Error al cargar reserva:', err)
       setReserva(null)

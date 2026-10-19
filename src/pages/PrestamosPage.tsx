@@ -132,32 +132,15 @@ export function PrestamosPage() {
 
     setSolicitando(true)
     try {
-      const nuevoSaldo = Math.round((cuenta.saldo + montoNum) * 100) / 100
-      const proximaCuota = new Date()
-      proximaCuota.setMonth(proximaCuota.getMonth() + 1)
-
-      const { error: errInsert } = await supabase.from('prestamos').insert({
-        cuenta_id: cuenta.id,
-        monto: montoNum,
-        cuotas_totales: cuotasSel,
-        cuota_monto: cuota,
-        tna: oferta.tna,
-        situacion_bcra: situacion ?? 1,
-        sueldo_acreditado: persona.sueldo_acreditado,
-        proxima_cuota_at: proximaCuota.toISOString(),
+      // La oferta, la cuota y el crédito los decide el servidor (S-1): las
+      // validaciones de arriba son para avisar rápido, no para autorizar.
+      const { error: errRpc } = await supabase.rpc('solicitar_prestamo', {
+        p_cuenta_id: cuenta.id,
+        p_monto: montoNum,
+        p_cuotas: cuotasSel,
+        p_situacion: situacion ?? 1,
       })
-      if (errInsert) throw new Error('No pudimos registrar el préstamo')
-
-      const { error: errCuenta } = await supabase.from('cuentas').update({ saldo: nuevoSaldo }).eq('id', cuenta.id)
-      if (errCuenta) throw new Error('No pudimos acreditar el préstamo en tu cuenta')
-
-      await supabase.from('movimientos').insert({
-        cuenta_id: cuenta.id,
-        tipo: 'deposito',
-        monto: montoNum,
-        saldo_resultante: nuevoSaldo,
-        descripcion: 'Préstamo otorgado',
-      })
+      if (errRpc) throw new Error(errRpc.message)
 
       setMonto('')
       await Promise.all([refreshCuenta(), refreshPrestamos()])

@@ -109,28 +109,6 @@ export interface BCTransaccion {
   importe: number
 }
 
-export interface BCPersonaTransaccion {
-  nombre: string
-  apellido: string
-  dni?: string
-  cbu: string
-  alias: string | null
-}
-
-export interface BCTransaccionEntrante {
-  _id: string
-  cbuOrigen: string
-  cbuDestino: string
-  importe: number
-  estado: string
-  motivoRechazo?: string
-  bankCodeOrigen: number
-  bankCodeDestino: number
-  createdAt: string
-  personaOrigen: BCPersonaTransaccion
-  personaDestino: BCPersonaTransaccion
-}
-
 export async function registrarPersona(
   nombre: string,
   apellido: string,
@@ -177,18 +155,6 @@ export async function transferir(
     body: JSON.stringify({ cbuOrigen, cbuDestino, importe, saldoOrigen }),
   })
   return handleResponse<BCTransaccion>(res, 'POST /transactions')
-}
-
-export async function listarTransacciones(minutos: number): Promise<BCTransaccionEntrante[]> {
-  if (!BASE_URL) return []
-  try {
-    const res = await fetchWithTimeout(`${BASE_URL}/transactions?minutos=${minutos}`, { headers: HEADERS })
-    if (res.status === 404) return []
-    return await handleResponse<BCTransaccionEntrante[]>(res, 'GET /transactions')
-  } catch (err) {
-    if (esNotFound(err)) return []
-    throw err
-  }
 }
 
 export interface BCBank {

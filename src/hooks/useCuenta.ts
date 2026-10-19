@@ -2,15 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
 import { useAuthStore } from '../store/authStore'
-import { calcInterestForDays } from './useReserva'
 import type { Cuenta } from '../types'
-
-const MS_PER_DAY = 86_400_000
-const TASA_DEFAULT = 32
-
-function roundMoney(n: number) {
-  return Math.round((n + Number.EPSILON) * 100) / 100
-}
 
 /**
  * Una sola suscripción Realtime por cuenta, compartida entre todos los
@@ -119,6 +111,11 @@ function cargarCuentasCompartido(personaId: string): Promise<CargaCuentas | null
 }
 
 async function cargarCuentas(personaId: string): Promise<CargaCuentas | null> {
+  // El interés diario lo acredita el servidor (S-1, docs/auditoria-2026-10.md):
+  // el navegador ya no puede escribir saldos. Después se leen ya actualizados.
+  const { data: intereses, error: errInteres } = await supabase.rpc('acreditar_interes_cuentas')
+  if (errInteres) console.error('Error al acreditar interés del saldo:', errInteres.message)
+
   const { data, error } = await supabase
     .from('cuentas')
     .select('*')
@@ -128,65 +125,11 @@ async function cargarCuentas(personaId: string): Promise<CargaCuentas | null> {
     console.error('Error al cargar cuentas:', error.message)
     return null
   }
-  const accrued = await Promise.all(((data ?? []) as Cuenta[]).map(accrueInterest))
+  const filas = (intereses ?? []) as { cuenta_id: string; interes: number }[]
   return {
-    todas: accrued.map((a) => a.cuenta),
-    interesPorCuenta: Object.fromEntries(accrued.map((a) => [a.cuenta.id, a.interes])),
+    todas: (data ?? []) as Cuenta[],
+    interesPorCuenta: Object.fromEntries(filas.map((f) => [f.cuenta_id, Number(f.interes)])),
   }
-}
-
-async function accrueInterest(current: Cuenta): Promise<{ cuenta: Cuenta; interes: number }> {
-  const tasa = Number(current.tasa_anual ?? TASA_DEFAULT)
-  const lastRaw = current.ultima_interes_at
-  const last = lastRaw ? new Date(lastRaw).getTime() : Date.now()
-  const days = Math.floor((Date.now() - last) / MS_PER_DAY)
-  const interest = calcInterestForDays(Number(current.saldo), tasa, days)
-
-  if (interest <= 0) {
-    // Ensure tasa is set for older rows / display
-    if (current.tasa_anual == null) {
-      return { cuenta: { ...current, tasa_anual: TASA_DEFAULT }, interes: 0 }
-    }
-    return { cuenta: current, interes: 0 }
-  }
-
-  const nuevoSaldo = roundMoney(Number(current.saldo) + interest)
-  const nuevaFecha = new Date(last + days * MS_PER_DAY).toISOString()
-
-  // Candado optimista: sólo acredita si nadie tocó la cuenta desde que se
-  // leyó (otra pestaña, otro celular, o una transferencia que entró en el
-  // medio). Si cambió algo, no se escribe nada: la próxima carga acredita
-  // con los datos frescos y el interés nunca se duplica ni pisa un saldo.
-  let update = supabase
-    .from('cuentas')
-    .update({
-      saldo: nuevoSaldo,
-      ultima_interes_at: nuevaFecha,
-      tasa_anual: tasa || TASA_DEFAULT,
-    })
-    .eq('id', current.id)
-    .eq('saldo', current.saldo)
-  update = lastRaw ? update.eq('ultima_interes_at', lastRaw) : update.is('ultima_interes_at', null)
-  const { data: updated, error } = await update.select('*').maybeSingle()
-
-  if (error) {
-    console.error('Error al acreditar interés del saldo:', error.message)
-    return { cuenta: current, interes: 0 }
-  }
-  if (!updated) {
-    const { data: fresca } = await supabase.from('cuentas').select('*').eq('id', current.id).maybeSingle()
-    return { cuenta: (fresca as Cuenta | null) ?? current, interes: 0 }
-  }
-
-  await supabase.from('movimientos').insert({
-    cuenta_id: current.id,
-    tipo: 'deposito',
-    monto: interest,
-    saldo_resultante: nuevoSaldo,
-    descripcion: 'Rendimiento de Reserva',
-  })
-
-  return { cuenta: updated as Cuenta, interes: interest }
 }
 
 export function useCuenta() {

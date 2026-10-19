@@ -1,3 +1,5 @@
+// Lo acredita el servidor al dar de alta al cliente (alta_cliente en
+// supabase/s1_rpc_saldos.sql): si cambia, cambiar los dos.
 export const BONO_BIENVENIDA = 150_000
 
 const SESION_KEY = 'monix_registro_sesion'

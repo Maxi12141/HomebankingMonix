@@ -59,6 +59,7 @@ const session = {
 // ── Mocks de red ────────────────────────────────────────────────────────────
 async function mockear(page, { demoraCuentasMs = 0, rpcFalla = false, cuentasExtra = [] } = {}) {
   await page.route(`${BC}/**`, (r) => r.fulfill({ json: [] }))
+  await page.route(`${SUPABASE}/functions/v1/**`, (r) => r.fulfill({ json: { acreditadas: 0 } }))
   await page.route(`${SUPABASE}/auth/v1/**`, (r) =>
     r.fulfill({ json: r.request().url().includes('/user') ? user : session }))
   await page.route(`${SUPABASE}/rest/v1/**`, async (r) => {
@@ -67,6 +68,13 @@ async function mockear(page, { demoraCuentasMs = 0, rpcFalla = false, cuentasExt
     if (recurso === 'rpc') {
       if (fn === 'depositar_en_cuenta') {
         return rpcFalla ? r.fulfill({ status: 500, json: {} }) : r.fulfill({ json: cuenta.saldo + 5000 })
+      }
+      // RPC de S-1 que la app llama al cargar.
+      if (fn === 'acreditar_interes_cuentas') return r.fulfill({ json: [] })
+      if (fn === 'mover_reserva') return r.fulfill({ json: { saldo_cuenta: cuenta.saldo - 1000, saldo_reserva: 1000 } })
+      if (fn === 'cobrar_cuotas_prestamos') return r.fulfill({ json: cuenta.saldo })
+      if (fn === 'preparar_reserva') {
+        return r.fulfill({ json: { reserva: { id: 'r1', cuenta_id: 'c-ars', saldo: 0, tasa_anual: 32, ultima_interes_at: ahora, created_at: ahora }, interes: 0 } })
       }
       return r.fulfill({ json: null })
     }
@@ -291,10 +299,40 @@ prueba('Fuentes propias: nada de Google Fonts y la negrita de Inter es real', as
   await page.context().close()
 })
 
+prueba('S-1: el navegador no escribe tablas de dinero; usa las RPC del servidor', async (b) => {
+  const page = await nuevaPagina(b)
+  const escriturasDirectas = []
+  const rpcs = []
+  page.on('request', (r) => {
+    const u = r.url()
+    if (/\/rest\/v1\/(cuentas|movimientos|reservas|prestamos|personas)\b/.test(u) && r.method() !== 'GET') escriturasDirectas.push(`${r.method()} ${u}`)
+    const rpc = u.match(/\/rest\/v1\/rpc\/(\w+)/)
+    if (rpc) rpcs.push({ fn: rpc[1], body: r.postDataJSON?.() ?? null })
+  })
+  for (const ruta of ['/dashboard', '/prestamos', '/reservas']) {
+    await page.goto(ruta)
+    await pasarLoader(page)
+    await page.waitForTimeout(700)
+  }
+  await page.getByPlaceholder('0.00').fill('1000')
+  await page.locator('form button[type="submit"]').click()
+  await page.getByText('Dinero ingresado a tu reserva').waitFor({ timeout: 5000 })
+
+  assert.deepEqual(escriturasDirectas, [])
+  const llamadas = new Set(rpcs.map((x) => x.fn))
+  for (const fn of ['acreditar_interes_cuentas', 'cobrar_cuotas_prestamos', 'preparar_reserva', 'mover_reserva']) {
+    assert.ok(llamadas.has(fn), `no se llamó a ${fn}`)
+  }
+  assert.deepEqual(rpcs.find((x) => x.fn === 'mover_reserva').body, { p_cuenta_id: 'c-ars', p_monto: 1000, p_modo: 'ingresar' })
+  await page.context().close()
+})
+
 prueba('Banco Central: una sola sincronización al navegar entre pantallas', async (b) => {
   const page = await nuevaPagina(b)
+  // Desde S-1 la sincronización la hace la Edge Function sincronizar-entrantes,
+  // y el navegador ya no consulta al Banco Central para esto.
   const consultasBC = []
-  page.on('request', (r) => { if (r.url().startsWith(BC)) consultasBC.push(r.url()) })
+  page.on('request', (r) => { if (r.url().includes('/functions/v1/sincronizar-entrantes')) consultasBC.push(r.url()) })
   await page.goto('/dashboard')
   await pasarLoader(page)
   await page.waitForTimeout(1000)

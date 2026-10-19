@@ -10,7 +10,6 @@ import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
 import { registrarPersona, asignarAlias, informarSituacionCrediticia, BancoCentralError, mensajeAmigableBC } from '../services/bancoCentral'
 import { generateNumeroCuenta, generateAlias } from '../utils/cuenta'
-import { situacionCrediticiaFicticia } from '../utils/prestamos'
 import {
   activarBiometria,
   esCancelacionBiometrica,
@@ -20,7 +19,7 @@ import {
   marcarIngresoConClave,
   soportaHuella,
 } from '../lib/biometria'
-import { BONO_BIENVENIDA, marcarUsuarioNuevo } from '../lib/onboarding'
+import { marcarUsuarioNuevo } from '../lib/onboarding'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { PasswordInput } from '../components/ui/PasswordInput'
@@ -180,58 +179,34 @@ export function RegisterPage() {
       const alias = generateAlias()
       await asignarAlias(cbu, alias)
 
-      setProgressMessage('Guardando tus datos...')
-      const { error: personaError } = await supabase.from('personas').insert({
-        id: userId,
-        nombre,
-        apellido,
-        dni,
-        email,
-        telefono: telefono || null,
-        fecha_nac: form.fecha_nac || null,
-        direccion: direccion || null,
+      // Persona, caja de ahorro con el bono de bienvenida y su movimiento, en una
+      // sola transacción del servidor (S-1, docs/auditoria-2026-10.md). La
+      // situación crediticia ficticia inicial también la elige el servidor.
+      setProgressMessage('Abriendo tu cuenta...')
+      const { data: alta, error: altaError } = await supabase.rpc('alta_cliente', {
+        p_nombre: nombre,
+        p_apellido: apellido,
+        p_dni: dni,
+        p_email: email,
+        p_telefono: telefono,
+        p_fecha_nac: form.fecha_nac || null,
+        p_direccion: direccion,
+        p_numero_cuenta: generateNumeroCuenta(),
+        p_cbu: cbu,
+        p_alias: alias,
       })
-
-      if (personaError) throw personaError
+      if (altaError) throw new Error(altaError.message)
 
       try {
-        // Le informamos al Banco Central una situación crediticia inicial
-        // ficticia (una persona puede tener cuentas en varios bancos del
-        // curso, y el registro compartido de deudores agrega lo que informa
-        // cada uno). No bloquea el registro si falla: Préstamos ya trata un
-        // DNI sin informe como situación 1 (ver consultarSituacion).
-        const { situacion, monto } = situacionCrediticiaFicticia()
-        await informarSituacionCrediticia(dni, monto, situacion)
-        await supabase.from('personas').update({
-          situacion_crediticia_monix: situacion,
-          situacion_informada_at: new Date().toISOString(),
-        }).eq('id', userId)
+        // Le informamos al Banco Central esa situación inicial (una persona puede
+        // tener cuentas en varios bancos del curso, y el registro compartido de
+        // deudores agrega lo que informa cada uno). No bloquea el registro si
+        // falla: Préstamos ya trata un DNI sin informe como situación 1.
+        const { situacion, monto_deuda } = alta as { situacion: number; monto_deuda: number }
+        await informarSituacionCrediticia(dni, monto_deuda, situacion)
+        await supabase.rpc('marcar_situacion_informada')
       } catch (err) {
         console.error('No pudimos informar la situación crediticia al Banco Central:', err)
-      }
-
-      setProgressMessage('Abriendo tu cuenta...')
-      const { data: cuentaNueva, error: cuentaError } = await supabase.from('cuentas').insert({
-        persona_id: userId,
-        numero_cuenta: generateNumeroCuenta(),
-        tipo: 'caja_ahorro',
-        saldo: BONO_BIENVENIDA,
-        activa: true,
-        cbu,
-        alias,
-      }).select('id').single()
-
-      if (cuentaError) throw cuentaError
-
-      if (cuentaNueva?.id) {
-        setProgressMessage('Acreditando tu bono de bienvenida...')
-        await supabase.from('movimientos').insert({
-          cuenta_id: cuentaNueva.id,
-          tipo: 'deposito',
-          monto: BONO_BIENVENIDA,
-          saldo_resultante: BONO_BIENVENIDA,
-          descripcion: 'Bono de bienvenida',
-        })
       }
 
       marcarUsuarioNuevo(userId)
