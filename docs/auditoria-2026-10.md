@@ -30,7 +30,9 @@ Medición del 2026-10-18: **1 alta y 5 moderadas**, todas transitivas salvo `rea
 | `dompurify` 3.4.2 | Moderada (11 avisos) | `jspdf` | Saltos del sanitizado en modo `IN_PLACE` y con hooks | Bajo: Monix arma el comprobante con `html2canvas` y una imagen, y no usa `jsPDF.html()`, que es lo que pasa por DOMPurify |
 | `fflate` 0.8.2 | Moderada | `jspdf` | Bucle infinito al descomprimir ZIP64 malformado ([GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98)) | Nulo: Monix no descomprime archivos |
 
-**Solución:** `npm audit fix` dentro de los rangos de versión actuales, sin saltos de versión mayor. Ver el estado en el paso P0-1.
+**Solución aplicada (P0-1):** `npm audit fix`, sin `--force`. Quedaron `ws` 8.22.0, `dompurify` 3.4.17, `fflate` 0.8.3 y `react-router-dom` 6.30.6. Resultado: **0 altas y 2 moderadas**.
+
+Las 2 que quedan son `react-router` y `react-router-dom`. Se arreglan recién en React Router 7, una versión mayor con cambios que rompen, así que no se forzó. Hoy no son explotables, porque todas las rutas son fijas. **Recomendación:** migrar a React Router 7 en un cambio aparte, y no armar nunca una ruta a partir del contenido de un QR o de un parámetro de la URL.
 
 ### V2 · Crítica: el usuario puede escribir su propio saldo desde el navegador
 
@@ -82,7 +84,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | Paso | Qué | Resuelve | Estado |
 |---|---|---|---|
 | S-1 | RPC de servidor para cada escritura de saldo, y privilegios por columna | V2 | **Espera aprobación**: migración en la base de producción |
-| P0-1 | `npm audit fix` | V1 | Pendiente |
+| P0-1 | `npm audit fix` | V1 | Hecho: 1 alta y 5 moderadas pasaron a 0 altas y 2 moderadas |
 | P0-2 | Áreas táctiles de 44 px sin cambiar el aspecto | H1 | Pendiente |
 | P0-3 | Nombres accesibles y link subrayado | H2 | Pendiente |
 | P0-4 | `autocomplete` en Login y Registro | H3 | Pendiente |
@@ -98,3 +100,9 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 ## Registro de cambios
 
 Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
+
+### P0-1 · Dependencias (2026-10-19)
+
+- **Comando:** `npm audit fix` sin `--force`. Sólo cambió `package-lock.json` (21 líneas).
+- **Verificación:** `npm audit --omit=dev --audit-level=high` sale 0. `npm run check:task` en verde: floor-guard limpio, `tsc` sin errores, build OK, JS inicial de 462,48 kB y 14/14 pruebas de Playwright.
+- **Trampa encontrada:** `npm audit fix --omit=dev` borra de `node_modules` las dependencias de desarrollo, TypeScript incluido. Hay que correr `npm install` después, o no usar `--omit=dev` en el fix.

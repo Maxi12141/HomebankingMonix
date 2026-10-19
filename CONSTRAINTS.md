@@ -46,7 +46,7 @@ Por qué estos números:
 |---------|------------------|-----------|
 | LCP mobile | no medible: el splash de 2,4 s (decisión de producto) y la entrada en opacidad 0 lo ocultan | medirlo apenas el shell deje de entrar desde opacidad 0 |
 | JS inicial | 462,6 kB gzip, un solo chunk | bajar con carga diferida por ruta y de jsPDF/html2canvas |
-| Vulnerabilidades en producción | 1 alta (`ws`), 5 moderadas, con arreglo vía `npm audit fix` | llegar a 0 altas antes del 2026-11-01 |
+| Vulnerabilidades en producción | 0 altas; 2 moderadas en `react-router` 6, que se arreglan recién en la v7 (versión mayor) | no puede subir; migrar a React Router 7 en un cambio aparte |
 | Supresiones existentes | 5 (`@ts-ignore` / `@ts-expect-error`) | no puede subir |
 
 ## Pendiente
