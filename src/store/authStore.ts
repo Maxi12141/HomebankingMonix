@@ -18,6 +18,10 @@ interface AuthState {
   clear: () => void
 }
 
+// El saldo del Dashboard cuenta desde 0 una sola vez por sesión: esta marca
+// lo recuerda (también entre recargas) y se borra al cerrar sesión.
+export const SALDO_ANIMADO_KEY = 'monix_saldo_animado'
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   persona: null,
@@ -27,5 +31,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   setPersona: (persona) => set({ persona }),
   setLoading: (loading) => set({ loading }),
   setProvisioning: (provisioning) => set({ provisioning }),
-  clear: () => set({ user: null, persona: null, loading: false, provisioning: false }),
+  clear: () => {
+    sessionStorage.removeItem(SALDO_ANIMADO_KEY)
+    set({ user: null, persona: null, loading: false, provisioning: false })
+  },
 }))

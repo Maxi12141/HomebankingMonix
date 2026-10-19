@@ -4,7 +4,7 @@ import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, Ch
 import { motion, AnimatePresence } from 'framer-motion'
 import CountUp from 'react-countup'
 import { EASE_MONIX, DURACION } from '../lib/motion'
-import { useAuthStore } from '../store/authStore'
+import { useAuthStore, SALDO_ANIMADO_KEY } from '../store/authStore'
 import { compartirTexto, textoDatosCuenta } from '../utils/compartir'
 import { useCuenta } from '../hooks/useCuenta'
 import { useMovimientos } from '../hooks/useMovimientos'
@@ -128,8 +128,11 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
   const [showData, setShowData] = useState(() => localStorage.getItem(MOSTRAR_SALDO_KEY) === '1')
   const [copiedCbu, setCopiedCbu] = useState(false)
   const [copiedAlias, setCopiedAlias] = useState(false)
-  const prevSaldoRef = useRef<number>(0)
-  const [countStart, setCountStart] = useState(0)
+  // Después de la primera vez en la sesión, el saldo aparece directo (sin contar
+  // desde 0) al cambiar de card o volver al Dashboard.
+  const [yaAnimado] = useState(() => sessionStorage.getItem(SALDO_ANIMADO_KEY) === '1')
+  const prevSaldoRef = useRef<number>(yaAnimado ? cuenta.saldo : 0)
+  const [countStart, setCountStart] = useState(yaAnimado ? cuenta.saldo : 0)
   const [animKey, setAnimKey] = useState(0)
   const [delta, setDelta] = useState<number | null>(null)
   const deltaTimerRef = useRef<ReturnType<typeof setTimeout>>()
@@ -137,7 +140,8 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
   useEffect(() => {
     if (cuenta.saldo === prevSaldoRef.current) return
     const prev = prevSaldoRef.current
-    if (prev !== 0) {
+    if (prev === 0) sessionStorage.setItem(SALDO_ANIMADO_KEY, '1')
+    else {
       const d = cuenta.saldo - prev
       setDelta(d)
       clearTimeout(deltaTimerRef.current)
