@@ -50,6 +50,14 @@ create policy "usuarios pueden ver movimientos de sus cuentas"
 -- POLICIES PARA reservas
 alter table reservas enable row level security;
 
+-- reservas.sql ya crea estas mismas políticas. Sin los drop, aplicar los dos
+-- archivos falla con "already exists" y el SQL Editor deshace todo este
+-- archivo (personas, cuentas y movimientos quedarían sin RLS). Ver
+-- docs/auditoria-2026-10.md, S-1.
+drop policy if exists "usuarios pueden ver su reserva" on reservas;
+drop policy if exists "usuarios pueden crear su reserva" on reservas;
+drop policy if exists "usuarios pueden actualizar su reserva" on reservas;
+
 create policy "usuarios pueden ver su reserva"
   on reservas for select
   using (
