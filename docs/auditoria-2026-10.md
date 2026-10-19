@@ -51,7 +51,7 @@ Estas escrituras existen porque la app las necesita hoy desde el navegador: el i
 
 **Alcance de la verificación:** se revisaron los archivos SQL del repo, y ninguna migración posterior reemplaza estas políticas. **No se verificó contra la base de producción**, porque el MCP de Supabase no estaba autorizado en esta sesión. Antes de cualquier cambio hay que confirmarlo en el SQL Editor con `select * from pg_policies where tablename in ('cuentas','personas','prestamos','movimientos','reservas');`.
 
-**Solución propuesta, sin implementar todavía porque requiere una migración en la base de producción:**
+**Solución implementada en S-1 (2026-10-19), pendiente de aplicar en producción siguiendo `manual-despliegue.md` §7.7.** El plan original era:
 
 1. **Privilegios por columna:** `revoke update on public.cuentas from authenticated;` y después `grant update (alias, tarjeta_congelada) on public.cuentas to authenticated;`. Igual en `personas`, dejando editables sólo los datos de contacto, `ingreso_mensual` y `sueldo_acreditado`.
 2. **Mover al servidor** cada escritura de saldo, como RPC `SECURITY DEFINER` que valida y registra el movimiento en la misma transacción, siguiendo el patrón de `transferencia_atomica.sql`. Las RPC a crear: interés diario, mover fondos a la reserva y desde ella, compra en MercadoMonix, alta y cobro de préstamos, y acreditación de transferencias entrantes (idempotente por `bc_transaccion_id`).
@@ -59,6 +59,13 @@ Estas escrituras existen porque la app las necesita hoy desde el navegador: el i
 4. **Orden seguro:** primero las RPC, después cambiar el front para que las use y recién al final revocar los privilegios. En orden inverso, la app se rompe en producción.
 
 **Agravante de performance:** las 15 pantallas montan cada una su propio `PageWrapper`, y con él la sincronización de transferencias. Cada navegación repite la consulta al Banco Central. Eso se resuelve en P1-9, aparte del arreglo de seguridad.
+
+### V4 · La API key del Banco Central viaja en el bundle del navegador
+
+`VITE_BC_API_KEY` se compila dentro del JavaScript que descarga cualquier visitante, porque el registro, la apertura de cuentas, las transferencias y la consulta de situación crediticia llaman al Banco Central desde el navegador. Cualquiera puede extraerla y operar contra la API de la cátedra en nombre de Monix.
+
+- **Mitigado en S-1:** las transferencias **entrantes** ya no dependen del navegador. Las consulta la Edge Function `sincronizar-entrantes` con su propia copia de la key (secret `BC_API_KEY`).
+- **Pendiente:** mover al servidor el resto de las llamadas (registro, cuentas, transferencias salientes, situación crediticia) y recién entonces sacar `VITE_BC_API_KEY` del front y rotar la key. Es un cambio más grande que S-1 y queda propuesto, no planificado.
 
 ### V3 · Secretos sin control automático
 
@@ -83,7 +90,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 
 | Paso | Qué | Resuelve | Estado |
 |---|---|---|---|
-| S-1 | RPC de servidor para cada escritura de saldo, y privilegios por columna | V2 | **Espera aprobación**: migración en la base de producción |
+| S-1 | RPC de servidor para cada escritura de saldo, y privilegios por columna | V2 | Hecho en código y probado. **Falta aplicarlo en producción** (manual §7.7) |
 | P0-1 | `npm audit fix` | V1 | Hecho: 1 alta y 5 moderadas pasaron a 0 altas y 2 moderadas |
 | P0-2 | Áreas táctiles de 44 px sin cambiar el aspecto | H1 | Hecho: 46 pasaron a 0 |
 | P0-3 | Nombres accesibles y link subrayado | H2 | Hecho: 14 pasaron a 0 |
@@ -221,3 +228,34 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
 - **Arreglo:** una referencia (`inicioConteoRef`) que al terminar cada conteo (`onEnd`) pasa a valer el saldo ya mostrado.
 - **Cambio de card:** no se reprodujo que volviera a contar. Lo que se ve es el deslizamiento de 0,22 s entre la card de pesos y la de dólares, que es la transición y no el conteo.
 - **Verificación:** prueba nueva con una cuenta en dólares que oculta y muestra el saldo y cambia de card dos veces. En cada caso comprueba que el valor final aparece directo y no cambia. Con el código anterior falla en el ojito ("$ 0,00"). La suite completa pasa.
+
+### S-1 · El saldo sólo cambia en el servidor (2026-10-19)
+
+Aprobado por Diego Urenda. Hecho en código y probado, **sin aplicar en producción**: no hay acceso a la base desde esta sesión, porque el MCP de Supabase no está autorizado. El orden de despliegue está en `manual-despliegue.md` §7.7.
+
+| Pieza | Archivo |
+|---|---|
+| 10 RPC `SECURITY DEFINER`, más `depositar_en_cuenta` convertida | `supabase/s1_rpc_saldos.sql` |
+| Revocación de escrituras del cliente | `supabase/s1_revocar_escrituras.sql` |
+| Edge Function para transferencias entrantes | `supabase/functions/sincronizar-entrantes/index.ts` |
+| Front que usa las RPC | `useCuenta`, `useReserva`, `usePrestamos`, `useSyncTransferenciasEntrantes`, `ReservasPage`, `MercadoMonixPage`, `PrestamosPage`, `RegisterPage`, `CuentasPage` |
+| Tests de SQL | `tests/sql/s1.test.mjs` (12), sobre PGlite con las migraciones reales del repo |
+
+**Decisiones de diseño:**
+
+- **Préstamos:** la oferta (TNA, monto máximo, cuotas, tope de cuota contra el ingreso) se recalcula en el servidor con las mismas reglas que `utils/prestamos.ts`. La situación crediticia la consulta el navegador al Banco Central y el servidor no la puede verificar, así que se usa la **peor** entre esa y la que Monix registró al dar de alta a la persona, que el usuario ya no puede editar.
+- **Alta de cliente:** persona, cuenta con el bono y movimiento van en una sola transacción. La situación crediticia ficticia inicial la elige el servidor.
+- **Reservas:** ingresar y retirar eran tres llamadas separadas, y una falla a mitad dejaba la plata debitada de un lado y sin acreditar del otro. Ahora es una sola transacción.
+- **Transferencias entrantes:** si el navegador le pasara al servidor los datos de la transferencia, igual podría inventarlos. Por eso la consulta al Banco Central la hace la Edge Function y la RPC sólo la puede llamar `service_role`. Es idempotente por `bc_transaccion_id`, con la cuenta bloqueada para serializar.
+
+**Lo que encontraron los tests:**
+
+- **Bug en `policies.sql`:** aplicado después de `reservas.sql` fallaba por políticas duplicadas, y el SQL Editor deshacía el archivo entero, dejando sin RLS a `personas`, `cuentas` y `movimientos`. Se corrigió con `drop policy if exists`. El orden de migraciones del manual nunca se había validado sobre un proyecto vacío.
+- **Bug en la propia migración:** un mensaje de error mostraba "el %30" en lugar de "el 30%", porque en un `RAISE` de PL/pgSQL `%%%` se lee como un `%` literal seguido del valor. Se corrigió.
+- **Dependencia oculta:** `depositar_en_cuenta` era `SECURITY INVOKER` y dependía del permiso de UPDATE del usuario. Sin convertirla, Depositar se rompía al revocar.
+
+**Verificación:**
+
+- **SQL, 12/12:** el test "V2 antes de S-1" demuestra que el usuario podía escribirse 99.999.999 de saldo. Después de revocar, 6 escrituras prohibidas devuelven `permission denied`, las ediciones permitidas siguen funcionando y cada RPC valida montos, saldos, propiedad de la cuenta, la oferta de préstamo e idempotencia.
+- **E2E, 22/22:** con una prueba nueva que comprueba que, al recorrer Dashboard, Préstamos y Reservas e ingresar a la reserva, el navegador no hace ninguna escritura directa a tablas de dinero.
+- **Sin probar:** la Edge Function no se ejecutó, porque no hay Deno en esta máquina; se revisó a mano contra el contrato de la RPC. Tampoco se probó nada contra el Supabase real.

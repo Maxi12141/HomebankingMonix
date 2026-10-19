@@ -151,7 +151,7 @@ npm run dev                  # http://localhost:5173
 | `npm run dev:celular` | Servidor de desarrollo expuesto en la red local, para probar desde el teléfono |
 | `node --env-file=.env.local scripts/seed-central-deudores.mjs` | Opcional. Informa deudas ficticias a la Central de Deudores para probar Préstamos |
 
-En local, el proxy `/bc-api` lo resuelve `vite.config.ts` (sólo en `dev` y `preview`). Si faltan `VITE_SUPABASE_URL` o `VITE_SUPABASE_ANON_KEY`, la aplicación muestra `MissingEnvScreen`. No hay tests automatizados ni CI (no existe `.github/workflows`): el único control previo al deploy es el chequeo de tipos de `tsc`, más el checklist de §13.
+En local, el proxy `/bc-api` lo resuelve `vite.config.ts` (sólo en `dev` y `preview`). Si faltan `VITE_SUPABASE_URL` o `VITE_SUPABASE_ANON_KEY`, la aplicación muestra `MissingEnvScreen`. No hay CI (no existe `.github/workflows`). Los controles previos al deploy se corren a mano, según `CONSTRAINTS.md`: `npm run check:full` (tipos, tests unitarios, tests de SQL con PGlite, 22 pruebas de Playwright, bundle, Lighthouse y dependencias). Además, el checklist de §13.
 
 ## 6. Variables de entorno
 
@@ -167,7 +167,7 @@ Replicar en Vercel → Project Settings → Environment Variables (Production y 
 
 `VITE_BC_ENV` no se lee actualmente: el header `x-environment` está fijo en `test` en `src/services/bancoCentral.ts`. El pase a `prod` requiere modificar ese archivo.
 
-Aparte, hay un secret que vive sólo en las Edge Functions de Supabase: `QR_JWT_PRIVATE_KEY` (§7.6).
+Aparte, hay secrets que viven sólo en las Edge Functions de Supabase: `QR_JWT_PRIVATE_KEY` (§7.6) y `BC_API_KEY` (§7.7).
 
 ## 7. Backend en Supabase
 
@@ -181,7 +181,7 @@ Aplicar primero el esquema base (tablas `personas`, `cuentas` y `movimientos`), 
 
 ### 7.3 Orden de migraciones
 
-Archivos en `supabase/*.sql`, aplicados a mano en el SQL Editor (no hay runner de migraciones). Orden derivado de las dependencias entre archivos; no validado sobre un proyecto vacío.
+Archivos en `supabase/*.sql`, aplicados a mano en el SQL Editor (no hay runner de migraciones). El orden de 1 a 14 está validado por `npm run test:sql`, que aplica los archivos reales sobre una base mínima en PGlite (`tests/sql/`). Esos tests encontraron que `policies.sql` fallaba después de `reservas.sql` (políticas duplicadas) y que el SQL Editor deshacía el archivo entero: se corrigió con `drop policy if exists`.
 
 | # | Archivo | Contenido |
 | --- | --- | --- |
@@ -199,6 +199,8 @@ Archivos en `supabase/*.sql`, aplicados a mano en el SQL Editor (no hay runner d
 | 11 | `metas_comunes.sql` | Metas comunes: tablas de metas, miembros, aportes y votaciones + RPC (crear, invitar, unirse, aportar, proponer desembolso, votar). El dinero sale sólo con mayoría |
 | 12 | `qr_lecturas.sql` | Tabla `qr_lecturas` (avisos de lectura de QR); agrega a Realtime |
 | 13 | `fix_transferencia_bc_id.sql` | Redefine `private.transferir_entre_cuentas`: la entrada de una transferencia Monix → Monix va sin `bc_transaccion_id`. Sin esto, toda transferencia entre cuentas Monix falla con 409. Va después de `transferencia_atomica.sql` |
+| 14 | `s1_rpc_saldos.sql` | S-1, paso 1 (aditivo): una RPC `SECURITY DEFINER` por cada escritura de saldo y `depositar_en_cuenta` como `SECURITY DEFINER`. Ver §7.7 |
+| 15 | `s1_revocar_escrituras.sql` | S-1, paso 3: el cliente deja de poder escribir saldos. **Sólo después de desplegar el front de S-1** (§7.7) |
 
 **Base que viene de una versión anterior** (con Monix Cerca, el pago NFC con la tarjeta o la tabla `cobros_nfc`): correr una vez `docs/monix-limpieza-base.sql` antes de publicar el código. Borra lo retirado y renombra `cobros_nfc` a `cobros_qr` conservando datos, RLS y Realtime, en una sola transacción. En un proyecto nuevo no hace falta. En la base actual ya está aplicado (2026-10-05), igual que el n.º 13.
 
@@ -237,6 +239,18 @@ El registro de usuarios crea la persona en el Banco Central (`POST /persons`) y 
 **CORS:** Supabase no agrega CORS a las funciones propias. Toda función que se llame desde el navegador tiene que responder `OPTIONS` y devolver `Access-Control-Allow-Origin`.
 
 Contrato de las funciones: `docs/qr-interbancario-jwt.md` §4 (firma) y §12–13 (aviso de lectura).
+
+### 7.7 S-1: el saldo sólo cambia en el servidor
+
+Corrige la vulnerabilidad V2 de `docs/auditoria-2026-10.md`: las políticas RLS dejaban que el usuario escribiera su propio saldo, sus préstamos y sus movimientos desde la consola del navegador. **El orden es obligatorio**: si se invierte, producción se rompe.
+
+1. **Verificar el punto de partida.** En el SQL Editor, `select tablename, policyname, cmd from pg_policies where tablename in ('cuentas','personas','movimientos','reservas','prestamos');` tiene que coincidir con `policies.sql`, `reservas.sql` y `prestamos.sql`.
+2. **Aplicar `s1_rpc_saldos.sql`.** Es aditivo: la app en producción sigue funcionando igual.
+3. **Desplegar la Edge Function `sincronizar-entrantes`.** Cargar el secret `BC_API_KEY` (la misma key del Banco Central que usa el front) y opcionalmente `BC_URL` (por defecto `https://centralbank.brocoly.cc/api`). Después: `npx supabase functions deploy sincronizar-entrantes --project-ref <ref>`. Va **con** verificación de JWT, porque la llama el usuario logueado.
+4. **Desplegar el front** (merge a `main`) y recorrer el checklist de §13.
+5. **Aplicar `s1_revocar_escrituras.sql`.** Volver a recorrer §13. Rollback: el encabezado del archivo indica cómo restituir los permisos.
+
+Las reglas de Préstamos y el bono de bienvenida están duplicados a propósito, en el front para avisar rápido y en el servidor para autorizar (`utils/prestamos.ts` y `lib/onboarding.ts` contra `s1_rpc_saldos.sql`). Si cambian, hay que cambiar los dos.
 
 ## 8. Frontend en Vercel
 
@@ -302,7 +316,9 @@ Monix se distribuye sólo como PWA: no hay app nativa. Las funciones del disposi
 ## 10. Seguridad
 
 - **RLS obligatorio** en toda tabla nueva. Una tabla sin política queda expuesta a lectura y escritura para cualquier usuario autenticado.
-- **Operaciones de saldo sólo por RPC.** Las funciones `SECURITY DEFINER` (`search_path = ''`, `FOR UPDATE`) son el único medio para modificar cuentas de terceros. Incluyen rate limiting por usuario (`private.enforce_rate`).
+- **Operaciones de saldo sólo por RPC.** Desde S-1 (§7.7), las funciones `SECURITY DEFINER` (`search_path = ''`, `FOR UPDATE`) son el único medio para modificar saldos, reservas, préstamos y movimientos, propios o de terceros. El cliente sólo puede editar alias, tarjeta congelada, datos de contacto e ingreso declarado. Las operaciones con dinero tienen rate limiting por usuario (`private.enforce_rate`).
+- **Transferencias entrantes sólo desde el servidor.** Las acredita la Edge Function `sincronizar-entrantes` con `service_role`. La RPC `acreditar_transferencia_entrante` no se puede llamar desde el navegador.
+- **API key del Banco Central en el bundle (limitación conocida, V4 de la auditoría).** `VITE_BC_API_KEY` viaja al navegador porque el registro, las cuentas y las transferencias llaman al Banco Central desde el cliente. Moverlas al servidor requiere más Edge Functions.
 - **`service_role` no se expone en el frontend.** El cliente usa sólo la clave `anon`, sujeta a RLS.
 - **Clave privada del QR:** sólo como secret `QR_JWT_PRIVATE_KEY` de `firmar-qr`. El código no tiene clave embebida. La clave pública sí está en el código (`qrJwt.ts` y `qr-lectura`) y no es secreta.
 - **`service_role` sólo dentro de `qr-lectura`**, como variable de entorno que inyecta Supabase. La función acepta un aviso sólo si el QR trae la firma de Monix.
@@ -342,7 +358,11 @@ Antes de dar una release por buena, probar en la URL de producción:
 - [ ] Login con email y contraseña y, en un celular, con huella.
 - [ ] Transferencia interna (Monix → Monix) y externa (CBU de otro banco) se acreditan y aparecen en el historial.
 - [ ] El QR propio se genera ("Generar QR") y un escaneo lo paga; un segundo escaneo del mismo QR se rechaza.
-- [ ] El simulador de Préstamos calcula cuota y total y permite solicitar uno.
+- [ ] El simulador de Préstamos calcula cuota y total y permite solicitar uno; el monto se acredita.
+- [ ] Reservas: ingresar y retirar mueven el saldo y dejan un movimiento cada uno.
+- [ ] mercadoMONIX: una compra descuenta el saldo.
+- [ ] Una transferencia desde otro banco se acredita sola en unos minutos (Edge Function `sincronizar-entrantes`).
+- [ ] Con S-1 completo: desde la consola del navegador, `supabase.from('cuentas').update({ saldo: 1 }).eq('id', '<cuenta propia>')` devuelve un error de permisos.
 - [ ] Una meta común se crea, recibe aportes y pide votación para retirar.
 - [ ] El botón "Instalar app" funciona en Chrome/Android.
 - [ ] La app instalada detecta una versión nueva sin reinstalar.

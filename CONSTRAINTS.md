@@ -25,6 +25,7 @@ Desde esa fecha se saca el `|| echo` y bloquean.
 |-----------|-------|----------------|----------|
 | Tipos | Cero errores de tipos | `tsc --noEmit` | `check:fast`, cada cambio |
 | Marca | Texto visible ≥ 11 px; montos en mint tinta (claro) o mint (oscuro); foco visible con Tab; loader con los tiempos de `motion/monix-logo.aep` | `npm run test:e2e` (Playwright) | `check:task` |
+| Seguridad de saldos | El navegador no puede escribir saldos, préstamos ni movimientos; cada RPC de dinero valida monto, saldo y propiedad (S-1) | `npm run test:sql` (PGlite sobre las migraciones reales) y la prueba e2e "S-1" | `check:task` |
 | Mobile | Sin scroll horizontal a 320 px en 9 pantallas | `npm run test:e2e` | `check:task` |
 | Toques | Ningún elemento interactivo de menos de 44×44 px en 6 pantallas con sesión (era 46 el 2026-10-18) | `npm run test:e2e` | `check:task` |
 | Accesibilidad | Cero violaciones axe serias o críticas (WCAG 2.1 AA) en 9 pantallas (eran 14 el 2026-10-18) | `@axe-core/playwright` en `npm run test:e2e` | `check:task` |
