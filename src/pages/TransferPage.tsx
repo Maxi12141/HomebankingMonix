@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { CheckCircle, Search, Star, Home, UserPlus, ChevronDown, ArrowLeft, ArrowRight, AlertTriangle, Share2, Download } from 'lucide-react'
+import { Search, Star, Home, UserPlus, ChevronDown, ArrowLeft, ArrowRight, AlertTriangle, Share2, Download } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
@@ -16,9 +16,11 @@ import { comprobantePdfFile, compartirArchivo, downloadComprobante, puedeCompart
 import { AgendaContactosPanel } from '../components/AgendaContactosPanel'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
+import { IconoExito } from '../components/ui/IconoExito'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import type { Movimiento } from '../types'
+import { Monto } from '../components/ui/Monto'
 
 type Step = 'buscar' | 'detalle' | 'resumen' | 'exito'
 type Moneda = 'ARS' | 'USD'
@@ -50,7 +52,7 @@ function BadgeOtroBanco({ bankCode }: { bankCode: number }) {
   }, [bankCode])
 
   return (
-    <span className="inline-block text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-400/15 text-amber-700 dark:text-amber-300">
+    <span className="inline-block text-2xs font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-400/15 text-amber-700 dark:text-amber-300">
       {nombre ? `Otro banco · ${nombre}` : 'Otro banco'}
     </span>
   )
@@ -289,7 +291,7 @@ export function TransferPage() {
     setError('')
     if (!cuentaOrigen || !destinatario) return
     if (isNaN(montoNum) || montoNum <= 0) { setError('Ingresá un monto válido'); return }
-    if (montoNum > cuentaOrigen.saldo) { setError('Saldo insuficiente para realizar la transferencia'); return }
+    if (montoNum > cuentaOrigen.saldo) { setError(`No te alcanza el saldo. Tenés ${formatMonto(cuentaOrigen.saldo, cuentaOrigen.moneda)} disponibles.`); return }
     if (destinatario.cbu === cuentaOrigen.cbu) { setError('No podés transferirte a vos mismo'); return }
     if (esConversion && !oficial) { setError('No pudimos obtener la cotización del día. Probá de nuevo en un momento.'); return }
     setStep('resumen')
@@ -383,7 +385,7 @@ export function TransferPage() {
         ? 'La transferencia se envió pero no pudimos actualizar tu saldo. Volvé a intentar — no se va a reenviar el dinero de nuevo.'
         : err instanceof BancoCentralError
           ? mensajeAmigableBC(err)
-          : 'Ocurrió un error al procesar la transferencia'
+          : 'No pudimos completar la transferencia. Revisá tus movimientos antes de volver a intentar.'
       setError(msg)
       toast.error(msg)
       setStep('resumen')
@@ -416,12 +418,12 @@ export function TransferPage() {
         }
         const resultado = await compartirArchivo(file)
         if (resultado === 'sin-gesto') toast('Comprobante listo: tocá compartir de nuevo', { icon: '📄' })
-        else if (resultado === 'error') toast.error('No se pudo compartir el comprobante')
+        else if (resultado === 'error') toast.error('No pudimos compartir el comprobante')
       } else {
         await downloadComprobante(comprobante)
       }
     } catch {
-      toast.error('No se pudo generar el comprobante')
+      toast.error('No pudimos generar el comprobante')
     } finally {
       setCompartiendo(false)
     }
@@ -492,7 +494,7 @@ export function TransferPage() {
                             {destinatario.banco ? `${destinatario.banco} · ` : ''}CBU: {destinatario.cbu}
                           </p>
                           <span className="flex flex-wrap items-center gap-1.5 mt-1">
-                            <span className={`inline-block text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            <span className={`inline-block text-2xs font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
                               destinatario.moneda === 'USD' ? 'bg-mint/20 text-navy dark:text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
                             }`}>
                               {destinatario.moneda === 'USD' ? 'Cuenta en dólares' : 'Cuenta en pesos'}
@@ -560,7 +562,7 @@ export function TransferPage() {
                       <p className="text-xs font-body text-slate-secondary truncate">{destinatario.alias ?? destinatario.cbu}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className={`text-[10px] font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      <span className={`text-2xs font-body font-medium uppercase tracking-wider px-2 py-0.5 rounded-full ${
                         destinatario.moneda === 'USD' ? 'bg-mint/20 text-navy dark:text-mint' : 'bg-navy/10 text-navy dark:bg-white/10 dark:text-white'
                       }`}>
                         {destinatario.moneda === 'USD' ? 'USD' : 'ARS'}
@@ -608,7 +610,7 @@ export function TransferPage() {
                   )}
 
                   <p className="font-body text-sm text-slate-secondary mb-1">Saldo disponible</p>
-                  <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mb-6">{saldoFormateado}</p>
+                  <Monto as="p" tamaño="grande" className="font-display text-2xl font-bold mb-6">{saldoFormateado}</Monto>
 
                   <form onSubmit={handleDetalleSubmit} className="flex flex-col gap-4">
                     <Input label={`Monto en ${monedaActual === 'USD' ? 'dólares' : 'pesos'}`} type="number" min="0.01" step="0.01" placeholder="0.00"
@@ -712,7 +714,7 @@ export function TransferPage() {
                     <div className="h-px bg-slate-200 dark:bg-white/10" />
                     <div className="flex justify-between">
                       <span className="font-body text-slate-secondary text-sm">Enviás</span>
-                      <span className="font-display font-bold text-mint-tinta-fuerte dark:text-mint text-lg">{montoFormateado}</span>
+                      <Monto tamaño="chico" className="font-display font-bold text-lg">{montoFormateado}</Monto>
                     </div>
                     {esConversion && (
                       <>
@@ -763,7 +765,7 @@ export function TransferPage() {
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
                   >
-                    <CheckCircle size={56} className="text-mint mx-auto mb-4" />
+                    <IconoExito className="mb-4" />
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
@@ -776,7 +778,7 @@ export function TransferPage() {
                       {esConversion && <> ({destinatario?.nombre} recibió {montoDestinoFormateado})</>}
                     </p>
                     <p className="font-body text-sm text-slate-secondary mb-8">
-                      Nuevo saldo: <span className="text-mint-tinta-fuerte dark:text-mint font-medium">{saldoFormateado}</span>
+                      Nuevo saldo: <Monto tamaño="chico" className="font-medium">{saldoFormateado}</Monto>
                     </p>
                     <div className="flex flex-col gap-3">
                       {vinoDeQr && (

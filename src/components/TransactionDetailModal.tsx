@@ -3,6 +3,7 @@ import { Download, Loader2, Share2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Modal } from './ui/Modal'
 import { Card } from './ui/Card'
+import { Monto } from './ui/Monto'
 import {
   comprobantePdfFile,
   compartirArchivo,
@@ -59,9 +60,9 @@ export function TransactionDetailModal({ movimiento, bankName, onClose }: Props)
       }
       const resultado = await compartirArchivo(file)
       if (resultado === 'sin-gesto') toast('Comprobante listo: tocá compartir de nuevo', { icon: '📄' })
-      else if (resultado === 'error') toast.error('No se pudo compartir el comprobante')
+      else if (resultado === 'error') toast.error('No pudimos compartir el comprobante')
     } catch {
-      toast.error('No se pudo generar el comprobante')
+      toast.error('No pudimos generar el comprobante')
     } finally {
       setCompartiendo(false)
     }
@@ -73,7 +74,7 @@ export function TransactionDetailModal({ movimiento, bankName, onClose }: Props)
     try {
       await downloadComprobante(movimiento, bankName)
     } catch {
-      toast.error('No se pudo generar el comprobante')
+      toast.error('No pudimos generar el comprobante')
     } finally {
       setDownloading(false)
     }
@@ -111,9 +112,9 @@ export function TransactionDetailModal({ movimiento, bankName, onClose }: Props)
             <p className="font-body text-xs text-slate-secondary uppercase tracking-wider mb-1">
               {tipoLabel[movimiento.tipo]}
             </p>
-            <p className={`font-display text-3xl font-semibold ${entrada ? 'text-mint-tinta dark:text-mint' : 'text-red-500 dark:text-red-400'}`}>
+            <Monto as="p" tamaño="grande" negativo={!entrada} className="font-display text-3xl font-semibold">
               {entrada ? '+' : '-'}{montoFormateado}
-            </p>
+            </Monto>
           </div>
           <div className="flex items-center gap-2 mt-1">
             {puedeCompartirArchivos() && (

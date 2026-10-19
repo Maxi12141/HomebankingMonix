@@ -6,6 +6,8 @@ import { formatMonto } from '../utils/cuenta'
 import { DatePicker } from '../components/ui/DatePicker'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
+import { Monto } from '../components/ui/Monto'
+import { MovimientosSkeleton } from '../components/ui/Skeleton'
 import { TransactionDetailModal } from '../components/TransactionDetailModal'
 import type { Movimiento } from '../types'
 
@@ -155,7 +157,7 @@ export function HistorialPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-slate-secondary font-body text-sm">Cargando movimientos...</div>
+          <MovimientosSkeleton filas={6} />
         ) : movimientosFiltrados.length === 0 ? (
           <Card className="p-8 text-center">
             <p className="font-body text-slate-secondary">
@@ -201,9 +203,9 @@ export function HistorialPage() {
                       )}
                     </div>
                   </div>
-                  <span className={`font-display font-semibold text-base ml-4 shrink-0 ${entrada ? 'text-mint-tinta-fuerte dark:text-mint' : 'text-red-500 dark:text-red-400'}`}>
+                  <Monto tamaño="chico" negativo={!entrada} className="font-display font-semibold text-base ml-4 shrink-0">
                     {entrada ? '+' : '-'}{montoFormateado}
-                  </span>
+                  </Monto>
                 </Card>
               )
             })}

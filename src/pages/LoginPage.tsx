@@ -135,7 +135,7 @@ export function LoginPage() {
       toast.success('Biometría activada. La próxima vez entrás más rápido.')
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
-        toast.error(err instanceof Error ? err.message : 'No se pudo activar la biometría')
+        toast.error(err instanceof Error ? err.message : 'No pudimos activar la biometría')
       }
     } finally {
       setBioLoading(false)
@@ -182,7 +182,7 @@ export function LoginPage() {
       }
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
-        setError(err instanceof Error ? err.message : 'No se pudo validar. Usá la contraseña.')
+        setError(err instanceof Error ? err.message : 'No pudimos validar. Usá la contraseña.')
       }
     } finally {
       setBioLoading(false)
@@ -233,7 +233,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] dark:bg-navy flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-input dark:bg-navy flex items-center justify-center p-4">
       <motion.div
         className="w-full max-w-md"
         initial={{ opacity: 0, y: 24 }}
@@ -295,9 +295,9 @@ export function LoginPage() {
                   className="relative flex h-24 w-24 items-center justify-center"
                   aria-label="Ingresar con biometría"
                 >
-                  <span className="huella-ring absolute inset-0 rounded-full border border-mint/25" />
-                  <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-mint/40" />
-                  <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
+                  <span className="huella-ring absolute inset-0 rounded-full border border-navy/20 dark:border-mint/25" />
+                  <span className="huella-ring huella-ring-delay absolute inset-3 rounded-full border border-navy/30 dark:border-mint/40" />
+                  <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-navy border border-navy dark:bg-mint/15 dark:border-mint/40">
                     <Fingerprint size={30} className="text-mint" strokeWidth={1.6} />
                   </span>
                 </button>
@@ -421,7 +421,7 @@ export function LoginPage() {
               </p>
 
               <div className="flex items-center justify-center mb-6">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-navy border border-navy dark:bg-mint/15 dark:border-mint/40">
                   <Fingerprint size={30} className="text-mint" strokeWidth={1.6} />
                 </span>
               </div>

@@ -48,6 +48,7 @@ import {
   type CobroQr,
   type DestinoQr,
 } from '../services/cobrosQr'
+import { Monto } from './ui/Monto'
 
 async function aplicarQr(
   raw: string,
@@ -219,7 +220,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         })
         .subscribe()
     } catch (err) {
-      console.error('No se pudo escuchar las lecturas del QR:', err)
+      console.error('No pudimos escuchar las lecturas del QR:', err)
       return
     }
     return () => {
@@ -291,7 +292,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         })
         .subscribe()
     } catch (err) {
-      console.error('No se pudo escuchar el cobro en tiempo real:', err)
+      console.error('No pudimos escuchar el cobro en tiempo real:', err)
       return
     }
     return () => {
@@ -331,7 +332,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
           setCobro(await obtenerCobroQr(id))
           setError('')
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'No se pudo armar el cobro')
+          setError(err instanceof Error ? err.message : 'No pudimos armar el cobro')
         }
       })()
     }, 650)
@@ -416,9 +417,9 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       <Card className="p-8 text-center">
         <CheckCircle size={48} className="text-mint mx-auto mb-3" />
         <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Cobro acreditado</h2>
-        <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mt-2">
+        <Monto as="p" tamaño="grande" className="font-display text-2xl font-bold mt-2">
           {formatMonto(cobro.monto, cobro.moneda)}
-        </p>
+        </Monto>
         <Button className="w-full mt-6" type="button" onClick={nuevoCobro}>
           Nuevo QR
         </Button>
@@ -582,9 +583,9 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         </p>
       )}
       {cobro && (
-        <p className="font-display text-xl font-bold text-mint-tinta dark:text-mint text-center mt-2">
+        <Monto as="p" tamaño="grande" className="font-display text-xl font-bold text-center mt-2">
           {formatMonto(cobro.monto, cobro.moneda)}
-        </p>
+        </Monto>
       )}
       <div className="mt-4">
         <Input
@@ -636,7 +637,7 @@ function BotonAgendar({
       setCbu(bc.cbu)
       toast.success(yaEstaba ? 'Ya estaba en tu agenda' : 'Contacto agendado')
     } catch {
-      toast.error('No se pudo agendar el contacto')
+      toast.error('No pudimos agendar el contacto')
     } finally {
       setLoading(false)
     }
@@ -753,7 +754,7 @@ export function EscanearYPagar({
       setCobro(null)
       setMontoLibre('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo leer ese QR')
+      setError(err instanceof Error ? err.message : 'No pudimos leer ese QR')
     } finally {
       setLoading(false)
     }
@@ -829,7 +830,7 @@ export function EscanearYPagar({
       await setLinterna(stream, next)
       setTorchOn(next)
     } catch {
-      toast.error('No se pudo prender la linterna')
+      toast.error('No pudimos prender la linterna')
     }
   }
 
@@ -855,7 +856,7 @@ export function EscanearYPagar({
       const raw = await leerQrDeArchivo(file)
       await aplicarQr(raw, cargarCobro, cargarCuenta, cargarDestinoJwt)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo leer la foto')
+      setError(err instanceof Error ? err.message : 'No pudimos leer la foto')
     } finally {
       setLoading(false)
     }
@@ -878,7 +879,7 @@ export function EscanearYPagar({
       })
       toast.success('Pago realizado')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo pagar')
+      setError(err instanceof Error ? err.message : 'No pudimos pagar')
     } finally {
       setLoading(false)
     }
@@ -905,7 +906,7 @@ export function EscanearYPagar({
       })
       toast.success('Pago realizado')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo pagar')
+      setError(err instanceof Error ? err.message : 'No pudimos pagar')
     } finally {
       setLoading(false)
     }
@@ -953,7 +954,7 @@ export function EscanearYPagar({
         <p className="font-body text-sm text-slate-secondary mt-1">
           Le pagaste a {pagado.nombre} {pagado.apellido}
         </p>
-        <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mt-2">{formatMonto(pagado.monto, pagado.moneda)}</p>
+        <Monto as="p" tamaño="grande" className="font-display text-2xl font-bold mt-2">{formatMonto(pagado.monto, pagado.moneda)}</Monto>
         {accionesPostPago(pagado.nombre, pagado.apellido, pagado.alias)}
       </Card>,
     )
@@ -967,7 +968,7 @@ export function EscanearYPagar({
         <p className="font-body text-sm text-slate-secondary mt-1">
           Le pagaste a {cobro.comercio_nombre} {cobro.comercio_apellido}
         </p>
-        <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mt-2">{formatMonto(cobro.monto, cobro.moneda)}</p>
+        <Monto as="p" tamaño="grande" className="font-display text-2xl font-bold mt-2">{formatMonto(cobro.monto, cobro.moneda)}</Monto>
         {accionesPostPago(cobro.comercio_nombre, cobro.comercio_apellido, cobro.comercio_alias)}
       </Card>,
     )
@@ -981,7 +982,7 @@ export function EscanearYPagar({
           {cobro.comercio_nombre} {cobro.comercio_apellido}
         </p>
         {cobro.comercio_alias && <p className="font-body text-xs text-slate-secondary">@{cobro.comercio_alias}</p>}
-        <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint my-3">{formatMonto(cobro.monto, cobro.moneda)}</p>
+        <Monto as="p" tamaño="grande" className="font-display text-2xl font-bold my-3">{formatMonto(cobro.monto, cobro.moneda)}</Monto>
         {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
         <Button className="w-full" type="button" loading={loading} onClick={() => { void pagarCobro() }}>
           Pagar

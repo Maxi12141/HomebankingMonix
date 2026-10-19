@@ -23,3 +23,6 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Capturas de las pruebas visuales
+tests/e2e/screens/

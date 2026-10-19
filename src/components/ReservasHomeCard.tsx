@@ -3,6 +3,7 @@ import { PiggyBank, TrendingUp } from 'lucide-react'
 import { Card } from './ui/Card'
 import { Button } from './ui/Button'
 import { estimacionDiaria, useReserva } from '../hooks/useReserva'
+import { Monto } from './ui/Monto'
 
 function formatARS(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
@@ -37,9 +38,9 @@ export function ReservasHomeCard({ cuentaId }: Props) {
       </div>
 
       <p className="font-body text-xs text-slate-secondary mb-1">Saldo en reserva</p>
-      <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mb-3">
+      <Monto as="p" tamaño="grande" className="font-display text-2xl font-bold mb-3">
         {loading ? '—' : formatARS(saldo)}
-      </p>
+      </Monto>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4">
         <p className="font-body text-xs text-slate-secondary">
@@ -49,10 +50,10 @@ export function ReservasHomeCard({ cuentaId }: Props) {
           Hoy ~ <span className="text-navy dark:text-white font-medium">+{formatARS(diario)}</span>
         </p>
         {interesHoy > 0 && (
-          <p className="font-body text-xs text-mint-tinta-fuerte dark:text-mint inline-flex items-center gap-1">
+          <Monto as="p" tamaño="chico" className="font-body text-xs inline-flex items-center gap-1">
             <TrendingUp size={12} />
             +{formatARS(interesHoy)} acreditados
-          </p>
+          </Monto>
         )}
       </div>
 

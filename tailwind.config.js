@@ -27,6 +27,10 @@ export default {
           input: '#F0F2F5',
         },
       },
+      fontSize: {
+        // Piso del manual de marca para etiquetas (Inter Bold 11 px).
+        '2xs': ['11px', { lineHeight: '14px' }],
+      },
       fontFamily: {
         display: ['"Plus Jakarta Sans"', 'sans-serif'],
         body: ['Inter', 'sans-serif'],

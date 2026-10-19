@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { Check, Copy, RotateCcw } from 'lucide-react'
+import { EASE_MONIX } from '../lib/motion'
 
 interface MonixCard3DProps {
   titular: string
@@ -137,7 +138,7 @@ export function MonixCard3D({
             transformStyle: 'preserve-3d',
           }}
           animate={{ scale: frozen ? [1, 0.96, 1] : 1 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.45, ease: EASE_MONIX }}
           className="relative w-full aspect-[1.45/1] sm:aspect-[1.586/1]"
         >
           {/* Flip layer */}
@@ -154,7 +155,7 @@ export function MonixCard3D({
             }}
             initial={false}
             animate={{ rotateY: flipped ? 180 : 0 }}
-            transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.75, ease: EASE_MONIX }}
             className="relative w-full h-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-mint/50 rounded-2xl"
             style={{ transformStyle: 'preserve-3d' }}
           >
@@ -181,7 +182,7 @@ export function MonixCard3D({
                     <p className="font-display text-lg font-bold tracking-[0.18em] text-white">
                       MONIX
                     </p>
-                    <p className="font-body text-[10px] uppercase tracking-[0.22em] text-mint/90 mt-0.5">
+                    <p className="font-body text-2xs uppercase tracking-[0.22em] text-mint/90 mt-0.5">
                       Débito · {tipoLabel}{moneda === 'USD' ? ' · USD' : ''}
                     </p>
                   </div>
@@ -212,7 +213,7 @@ export function MonixCard3D({
                   </p>
                   <div className="mt-4 flex items-end justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-body text-[9px] uppercase tracking-[0.18em] text-slate-secondary">
+                      <p className="font-body text-2xs uppercase tracking-[0.18em] text-slate-secondary">
                         Titular
                       </p>
                       <p className="font-display text-sm font-semibold text-white truncate">
@@ -220,7 +221,7 @@ export function MonixCard3D({
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-body text-[9px] uppercase tracking-[0.18em] text-slate-secondary">
+                      <p className="font-body text-2xs uppercase tracking-[0.18em] text-slate-secondary">
                         Vence
                       </p>
                       <p className="font-mono text-sm text-white/90">12/29</p>
@@ -244,7 +245,7 @@ export function MonixCard3D({
                 <div className="mt-3 sm:mt-5 h-8 sm:h-10 w-full shrink-0 bg-black/70" />
                 <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 py-2.5 sm:px-5 sm:py-3">
                   <div className="flex shrink-0 items-center justify-between rounded-md bg-white/90 px-3 py-1.5">
-                    <span className="font-body text-[10px] uppercase tracking-wider text-navy/50">CVV</span>
+                    <span className="font-body text-2xs uppercase tracking-wider text-navy/50">CVV</span>
                     <span className="font-mono text-sm tracking-widest text-navy">
                       {showSensitive ? cvv : '•••'}
                     </span>
@@ -253,7 +254,7 @@ export function MonixCard3D({
                   <div className="flex min-h-0 flex-1 flex-col justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-body text-[10px] uppercase tracking-[0.16em] text-slate-secondary">
+                        <p className="font-body text-2xs uppercase tracking-[0.16em] text-slate-secondary">
                           CBU
                         </p>
                         <button
@@ -268,7 +269,7 @@ export function MonixCard3D({
                           {copied === 'cbu' ? <Check size={14} className="text-mint" /> : <Copy size={14} />}
                         </button>
                       </div>
-                      <p className="mt-0.5 break-all font-mono text-[10px] leading-tight tracking-wide text-white sm:text-xs">
+                      <p className="mt-0.5 break-all font-mono text-2xs leading-tight tracking-wide text-white sm:text-xs">
                         {cbu || '—'}
                       </p>
                     </div>
@@ -277,7 +278,7 @@ export function MonixCard3D({
 
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-body text-[10px] uppercase tracking-[0.16em] text-slate-secondary">
+                        <p className="font-body text-2xs uppercase tracking-[0.16em] text-slate-secondary">
                           Alias
                         </p>
                         <button
@@ -298,7 +299,7 @@ export function MonixCard3D({
                     </div>
                   </div>
 
-                  <p className="shrink-0 font-body text-[9px] leading-tight text-slate-secondary/80 sm:text-[10px]">
+                  <p className="shrink-0 font-body text-2xs leading-tight text-slate-secondary/80">
                     Datos para recibir transferencias · MONIX Débito
                   </p>
                 </div>
@@ -314,7 +315,7 @@ export function MonixCard3D({
                 initial={{ opacity: 0, clipPath: 'circle(0% at 50% 50%)' }}
                 animate={{ opacity: 1, clipPath: 'circle(150% at 50% 50%)' }}
                 exit={{ opacity: 0, clipPath: 'circle(0% at 50% 50%)' }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.5, ease: EASE_MONIX }}
                 className="pointer-events-none absolute inset-0 rounded-2xl overflow-hidden z-20"
                 style={{
                   background:

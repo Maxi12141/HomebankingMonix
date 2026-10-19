@@ -7,6 +7,7 @@ import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { Monto } from '../components/ui/Monto'
 
 const COMERCIOS = [
   { id: 'c1', name: 'mercadoMONIX', pct: 8, icon: ShoppingBag, cat: 'Marketplace' },
@@ -64,7 +65,7 @@ export function CashbackPage() {
           </div>
           <div>
             <p className="font-body text-xs text-slate-secondary">Cashback acumulado (demo)</p>
-            <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint">{formatARS(acumulado)}</p>
+            <Monto as="p" tamaño="grande" className="font-display text-2xl font-bold">{formatARS(acumulado)}</Monto>
           </div>
         </Card>
 
@@ -118,7 +119,7 @@ export function CashbackPage() {
               className="mt-4 rounded-xl bg-slate-input dark:bg-white/5 px-4 py-3 flex items-center justify-between"
             >
               <span className="font-body text-sm text-slate-secondary">Te devolverían</span>
-              <span className="font-display text-lg font-bold text-mint-tinta-fuerte dark:text-mint">{formatARS(devolucion)}</span>
+              <Monto tamaño="chico" className="font-display text-lg font-bold">{formatARS(devolucion)}</Monto>
             </motion.div>
           </AnimatePresence>
 

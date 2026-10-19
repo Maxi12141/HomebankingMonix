@@ -64,7 +64,7 @@ function retainCuentaRealtime(ids: string[]) {
       realtimeChannels.set(id, channel)
     } catch (err) {
       realtimeRefCount.delete(id)
-      console.error('No se pudo suscribir a cambios de la cuenta:', err)
+      console.error('No pudimos suscribir a cambios de la cuenta:', err)
     }
   }
 

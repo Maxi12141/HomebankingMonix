@@ -41,7 +41,7 @@ export async function detectQrUntil(video: HTMLVideoElement, signal: AbortSignal
   const jsQR = (await import('jsqr')).default
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
-  if (!ctx) throw new Error('No se pudo leer el QR con la cámara')
+  if (!ctx) throw new Error('No pudimos leer el QR con la cámara')
 
   while (!signal.aborted) {
     if (video.readyState >= 2 && video.videoWidth > 0) {
@@ -75,7 +75,7 @@ export function mensajeErrorCamara(err: unknown): string {
     return 'La cámara está ocupada por otra app. Cerrala o usá “Sacar foto del QR”.'
   }
   if (raw.trim() && !/^permission denied$/i.test(raw.trim())) return raw
-  return 'No se pudo abrir la cámara en vivo. Tocá “Sacar foto del QR”.'
+  return 'No pudimos abrir la cámara en vivo. Tocá “Sacar foto del QR”.'
 }
 
 function esPantallaChica() {
@@ -107,7 +107,7 @@ export async function pedirStreamCamara(): Promise<MediaStream> {
       ultimo = err
     }
   }
-  throw ultimo instanceof Error ? ultimo : new Error('No se pudo abrir la cámara')
+  throw ultimo instanceof Error ? ultimo : new Error('No pudimos abrir la cámara')
 }
 
 export async function engancharCamara(video: HTMLVideoElement, stream: MediaStream) {
@@ -138,7 +138,7 @@ export async function leerQrDeArchivo(file: Blob): Promise<string> {
     canvas.width = bitmap.width
     canvas.height = bitmap.height
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
-    if (!ctx) throw new Error('No se pudo leer la foto')
+    if (!ctx) throw new Error('No pudimos leer la foto')
     ctx.drawImage(bitmap, 0, 0)
     const image = ctx.getImageData(0, 0, canvas.width, canvas.height)
     const code = jsQR(image.data, image.width, image.height)
@@ -185,5 +185,5 @@ export async function waitForVideo(getVideo: () => HTMLVideoElement | null, sign
     if (video) return video
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
   }
-  throw new Error('No se pudo abrir la cámara')
+  throw new Error('No pudimos abrir la cámara')
 }

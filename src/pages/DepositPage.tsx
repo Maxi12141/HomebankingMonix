@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
@@ -8,8 +7,10 @@ import { useCuentaStore } from '../store/cuentaStore'
 import { formatMonto } from '../utils/cuenta'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
+import { IconoExito } from '../components/ui/IconoExito'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { Monto } from '../components/ui/Monto'
 
 type Step = 'form' | 'success'
 
@@ -23,6 +24,9 @@ function parseMonto(raw: string) {
   const n = parseFloat(raw.replace(/\s/g, '').replace(',', '.'))
   return n
 }
+
+// El RPC depositar_en_cuenta es una sola transacción: si falla, no se movió nada.
+const ERROR_DEPOSITO = 'No pudimos acreditar el depósito. Tu plata no se movió: probá de nuevo en unos minutos.'
 
 export function DepositPage() {
   const { cuenta, cuentas, refreshCuenta } = useCuenta()
@@ -74,10 +78,10 @@ export function DepositPage() {
         p_monto: montoNum,
         p_descripcion: descripcion.trim() || null,
       })
-      if (errDep) throw new Error(errDep.message || 'No se pudo depositar')
+      if (errDep) throw new Error(errDep.message || ERROR_DEPOSITO)
 
       const nuevoSaldo = Number(data)
-      if (!Number.isFinite(nuevoSaldo)) throw new Error('No se pudo depositar')
+      if (!Number.isFinite(nuevoSaldo)) throw new Error('No pudimos confirmar el depósito. Revisá tus movimientos antes de volver a intentar.')
 
       updateSaldoCuenta(cuentaDestino.id, nuevoSaldo)
       setDepositado({ monto: montoNum, saldo: nuevoSaldo, moneda: cuentaDestino.moneda })
@@ -85,7 +89,7 @@ export function DepositPage() {
       toast.success('¡Depósito realizado con éxito!')
       void refreshCuenta()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Ocurrió un error al procesar el depósito'
+      const msg = err instanceof Error ? err.message : ERROR_DEPOSITO
       setError(msg)
       toast.error(msg)
     } finally {
@@ -138,7 +142,7 @@ export function DepositPage() {
                 )}
 
                 <p className="font-body text-sm text-slate-secondary mb-1">Saldo actual</p>
-                <p className="font-display text-2xl font-bold text-mint-tinta dark:text-mint mb-6">{saldoFormateado}</p>
+                <Monto as="p" tamaño="grande" className="font-display text-2xl font-bold mb-6">{saldoFormateado}</Monto>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                   <Input
@@ -177,14 +181,14 @@ export function DepositPage() {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 >
-                  <CheckCircle size={56} className="text-mint mx-auto mb-4" />
+                  <IconoExito className="mb-4" />
                 </motion.div>
                 <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-2">¡Depósito exitoso!</h2>
                 <p className="font-body text-slate-secondary mb-2">
                   Depositaste {formatMonto(depositado.monto, depositado.moneda)}
                 </p>
                 <p className="font-body text-sm text-slate-secondary mb-8">
-                  Nuevo saldo: <span className="text-mint-tinta-fuerte dark:text-mint font-medium">{formatMonto(depositado.saldo, depositado.moneda)}</span>
+                  Nuevo saldo: <Monto tamaño="chico" className="font-medium">{formatMonto(depositado.saldo, depositado.moneda)}</Monto>
                 </p>
                 <Button className="w-full" onClick={handleReset}>Nuevo depósito</Button>
               </Card>

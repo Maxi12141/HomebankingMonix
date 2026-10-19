@@ -209,6 +209,47 @@
       transition: box-shadow 0.2s ease !important;
     }
   }
+
+  /* Loader del isologo (LoadingScreen). Tiempos de motion/monix-logo.aep. */
+  @keyframes loader-fondo {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes loader-sube {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  /* Ciclo de 1,8 s: entra 0,7 s, queda 0,5 s, sale 0,6 s siguiendo el arco. */
+  @keyframes loader-arco {
+    0% { transform: translateX(0); animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+    38.9% { transform: translateX(320px); }
+    66.7% { transform: translateX(320px); animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+    100% { transform: translateX(640px); }
+  }
+  .loader-fondo {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: loader-fondo 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .loader-pieza {
+    animation: loader-sube 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .loader-pieza-1 { animation-delay: 0.15s; }
+  .loader-pieza-2 { animation-delay: 0.23s; }
+  .loader-pieza-3 { animation-delay: 0.31s; }
+  .loader-barrido {
+    animation: loader-arco 1.8s 0.55s infinite both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .loader-fondo,
+    .loader-pieza {
+      animation: none;
+    }
+    .loader-barrido {
+      animation: none;
+      transform: translateX(320px);
+    }
+  }
 }
 
 @layer base {

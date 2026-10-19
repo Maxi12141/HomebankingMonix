@@ -33,13 +33,13 @@ export async function crearCobroQr(cuentaId: string, monto: number, descripcion:
     p_monto: monto,
     p_descripcion: descripcion,
   })
-  if (error) throw new Error(rpcMessage(error, 'No se pudo crear el cobro'))
+  if (error) throw new Error(rpcMessage(error, 'No pudimos crear el cobro'))
   return String(data)
 }
 
 export async function obtenerCobroQr(cobroId: string): Promise<CobroQr> {
   const { data, error } = await supabase.rpc('obtener_cobro_qr', { p_cobro_id: cobroId })
-  if (error) throw new Error(rpcMessage(error, 'No se pudo leer el cobro'))
+  if (error) throw new Error(rpcMessage(error, 'No pudimos leer el cobro'))
   const row = Array.isArray(data) ? data[0] : data
   if (!row) throw new Error('No encontramos ese cobro')
   return mapCobro(row as Record<string, unknown>)
@@ -47,12 +47,12 @@ export async function obtenerCobroQr(cobroId: string): Promise<CobroQr> {
 
 export async function cancelarCobroQr(cobroId: string) {
   const { error } = await supabase.rpc('cancelar_cobro_qr', { p_cobro_id: cobroId })
-  if (error) throw new Error(rpcMessage(error, 'No se pudo cancelar el cobro'))
+  if (error) throw new Error(rpcMessage(error, 'No pudimos cancelar el cobro'))
 }
 
 export async function pagarCobroQr(cobroId: string) {
   const { error } = await supabase.rpc('pagar_cobro_qr', { p_cobro_id: cobroId })
-  if (error) throw new Error(rpcMessage(error, 'No se pudo completar el pago'))
+  if (error) throw new Error(rpcMessage(error, 'No pudimos completar el pago'))
 }
 
 export interface DestinoQr {
@@ -65,7 +65,7 @@ export interface DestinoQr {
 
 export async function resolverQrCuenta(cuentaId: string): Promise<DestinoQr> {
   const { data, error } = await supabase.rpc('resolver_qr_cuenta', { p_cuenta_id: cuentaId })
-  if (error) throw new Error(rpcMessage(error, 'No se pudo leer ese QR'))
+  if (error) throw new Error(rpcMessage(error, 'No pudimos leer ese QR'))
   const row = Array.isArray(data) ? data[0] : data
   if (!row?.cuenta_id) throw new Error('No encontramos esa cuenta')
   return {
@@ -83,7 +83,7 @@ export async function pagarQrCuenta(cuentaDestinoId: string, monto: number, desc
     p_monto: monto,
     p_descripcion: descripcion,
   })
-  if (error) throw new Error(rpcMessage(error, 'No se pudo completar el pago'))
+  if (error) throw new Error(rpcMessage(error, 'No pudimos completar el pago'))
 }
 
 export async function setTarjetaFlags(
@@ -91,5 +91,5 @@ export async function setTarjetaFlags(
   flags: { tarjeta_congelada?: boolean },
 ) {
   const { error } = await supabase.from('cuentas').update(flags).eq('id', cuentaId)
-  if (error) throw new Error(rpcMessage(error, 'No se pudo actualizar la tarjeta'))
+  if (error) throw new Error(rpcMessage(error, 'No pudimos actualizar la tarjeta'))
 }

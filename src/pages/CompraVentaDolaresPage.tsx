@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle, Lock, RefreshCw } from 'lucide-react'
+import { Lock, RefreshCw } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
@@ -10,8 +10,10 @@ import { useMercadoFinanciero } from '../hooks/useMercadoFinanciero'
 import { formatMonto } from '../utils/cuenta'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
+import { IconoExito } from '../components/ui/IconoExito'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { Monto } from '../components/ui/Monto'
 
 type Modo = 'comprar' | 'vender'
 type Step = 'form' | 'success'
@@ -94,7 +96,7 @@ export function CompraVentaDolaresPage() {
       toast.success(modo === 'comprar' ? '¡Compra realizada con éxito!' : '¡Venta realizada con éxito!')
     } catch (err) {
       // PostgrestError puede no ser instanceof Error — se lee el message directamente.
-      const msg = (err as { message?: string } | null)?.message || 'Ocurrió un error al procesar la operación'
+      const msg = (err as { message?: string } | null)?.message || 'No pudimos completar la operación. Tu plata no se movió: probá de nuevo en unos minutos.'
       setError(msg)
       toast.error(msg)
     } finally {
@@ -159,7 +161,7 @@ export function CompraVentaDolaresPage() {
 
                 <div className="flex items-center justify-between gap-3 mb-6 rounded-xl bg-slate-input dark:bg-white/5 px-4 py-3">
                   <div>
-                    <p className="font-body text-[10px] uppercase tracking-wider text-slate-secondary">Dólar oficial</p>
+                    <p className="font-body text-2xs uppercase tracking-wider text-slate-secondary">Dólar oficial</p>
                     <p className="font-display text-sm font-semibold text-navy dark:text-white mt-0.5">
                       {oficial ? `Compra ${formatMonto(oficial.compra, 'ARS')} · Venta ${formatMonto(oficial.venta, 'ARS')}` : loadingCotizacion ? 'Cargando...' : 'No disponible'}
                     </p>
@@ -183,9 +185,9 @@ export function CompraVentaDolaresPage() {
                     <p className="font-body text-xs text-slate-secondary">
                       {modo === 'comprar' ? 'Vas a pagar' : 'Vas a recibir'}
                     </p>
-                    <p className="font-display text-xl font-bold text-mint-tinta-fuerte dark:text-mint mt-0.5">
+                    <Monto as="p" tamaño="chico" className="font-display text-xl font-bold mt-0.5">
                       {formatMonto(montoArs, 'ARS')}
-                    </p>
+                    </Monto>
                   </div>
 
                   <p className="font-body text-xs text-slate-secondary">
@@ -212,7 +214,7 @@ export function CompraVentaDolaresPage() {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 >
-                  <CheckCircle size={56} className="text-mint mx-auto mb-4" />
+                  <IconoExito className="mb-4" />
                 </motion.div>
                 <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-2">
                   {modo === 'comprar' ? '¡Compra exitosa!' : '¡Venta exitosa!'}

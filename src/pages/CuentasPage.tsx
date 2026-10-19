@@ -12,6 +12,7 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { compartirTexto, textoDatosCuenta } from '../utils/compartir'
 import type { Cuenta, Persona } from '../types'
+import { Monto } from '../components/ui/Monto'
 
 type Estado = 'idle' | 'confirmar' | 'abriendo'
 
@@ -31,7 +32,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
       className="flex items-center justify-between gap-3 w-full rounded-xl bg-slate-input dark:bg-white/5 px-3 py-2.5 text-left hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors"
     >
       <span className="min-w-0">
-        <span className="block font-body text-[10px] uppercase tracking-wider text-slate-secondary">{label}</span>
+        <span className="block font-body text-2xs uppercase tracking-wider text-slate-secondary">{label}</span>
         <span className="block font-body text-sm text-navy dark:text-white truncate">{value}</span>
       </span>
       {copiado ? <Check size={16} className="text-navy dark:text-mint shrink-0" /> : <Copy size={16} className="text-slate-secondary shrink-0" />}
@@ -46,9 +47,9 @@ function CuentaCard({ cuenta, titulo, persona }: { cuenta: Cuenta; titulo: strin
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <p className="font-body text-xs text-slate-secondary uppercase tracking-wider">{titulo}</p>
-          <p className="font-display text-3xl font-bold text-mint-tinta dark:text-mint mt-1">
+          <Monto as="p" tamaño="grande" className="font-display text-3xl font-bold mt-1">
             {formatMonto(Number(cuenta.saldo), cuenta.moneda)}
-          </p>
+          </Monto>
         </div>
         <div className="rounded-xl bg-mint/15 text-navy dark:text-mint p-2.5 shrink-0">
           <Icon size={22} />
@@ -119,7 +120,7 @@ export function CuentasPage() {
     } catch (err) {
       const msg = err instanceof BancoCentralError
         ? mensajeAmigableBC(err)
-        : err instanceof Error ? err.message : 'No se pudo abrir la cuenta'
+        : err instanceof Error ? err.message : 'No pudimos abrir la cuenta'
       setError(msg)
       setEstado('idle')
       toast.error(msg)

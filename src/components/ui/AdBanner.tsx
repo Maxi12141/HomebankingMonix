@@ -118,7 +118,7 @@ export function AdBanner() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 mb-0.5">
-              <span className="font-display text-[10px] sm:text-xs font-bold tracking-[0.18em] text-mint uppercase">
+              <span className="font-display text-2xs sm:text-xs font-bold tracking-[0.18em] text-mint uppercase">
                 mercadoMONIX
               </span>
               <Sparkles size={12} className="text-mint" />
@@ -236,7 +236,7 @@ function PromoCard({
           <div className={`text-[13px] sm:text-base font-semibold leading-snug ${titleCls}`}>
             {title}
           </div>
-          <div className="text-[11px] sm:text-sm text-slate-secondary mt-0.5 leading-snug">
+          <div className="text-2xs sm:text-sm text-slate-secondary mt-0.5 leading-snug">
             {subtitle}
           </div>
         </div>

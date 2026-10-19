@@ -189,7 +189,7 @@ export function OnboardingTour({ steps, onComplete }: Props) {
               />
             ))}
           </div>
-          <span className="font-body text-[11px] text-white/40 tabular-nums">
+          <span className="font-body text-2xs text-white/40 tabular-nums">
             {step + 1}/{steps.length}
           </span>
         </div>

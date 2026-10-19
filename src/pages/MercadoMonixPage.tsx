@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   Minus,
   Plus,
-  CheckCircle,
   X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -19,6 +18,7 @@ import { useCuentaStore } from '../store/cuentaStore'
 import { useAuthStore } from '../store/authStore'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
+import { IconoExito } from '../components/ui/IconoExito'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import {
@@ -27,6 +27,7 @@ import {
   productoImagen,
   type ProductoMercado,
 } from '../data/mercadoMonixProductos'
+import { Monto } from '../components/ui/Monto'
 
 function formatARS(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -55,13 +56,13 @@ function ProductImage({ producto, className = 'h-44' }: { producto: ProductoMerc
           <span className="font-display text-xs font-bold text-navy dark:text-mint uppercase tracking-wider">
             {producto.categoria}
           </span>
-          <span className="font-body text-[11px] text-navy dark:text-white line-clamp-2">
+          <span className="font-body text-2xs text-navy dark:text-white line-clamp-2">
             {producto.titulo}
           </span>
         </div>
       )}
       {producto.tag && (
-        <span className="absolute left-3 top-3 rounded-md bg-mint text-navy text-[10px] font-body font-bold uppercase tracking-wide px-2 py-0.5">
+        <span className="absolute left-3 top-3 rounded-md bg-mint text-navy text-2xs font-body font-bold uppercase tracking-wide px-2 py-0.5">
           {producto.tag}
         </span>
       )}
@@ -134,7 +135,7 @@ export function MercadoMonixPage() {
         .from('cuentas')
         .update({ saldo: nuevoSaldo })
         .eq('id', cuenta.id)
-      if (errSaldo) throw new Error('No se pudo descontar el saldo')
+      if (errSaldo) throw new Error('No pudimos descontar el saldo')
 
       const { error: errMov } = await supabase.from('movimientos').insert({
         cuenta_id: cuenta.id,
@@ -143,14 +144,14 @@ export function MercadoMonixPage() {
         saldo_resultante: nuevoSaldo,
         descripcion: `mercadoMONIX|${producto.titulo} x${cantidad}`,
       })
-      if (errMov) throw new Error('No se pudo registrar la compra')
+      if (errMov) throw new Error('No pudimos registrar la compra')
 
       updateSaldo(nuevoSaldo)
       await refreshCuenta()
       setSuccess(true)
       toast.success('¡Compra realizada con tu tarjeta MONIX!')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'No se pudo completar la compra'
+      const msg = err instanceof Error ? err.message : 'No pudimos completar la compra'
       setError(msg)
       toast.error(msg)
     } finally {
@@ -264,15 +265,15 @@ export function MercadoMonixPage() {
                   <p className="font-display text-lg sm:text-xl font-bold text-navy dark:text-white">
                     {formatARS(p.precio)}
                   </p>
-                  <p className="font-body text-[11px] sm:text-xs text-navy dark:text-mint mt-0.5">
+                  <p className="font-body text-2xs sm:text-xs text-navy dark:text-mint mt-0.5">
                     en {p.cuotas} cuotas sin interés
                   </p>
                   {p.envioGratis && (
-                    <p className="font-body text-[11px] sm:text-xs text-navy dark:text-mint font-medium mt-1.5 inline-flex items-center gap-1">
+                    <p className="font-body text-2xs sm:text-xs text-navy dark:text-mint font-medium mt-1.5 inline-flex items-center gap-1">
                       <Truck size={12} /> Envío gratis
                     </p>
                   )}
-                  <p className="font-body text-[10px] sm:text-[11px] text-slate-secondary mt-2 inline-flex items-center gap-1">
+                  <p className="font-body text-2xs text-slate-secondary mt-2 inline-flex items-center gap-1">
                     <Star size={11} className="text-navy dark:text-mint fill-navy dark:fill-mint" />
                     {p.rating} · {p.vendidos.toLocaleString('es-AR')} vendidos
                   </p>
@@ -292,7 +293,7 @@ export function MercadoMonixPage() {
           </div>
         )}
 
-        <p className="font-body text-[11px] text-slate-secondary text-center mt-6">
+        <p className="font-body text-2xs text-slate-secondary text-center mt-6">
           mercadoMONIX · al comprar se descuenta de tu saldo · no afiliado a Mercado Libre
         </p>
       </div>
@@ -316,7 +317,7 @@ export function MercadoMonixPage() {
 
             {success ? (
               <div className="p-6 text-center">
-                <CheckCircle size={52} className="text-mint mx-auto mb-3" />
+                <IconoExito className="mb-3" />
                 <p className="font-display text-lg font-semibold text-navy dark:text-white mb-1">
                   ¡Listo!
                 </p>
@@ -326,9 +327,9 @@ export function MercadoMonixPage() {
                 <p className="font-body text-xs text-slate-secondary mb-2">
                   Cantidad: {cantidad}
                 </p>
-                <p className="font-display text-xl font-bold text-mint-tinta dark:text-mint mb-4">
+                <Monto as="p" tamaño="grande" className="font-display text-xl font-bold mb-4">
                   {formatARS(total)}
-                </p>
+                </Monto>
                 <p className="font-body text-xs text-slate-secondary mb-5">
                   Nuevo saldo: {formatARS(saldo)}
                 </p>
@@ -395,7 +396,7 @@ export function MercadoMonixPage() {
                   <p className="font-body text-xs text-white/70 uppercase tracking-wide">
                     {titular}
                   </p>
-                  <p className="font-body text-[11px] text-mint mt-2">
+                  <p className="font-body text-2xs text-mint mt-2">
                     Se debitará de tu saldo disponible
                   </p>
                 </div>
@@ -416,9 +417,9 @@ export function MercadoMonixPage() {
                   <div className="h-px bg-slate-200 dark:bg-white/10" />
                   <div className="flex justify-between gap-3">
                     <span className="font-body text-sm text-slate-secondary">Saldo después</span>
-                    <span className={`font-display text-sm font-bold ${total > saldo ? 'text-red-500' : 'text-mint-tinta-fuerte dark:text-mint'}`}>
+                    <Monto tamaño="chico" negativo={total > saldo} className="font-display text-sm font-bold">
                       {formatARS(roundMoney(saldo - total))}
-                    </span>
+                    </Monto>
                   </div>
                 </div>
 

@@ -95,7 +95,7 @@ export function ProfilePage() {
     if (emailCambio) {
       const { error: authError } = await supabase.auth.updateUser({ email })
       if (authError) {
-        toast.error('Error al actualizar el email')
+        toast.error('No pudimos actualizar tu email. Probá de nuevo.')
         setSavingProfile(false)
         return
       }
@@ -114,7 +114,7 @@ export function ProfilePage() {
       )
       setEditMode(false)
     } else {
-      toast.error('Error al actualizar los datos')
+      toast.error('No pudimos guardar tus datos. Probá de nuevo.')
     }
     setSavingProfile(false)
   }
@@ -146,7 +146,7 @@ export function ProfilePage() {
       setCuenta({ ...cuenta, alias: aliasInput })
       toast.success('Alias actualizado correctamente')
     } catch {
-      toast.error('No se pudo actualizar el alias')
+      toast.error('No pudimos actualizar el alias')
     }
     setSavingAlias(false)
   }
@@ -166,7 +166,7 @@ export function ProfilePage() {
       setPersona({ ...persona, sueldo_acreditado: sueldoAcreditado, ingreso_mensual: ingresoNum })
       toast.success('Datos financieros actualizados')
     } else {
-      toast.error('No se pudieron guardar los datos financieros')
+      toast.error('No pudimos guardar los datos financieros')
     }
     setSavingCredito(false)
   }
@@ -200,7 +200,7 @@ export function ProfilePage() {
       setCurrentPass('')
       setNewPass('')
     } else {
-      setPassError('No se pudo actualizar la contraseña')
+      setPassError('No pudimos actualizar la contraseña')
     }
     setSavingPass(false)
   }
@@ -217,7 +217,7 @@ export function ProfilePage() {
         borrarNombreBio(user.email ?? persona.email)
         toast.success('Biometría desactivada')
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'No se pudo desactivar'
+        const msg = err instanceof Error ? err.message : 'No pudimos desactivar'
         toast.error(msg)
       } finally {
         setSavingBio(false)
@@ -255,7 +255,7 @@ export function ProfilePage() {
       setConfirmandoBio(false)
       setConfirmPass('')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'No se pudo configurar el desbloqueo'
+      const msg = err instanceof Error ? err.message : 'No pudimos configurar el desbloqueo'
       toast.error(msg, { id: 'bio' })
     } finally {
       setSavingBio(false)
@@ -269,7 +269,7 @@ export function ProfilePage() {
       localStorage.setItem('monix_permisos_ok', '1')
       toast.success('Listo. Si el navegador no preguntó, habilitalos desde el candado de la barra de direcciones.')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudieron pedir los permisos')
+      toast.error(err instanceof Error ? err.message : 'No pudimos pedir los permisos')
     } finally {
       setSavingPermisos(false)
     }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRightLeft, History, Plus, Eye, EyeOff, Copy, Check, TrendingUp, ChevronLeft, ChevronRight, QrCode, Share2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CountUp from 'react-countup'
+import { EASE_MONIX, DURACION } from '../lib/motion'
 import { useAuthStore } from '../store/authStore'
 import { compartirTexto, textoDatosCuenta } from '../utils/compartir'
 import { useCuenta } from '../hooks/useCuenta'
@@ -10,6 +11,8 @@ import { useMovimientos } from '../hooks/useMovimientos'
 import { useBankNames } from '../hooks/useBankNames'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
+import { Skeleton, MovimientosSkeleton } from '../components/ui/Skeleton'
+import { useCuentaStore } from '../store/cuentaStore'
 import { Button } from '../components/ui/Button'
 import { WelcomeBonusModal } from '../components/WelcomeBonusModal'
 import { OnboardingTour } from '../components/OnboardingTour'
@@ -29,6 +32,7 @@ import {
   hayTourPendiente,
   limpiarClavesViejas,
 } from '../lib/onboarding'
+import { Monto } from '../components/ui/Monto'
 
 function formatMonto(monto: number, tipo: string, moneda: 'ARS' | 'USD') {
   const esEntrada = tipo === 'deposito' || tipo === 'transferencia_entrada'
@@ -173,13 +177,13 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
           {showData ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
       </div>
-      <p className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-mint-tinta dark:text-mint leading-none min-w-0">
+      <Monto as="p" tamaño="grande" className="font-display text-3xl sm:text-4xl md:text-5xl font-bold leading-none min-w-0">
         {showData ? (
           <CountUp
             key={animKey}
             start={countStart}
             end={cuenta.saldo}
-            duration={1.4}
+            duration={DURACION.contar}
             decimals={2}
             decimal={isUSD ? '.' : ','}
             separator={isUSD ? ',' : '.'}
@@ -189,7 +193,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
         ) : (
           <span>{isUSD ? 'US$' : '$ '}••••••</span>
         )}
-      </p>
+      </Monto>
       <AnimatePresence>
         {delta !== null && (
           <motion.p
@@ -198,7 +202,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.3 }}
-            className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint-tinta-fuerte dark:text-mint' : 'text-red-500 dark:text-red-400'}`}
+            className={`font-body text-sm font-medium mt-1 mb-2 ${delta > 0 ? 'text-mint-tinta-fuerte dark:text-mint' : 'text-red-600 dark:text-red-400'}`}
           >
             {showData ? (
               <>{delta > 0 ? '+' : ''}{formatMoneda(delta, cuenta.moneda)}</>
@@ -221,10 +225,10 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
           </span>
         </p>
         {interesHoy > 0 && (
-          <p className="font-body text-xs text-mint-tinta-fuerte dark:text-mint inline-flex items-center gap-1">
+          <Monto as="p" tamaño="chico" className="font-body text-xs inline-flex items-center gap-1">
             <TrendingUp size={12} />
             +{showData ? formatMoneda(interesHoy, cuenta.moneda) : '••••'} acreditados
-          </p>
+          </Monto>
         )}
       </div>
 
@@ -239,7 +243,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             {showData ? (cuenta.cbu ?? '—') : '•••••••••••••••••••••'}
           </span>
           <button onClick={() => handleCopy(cuenta.cbu ?? '', 'cbu')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar CBU">
-            {copiedCbu ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
+            {copiedCbu ? <Check size={13} className="text-navy dark:text-mint" /> : <Copy size={13} />}
           </button>
         </div>
 
@@ -251,7 +255,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             {showData ? (cuenta.alias ?? '—') : '••••••••••••••'}
           </span>
           <button onClick={() => handleCopy(cuenta.alias ?? '', 'alias')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar Alias">
-            {copiedAlias ? <Check size={13} className="text-mint" /> : <Copy size={13} />}
+            {copiedAlias ? <Check size={13} className="text-navy dark:text-mint" /> : <Copy size={13} />}
           </button>
         </div>
 
@@ -278,6 +282,7 @@ export function DashboardPage() {
   const { persona, user } = useAuthStore()
   const { cuenta, cuentas, interesHoyPorCuenta } = useCuenta()
   const { movimientos, loading: loadingMov } = useMovimientos(5)
+  const cuentasLoaded = useCuentaStore((st) => st.cuentasLoaded)
   const bankNames = useBankNames(movimientos)
 
   const [showWelcome, setShowWelcome] = useState(false)
@@ -337,7 +342,7 @@ export function DashboardPage() {
                 initial={{ opacity: 0, x: direction * 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: direction * -20 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: DURACION.swipe, ease: EASE_MONIX }}
                 // Con dos cuentas también se pasa de una a otra deslizando:
                 // hacia la izquierda la siguiente, hacia la derecha la anterior.
                 // pan-y deja el scroll vertical de la página al navegador.
@@ -360,6 +365,13 @@ export function DashboardPage() {
               </motion.div>
             )}
           </AnimatePresence>
+          {!cuentaMostrada && !cuentasLoaded && (
+            <Card className="p-8" role="status" aria-busy="true" aria-label="Cargando tu saldo">
+              <Skeleton className="h-4 w-32 mb-4" />
+              <Skeleton className="h-10 sm:h-12 w-3/5 mb-4" />
+              <Skeleton className="h-3 w-2/5" />
+            </Card>
+          )}
 
           {cuentaUSD && (
             <>
@@ -427,7 +439,7 @@ export function DashboardPage() {
           </div>
 
           {loadingMov ? (
-            <div className="text-center py-8 text-slate-secondary font-body text-sm">Cargando...</div>
+            <MovimientosSkeleton />
           ) : movimientos.length === 0 ? (
             <Card className="p-6 text-center">
               <p className="font-body text-slate-secondary text-sm">Todavía no tenés movimientos</p>
@@ -458,9 +470,9 @@ export function DashboardPage() {
                           {new Date(mov.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </p>
                       </div>
-                      <span className={`font-display font-semibold text-base ${esEntrada ? 'text-mint-tinta-fuerte dark:text-mint' : 'text-red-500 dark:text-red-400'}`}>
+                      <Monto tamaño="chico" negativo={!esEntrada} className="font-display font-semibold text-base">
                         {text}
-                      </span>
+                      </Monto>
                     </Card>
                   </motion.div>
                 )

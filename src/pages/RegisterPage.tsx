@@ -118,7 +118,7 @@ export function RegisterPage() {
       toast.success('Biometría activada. La próxima vez entrás más rápido.')
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
-        toast.error(err instanceof Error ? err.message : 'No se pudo activar la biometría')
+        toast.error(err instanceof Error ? err.message : 'No pudimos activar la biometría')
       }
     } finally {
       setBioLoading(false)
@@ -170,7 +170,7 @@ export function RegisterPage() {
       })
 
       if (authError) throw authError
-      if (!authData.user) throw new Error('No se pudo crear el usuario')
+      if (!authData.user) throw new Error('No pudimos crear el usuario')
 
       userId = authData.user.id
 
@@ -207,7 +207,7 @@ export function RegisterPage() {
           situacion_informada_at: new Date().toISOString(),
         }).eq('id', userId)
       } catch (err) {
-        console.error('No se pudo informar la situación crediticia al Banco Central:', err)
+        console.error('No pudimos informar la situación crediticia al Banco Central:', err)
       }
 
       setProgressMessage('Abriendo tu cuenta...')
@@ -251,7 +251,7 @@ export function RegisterPage() {
       if (userId) {
         await supabase.auth.signOut().catch(() => undefined)
       }
-      const msg = err instanceof Error ? err.message : 'Error al registrarse'
+      const msg = err instanceof Error ? err.message : 'No pudimos crear tu cuenta. Probá de nuevo en unos minutos.'
       if (msg.includes('already registered')) {
         setError('Ese email ya está registrado')
       } else if (msg.includes('duplicate') && msg.includes('dni')) {
@@ -270,7 +270,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] dark:bg-navy flex items-center justify-center p-4 py-10">
+    <div className="min-h-screen bg-slate-input dark:bg-navy flex items-center justify-center p-4 py-10">
       <motion.div
         className="w-full max-w-lg"
         initial={{ opacity: 0, y: 24 }}
@@ -297,7 +297,7 @@ export function RegisterPage() {
               </p>
 
               <div className="flex items-center justify-center mb-6">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-mint/15 border border-mint/40">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-navy border border-navy dark:bg-mint/15 dark:border-mint/40">
                   <Fingerprint size={30} className="text-mint" strokeWidth={1.6} />
                 </span>
               </div>

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { useMovimientos } from '../hooks/useMovimientos'
 import { useNotificacionesStore } from '../stores/notificacionesStore'
 import type { Movimiento } from '../types'
+import { Monto } from './ui/Monto'
 
 const currency = (n: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
@@ -72,7 +73,7 @@ export function NotificationBell() {
       >
         <Bell size={18} />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-mint text-navy text-[10px] font-body font-bold rounded-full flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-mint text-navy text-2xs font-body font-bold rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -131,9 +132,9 @@ export function NotificationBell() {
                           })}
                         </p>
                       </div>
-                      <span className="font-display text-sm font-semibold text-mint-tinta-fuerte dark:text-mint shrink-0">
+                      <Monto tamaño="chico" className="font-display text-sm font-semibold shrink-0">
                         +{currency(n.monto)}
-                      </span>
+                      </Monto>
                     </button>
                   ))
                 )}

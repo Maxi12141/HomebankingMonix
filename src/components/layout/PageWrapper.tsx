@@ -40,7 +40,7 @@ export function PageWrapper({ children }: PageWrapperProps) {
   }, [drawerOpen])
 
   return (
-    <div className="flex min-h-screen bg-[#F0F2F5] dark:bg-navy font-body transition-colors duration-300">
+    <div className="flex min-h-screen bg-slate-input dark:bg-navy font-body transition-colors duration-300">
       {/* Backdrop */}
       <div
         className={`fixed inset-0 z-[55] bg-black/40 transition-opacity duration-300 ${

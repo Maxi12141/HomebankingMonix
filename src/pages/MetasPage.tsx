@@ -23,6 +23,7 @@ import {
   type MetaDetalle,
   type MetaResumen,
 } from '../services/metasComunes'
+import { Monto } from '../components/ui/Monto'
 
 function ars(n: number) {
   return formatMonto(n, 'ARS')
@@ -70,7 +71,7 @@ export function MetasPage() {
     try {
       setLista(await listarMetasComunes())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudieron cargar las metas')
+      setError(err instanceof Error ? err.message : 'No pudimos cargar las metas')
     } finally {
       setCargando(false)
     }
@@ -93,7 +94,7 @@ export function MetasPage() {
         toast.success(`Entraste a ${row.titulo}`)
         setLista(await listarMetasComunes())
       } catch (err) {
-        if (vivo) setError(err instanceof Error ? err.message : 'No se pudo entrar con ese código')
+        if (vivo) setError(err instanceof Error ? err.message : 'No pudimos entrar con ese código')
       } finally {
         if (vivo) setEnviando(false)
       }
@@ -106,7 +107,7 @@ export function MetasPage() {
     try {
       setDetalle(await detalleMetaComun(id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo abrir la meta')
+      setError(err instanceof Error ? err.message : 'No pudimos abrir la meta')
     }
   }
 
@@ -128,7 +129,7 @@ export function MetasPage() {
       setObjetivo('')
       await cargarLista()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear la meta')
+      setError(err instanceof Error ? err.message : 'No pudimos crear la meta')
     } finally {
       setEnviando(false)
     }
@@ -145,7 +146,7 @@ export function MetasPage() {
       await cargarLista()
       toast.success(`Entraste a ${row.titulo}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo entrar')
+      setError(err instanceof Error ? err.message : 'No pudimos entrar')
     } finally {
       setEnviando(false)
     }
@@ -165,7 +166,7 @@ export function MetasPage() {
       await cargarLista()
       toast.success('Aporte acreditado en la meta')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo aportar')
+      setError(err instanceof Error ? err.message : 'No pudimos aportar')
     } finally {
       setEnviando(false)
     }
@@ -182,7 +183,7 @@ export function MetasPage() {
       setAliasInvitar('')
       toast.success('Se sumó a la meta')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo invitar')
+      setError(err instanceof Error ? err.message : 'No pudimos invitar')
     } finally {
       setEnviando(false)
     }
@@ -207,7 +208,7 @@ export function MetasPage() {
       if (row.estado === 'desembolsada') toast.success('El desembolso salió')
       else toast.success('Quedó abierta la votación')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo proponer')
+      setError(err instanceof Error ? err.message : 'No pudimos proponer')
     } finally {
       setEnviando(false)
     }
@@ -224,7 +225,7 @@ export function MetasPage() {
       await cargarLista()
       if (row.estado === 'desembolsada') toast.success('La mayoría aprobó y salió el pago')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo votar')
+      setError(err instanceof Error ? err.message : 'No pudimos votar')
     } finally {
       setEnviando(false)
     }
@@ -237,7 +238,7 @@ export function MetasPage() {
       setCopiado(true)
       window.setTimeout(() => setCopiado(false), 1600)
     } catch {
-      toast.error('No se pudo copiar')
+      toast.error('No pudimos copiar')
     }
   }
 
@@ -284,7 +285,7 @@ export function MetasPage() {
 
           <Card className="p-6 mt-5 mb-4">
             <p className="font-body text-xs text-slate-secondary uppercase tracking-wider">En custodia</p>
-            <p className="font-display text-3xl font-bold text-mint-tinta dark:text-mint mt-1">{ars(detalle.saldo)}</p>
+            <Monto as="p" tamaño="grande" className="font-display text-3xl font-bold mt-1">{ars(detalle.saldo)}</Monto>
             {progreso != null && (
               <div className="mt-3">
                 <div className="h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
@@ -297,11 +298,11 @@ export function MetasPage() {
             )}
             <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="rounded-xl bg-slate-input dark:bg-white/5 px-3 py-2.5">
-                <p className="font-body text-[11px] text-slate-secondary uppercase">TNA</p>
+                <p className="font-body text-2xs text-slate-secondary uppercase">TNA</p>
                 <p className="font-display font-semibold text-navy dark:text-white">{detalle.tasaAnual}%</p>
               </div>
               <div className="rounded-xl bg-slate-input dark:bg-white/5 px-3 py-2.5">
-                <p className="font-body text-[11px] text-slate-secondary uppercase">Rinde / día</p>
+                <p className="font-body text-2xs text-slate-secondary uppercase">Rinde / día</p>
                 <p className="font-display font-semibold text-navy dark:text-white">{ars(detalle.estimacionDiaria)}</p>
               </div>
             </div>
@@ -317,7 +318,7 @@ export function MetasPage() {
               <p className="font-display font-semibold text-navy dark:text-white mb-3">Invitar</p>
               <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-input dark:bg-white/5 px-3 py-2.5 mb-3">
                 <div>
-                  <p className="font-body text-[11px] text-slate-secondary uppercase">Código</p>
+                  <p className="font-body text-2xs text-slate-secondary uppercase">Código</p>
                   <p className="font-display tracking-widest text-navy dark:text-white">{detalle.codigo}</p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -387,7 +388,7 @@ export function MetasPage() {
                       <span className="text-slate-secondary"> · armó la meta</span>
                     )}
                   </span>
-                  <span className="font-body text-sm text-mint-tinta-fuerte dark:text-mint">{ars(m.aporteTotal)}</span>
+                  <Monto tamaño="chico" className="font-body text-sm">{ars(m.aporteTotal)}</Monto>
                 </li>
               ))}
             </ul>
@@ -584,7 +585,7 @@ export function MetasPage() {
                       {m.miembros} {m.miembros === 1 ? 'persona' : 'personas'} · {estadoMeta(m.estado)}
                     </span>
                   </span>
-                  <span className="font-body text-sm text-mint-tinta-fuerte dark:text-mint shrink-0">{ars(m.saldo)}</span>
+                  <Monto tamaño="chico" className="font-body text-sm shrink-0">{ars(m.saldo)}</Monto>
                 </button>
               </li>
             ))}

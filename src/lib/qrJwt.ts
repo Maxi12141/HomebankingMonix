@@ -250,7 +250,7 @@ export async function firmarQrPropio(input: FirmarQrInput): Promise<string> {
       cid: input.cid,
     },
   })
-  if (error) throw new Error('No se pudo firmar el QR')
-  if (!data?.jwt) throw new Error(data?.error ?? 'No se pudo firmar el QR')
+  if (error) throw new Error('No pudimos firmar el QR')
+  if (!data?.jwt) throw new Error(data?.error ?? 'No pudimos firmar el QR')
   return data.jwt
 }

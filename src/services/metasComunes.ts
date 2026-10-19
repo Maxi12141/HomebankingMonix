@@ -75,7 +75,7 @@ export interface MetaDetalle {
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(fn, args)
-  if (error) throw new Error(rpcMessage(error, 'No se pudo completar la operación'))
+  if (error) throw new Error(rpcMessage(error, 'No pudimos completar la operación'))
   return data as T
 }
 
@@ -121,9 +121,9 @@ function parseVotacion(raw: unknown): MetaVotacion | null {
 }
 
 function parseDetalle(data: unknown): MetaDetalle {
-  if (!data || typeof data !== 'object') throw new Error('No se pudo leer la meta')
+  if (!data || typeof data !== 'object') throw new Error('No pudimos leer la meta')
   const r = data as Record<string, unknown>
-  if (typeof r.id !== 'string') throw new Error('No se pudo leer la meta')
+  if (typeof r.id !== 'string') throw new Error('No pudimos leer la meta')
   const miembros = Array.isArray(r.miembros) ? r.miembros : []
   const aportes = Array.isArray(r.aportes) ? r.aportes : []
   const estado = r.estado === 'votacion' || r.estado === 'desembolsada' ? r.estado : 'abierta'

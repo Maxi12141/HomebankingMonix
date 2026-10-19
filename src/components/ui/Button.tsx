@@ -7,7 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ variant = 'primary', loading, loadingLabel = 'Cargando...', children, className = '', disabled, ...props }: ButtonProps) {
-  const base = 'rounded-xl font-body font-medium px-5 py-3 transition-[transform,box-shadow,background-color,color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none'
+  const base = 'rounded-xl font-body font-medium px-5 py-3 transition-[transform,box-shadow,background-color,color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy dark:focus-visible:outline-mint disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none'
 
   const variants = {
     primary: 'bg-mint text-navy hover:bg-mint-hover hover:shadow-md hover:shadow-mint/25 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]',

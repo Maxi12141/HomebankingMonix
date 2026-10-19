@@ -19,6 +19,8 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import type { Prestamo } from '../types'
+import { Monto } from '../components/ui/Monto'
+import { MovimientosSkeleton } from '../components/ui/Skeleton'
 
 function formatARS(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -143,10 +145,10 @@ export function PrestamosPage() {
         sueldo_acreditado: persona.sueldo_acreditado,
         proxima_cuota_at: proximaCuota.toISOString(),
       })
-      if (errInsert) throw new Error('No se pudo registrar el préstamo')
+      if (errInsert) throw new Error('No pudimos registrar el préstamo')
 
       const { error: errCuenta } = await supabase.from('cuentas').update({ saldo: nuevoSaldo }).eq('id', cuenta.id)
-      if (errCuenta) throw new Error('No se pudo acreditar el préstamo en tu cuenta')
+      if (errCuenta) throw new Error('No pudimos acreditar el préstamo en tu cuenta')
 
       await supabase.from('movimientos').insert({
         cuenta_id: cuenta.id,
@@ -160,7 +162,7 @@ export function PrestamosPage() {
       await Promise.all([refreshCuenta(), refreshPrestamos()])
       toast.success('¡Préstamo acreditado en tu cuenta!')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'No se pudo solicitar el préstamo'
+      const msg = err instanceof Error ? err.message : 'No pudimos solicitar el préstamo'
       setError(msg)
       toast.error(msg)
     } finally {
@@ -267,9 +269,9 @@ export function PrestamosPage() {
               <div className="rounded-xl bg-slate-input dark:bg-white/5 px-4 py-3 space-y-2 mt-4">
                 <div className="flex justify-between gap-3">
                   <span className="font-body text-sm text-slate-secondary">Cuota mensual</span>
-                  <span className="font-display font-bold text-mint-tinta-fuerte dark:text-mint">{formatARS(cuota)}</span>
+                  <Monto tamaño="chico" className="font-display font-bold">{formatARS(cuota)}</Monto>
                 </div>
-                <p className="font-body text-[11px] text-slate-secondary leading-relaxed flex items-start gap-1.5">
+                <p className="font-body text-2xs text-slate-secondary leading-relaxed flex items-start gap-1.5">
                   <Info size={12} className="shrink-0 mt-0.5" />
                   Sistema francés: la cuota es fija, pero la parte de interés y la de capital que la componen cambian
                   cada mes (al principio pagás más interés porque el saldo es más alto). El detalle mes a mes está en
@@ -336,7 +338,7 @@ export function PrestamosPage() {
         )}
 
         {loadingPrestamos && prestamos.length === 0 && (
-          <p className="font-body text-sm text-slate-secondary text-center py-4">Cargando tus préstamos…</p>
+          <MovimientosSkeleton filas={2} label="Cargando tus préstamos" />
         )}
       </div>
 
@@ -458,7 +460,7 @@ function EsquemaPagoModal({
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-navy/5 dark:bg-white/10 font-body text-[11px] font-bold text-navy dark:text-white">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-navy/5 dark:bg-white/10 font-body text-2xs font-bold text-navy dark:text-white">
                       {f.numero}
                     </span>
                     <span className="font-body text-xs text-slate-secondary truncate">
@@ -475,7 +477,7 @@ function EsquemaPagoModal({
                   <div className="h-full bg-mint" style={{ width: `${100 - interesPct}%` }} />
                 </div>
 
-                <div className="flex items-center justify-between font-body text-[11px] text-slate-secondary">
+                <div className="flex items-center justify-between font-body text-2xs text-slate-secondary">
                   <span>Interés {formatARS(f.interes)}</span>
                   <span>Capital {formatARS(f.amortizacion)}</span>
                   <span>Saldo {formatARS(f.saldoPendiente)}</span>

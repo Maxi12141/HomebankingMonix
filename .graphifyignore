@@ -1,0 +1,10 @@
+# Copias de skills de terceros, no son del proyecto
+.agents/
+.claude/
+# Export de Figma (prototipo aparte)
+Pantallas de figma/
+# Assets binarios sin valor semántico
+public/
+src/assets/
+.scratch-*
+package-lock.json

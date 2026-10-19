@@ -211,7 +211,7 @@ async function asegurarCredencial(userId: string, nombre: string): Promise<BioRe
     }),
   ])
   if (!(cred instanceof PublicKeyCredential)) {
-    throw new Error('No se pudo registrar el desbloqueo biométrico')
+    throw new Error('No pudimos registrar el desbloqueo biométrico')
   }
   return { credId: bufferToB64(cred.rawId) }
 }

@@ -47,7 +47,7 @@ export function TarjetaPage() {
       setFrozen(!next)
       if (prevLocal == null) localStorage.removeItem(freezeKey(cuentaMostrada.id))
       else localStorage.setItem(freezeKey(cuentaMostrada.id), prevLocal)
-      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar')
+      toast.error(err instanceof Error ? err.message : 'No pudimos actualizar')
     }
   }
 

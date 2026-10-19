@@ -405,7 +405,7 @@ export function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="bg-[#F0F2F5] dark:bg-navy-card py-20 px-6 transition-colors duration-300">
+      <section className="bg-slate-input dark:bg-navy-card py-20 px-6 transition-colors duration-300">
         <div className="max-w-6xl mx-auto">
           <motion.div
             className="text-center mb-12"
@@ -457,7 +457,7 @@ export function LandingPage() {
             {products.map((product, i) => (
               <motion.div
                 key={product.title}
-                className="bg-[#F0F2F5] dark:bg-navy-card rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 flex flex-col"
+                className="bg-slate-input dark:bg-navy-card rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 flex flex-col"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -501,7 +501,7 @@ export function LandingPage() {
       </section>
 
       {/* CTA final */}
-      <section className="py-20 px-6 bg-[#F0F2F5] dark:bg-navy-card transition-colors duration-300">
+      <section className="py-20 px-6 bg-slate-input dark:bg-navy-card transition-colors duration-300">
         <motion.div
           className="max-w-xl mx-auto text-center"
           initial={{ opacity: 0, y: 20 }}

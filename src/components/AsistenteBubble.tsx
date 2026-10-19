@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowUp, Bot, Mic, X } from 'lucide-react'
+import { EASE_MONIX } from '../lib/motion'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
 import { useTecladoInset } from '../hooks/useTecladoInset'
@@ -300,7 +301,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 6 }}
-              transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.16, ease: EASE_MONIX }}
               className={`pointer-events-auto ${tecladoAbierto ? 'w-full' : 'w-[min(20.5rem,calc(100vw-1.5rem))]'}`}
             >
               <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-navy-card shadow-xl shadow-navy/10 dark:shadow-black/40">
@@ -312,7 +313,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
                   <p className="font-display text-sm font-semibold text-navy dark:text-white leading-none">
                     Moni
                   </p>
-                  <p className="font-body text-[10px] text-slate-secondary mt-0.5">
+                  <p className="font-body text-2xs text-slate-secondary mt-0.5">
                     {dictando
                       ? 'Te escucho…'
                       : wakeOn
@@ -355,7 +356,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
                         <button
                           type="button"
                           onClick={() => go(msg.href!)}
-                          className="mt-1.5 font-body text-[11px] font-semibold text-navy/80 dark:text-mint hover:underline"
+                          className="mt-1.5 font-body text-2xs font-semibold text-navy/80 dark:text-mint hover:underline"
                         >
                           {msg.hrefLabel ?? 'Abrir'} →
                         </button>
@@ -372,7 +373,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
                       key={chip}
                       type="button"
                       onClick={() => ask(chip)}
-                      className="shrink-0 rounded-full border border-slate-200 dark:border-white/10 px-2.5 py-1 font-body text-[11px] text-slate-secondary hover:border-mint hover:text-navy dark:hover:text-white transition-colors"
+                      className="shrink-0 rounded-full border border-slate-200 dark:border-white/10 px-2.5 py-1 font-body text-2xs text-slate-secondary hover:border-mint hover:text-navy dark:hover:text-white transition-colors"
                     >
                       {chip}
                     </button>

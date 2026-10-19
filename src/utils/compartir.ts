@@ -25,7 +25,7 @@ export async function compartirTexto({ titulo, texto, url }: { titulo: string; t
     toast.success('Copiado. Pegalo donde quieras compartirlo')
     return 'copiado'
   } catch {
-    toast.error('No se pudo compartir')
+    toast.error('No pudimos compartir')
     return 'error'
   }
 }

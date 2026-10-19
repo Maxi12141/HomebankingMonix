@@ -31,7 +31,7 @@ export function HuellaLockScreen({ onUnlock }: Props) {
       onUnlock()
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
-        setError(err instanceof Error ? err.message : 'No se pudo validar. Usá la contraseña de Monix.')
+        setError(err instanceof Error ? err.message : 'No pudimos validar. Usá la contraseña de Monix.')
       }
     } finally {
       setLoadingBio(false)
@@ -57,7 +57,7 @@ export function HuellaLockScreen({ onUnlock }: Props) {
       }
       onUnlock()
     } catch {
-      setError('No se pudo validar la contraseña de Monix')
+      setError('No pudimos validar la contraseña de Monix')
     } finally {
       setLoadingClave(false)
     }

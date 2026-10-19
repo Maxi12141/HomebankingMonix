@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_cuentas_moneda_sql", "label": "cuentas_moneda.sql", "file_type": "code", "source_file": "supabase/cuentas_moneda.sql", "source_location": null}, {"id": "public_cuentas", "label": "public.cuentas", "file_type": "code", "source_file": "", "source_location": "", "origin_file": "$graphify-root$/supabase/cuentas_moneda.sql"}], "edges": []}

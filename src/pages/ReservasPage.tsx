@@ -10,6 +10,7 @@ import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { Monto } from '../components/ui/Monto'
 
 type Mode = 'ingresar' | 'retirar'
 
@@ -59,13 +60,13 @@ export function ReservasPage() {
           .from('cuentas')
           .update({ saldo: nuevoSaldoCuenta })
           .eq('id', cuenta.id)
-        if (errCuenta) throw new Error('No se pudo descontar el saldo')
+        if (errCuenta) throw new Error('No pudimos descontar el saldo')
 
         const { error: errReserva } = await supabase
           .from('reservas')
           .update({ saldo: nuevoSaldoReserva })
           .eq('id', reserva.id)
-        if (errReserva) throw new Error('No se pudo acreditar en la reserva')
+        if (errReserva) throw new Error('No pudimos acreditar en la reserva')
 
         const { error: errMov } = await supabase.from('movimientos').insert({
           cuenta_id: cuenta.id,
@@ -74,13 +75,13 @@ export function ReservasPage() {
           saldo_resultante: nuevoSaldoCuenta,
           descripcion: 'Reserva|Ingreso a ahorro MONIX',
         })
-        if (errMov) throw new Error('No se pudo registrar el movimiento')
+        if (errMov) throw new Error('No pudimos registrar el movimiento')
 
         updateSaldo(nuevoSaldoCuenta)
         toast.success('Dinero ingresado a tu reserva')
       } else {
         if (montoNum > saldoReserva) {
-          throw new Error('No se pudo completar la transacción. Actualmente no tenés ese monto en tu reserva.')
+          throw new Error('No te alcanza lo que tenés en la reserva para retirar ese monto.')
         }
         const nuevoSaldoCuenta = roundMoney(cuenta.saldo + montoNum)
         const nuevoSaldoReserva = roundMoney(saldoReserva - montoNum)
@@ -89,13 +90,13 @@ export function ReservasPage() {
           .from('reservas')
           .update({ saldo: nuevoSaldoReserva })
           .eq('id', reserva.id)
-        if (errReserva) throw new Error('No se pudo debitar la reserva')
+        if (errReserva) throw new Error('No pudimos debitar la reserva')
 
         const { error: errCuenta } = await supabase
           .from('cuentas')
           .update({ saldo: nuevoSaldoCuenta })
           .eq('id', cuenta.id)
-        if (errCuenta) throw new Error('No se pudo acreditar el saldo')
+        if (errCuenta) throw new Error('No pudimos acreditar el saldo')
 
         const { error: errMov } = await supabase.from('movimientos').insert({
           cuenta_id: cuenta.id,
@@ -104,7 +105,7 @@ export function ReservasPage() {
           saldo_resultante: nuevoSaldoCuenta,
           descripcion: 'Reserva|Retiro de ahorro MONIX',
         })
-        if (errMov) throw new Error('No se pudo registrar el movimiento')
+        if (errMov) throw new Error('No pudimos registrar el movimiento')
 
         updateSaldo(nuevoSaldoCuenta)
         toast.success('Dinero vuelto a tu saldo disponible')
@@ -113,7 +114,7 @@ export function ReservasPage() {
       setMonto('')
       await Promise.all([refreshCuenta(), refreshReserva()])
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'No se pudo completar la operación'
+      const msg = err instanceof Error ? err.message : 'No pudimos completar la operación'
       setError(msg)
       toast.error(msg)
     } finally {
@@ -137,9 +138,9 @@ export function ReservasPage() {
               <p className="font-body text-xs text-slate-secondary uppercase tracking-wider">
                 En reserva
               </p>
-              <p className="font-display text-3xl font-bold text-mint-tinta dark:text-mint mt-1">
+              <Monto as="p" tamaño="grande" className="font-display text-3xl font-bold mt-1">
                 {loading ? '—' : formatARS(saldoReserva)}
-              </p>
+              </Monto>
             </div>
             <div className="rounded-xl bg-mint/15 text-navy dark:text-mint p-2.5">
               <PiggyBank size={22} />
@@ -148,7 +149,7 @@ export function ReservasPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-slate-input dark:bg-white/5 px-3 py-2.5">
-              <p className="font-body text-[10px] uppercase tracking-wider text-slate-secondary">
+              <p className="font-body text-2xs uppercase tracking-wider text-slate-secondary">
                 TNA
               </p>
               <p className="font-display text-sm font-semibold text-navy dark:text-white mt-0.5">
@@ -156,7 +157,7 @@ export function ReservasPage() {
               </p>
             </div>
             <div className="rounded-xl bg-slate-input dark:bg-white/5 px-3 py-2.5">
-              <p className="font-body text-[10px] uppercase tracking-wider text-slate-secondary">
+              <p className="font-body text-2xs uppercase tracking-wider text-slate-secondary">
                 Estimado diario
               </p>
               <p className="font-display text-sm font-semibold text-navy dark:text-white mt-0.5">

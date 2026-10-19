@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, MotionConfig } from 'framer-motion'
 import toast, { Toaster, useToasterStore } from 'react-hot-toast'
 
 // react-hot-toast no limita solo cuántos toasts se acumulan en pantalla — si
@@ -175,7 +175,10 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <AppShell />
+        {/* Framer Motion respeta "reducir movimiento" del sistema, como ya lo hace el CSS. */}
+        <MotionConfig reducedMotion="user">
+          <AppShell />
+        </MotionConfig>
       </BrowserRouter>
     </ErrorBoundary>
   )
