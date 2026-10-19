@@ -247,6 +247,25 @@ prueba('Pantallas diferidas: el Dashboard se baja durante el splash sólo si hay
   await sinSesion.context().close()
 })
 
+prueba('Banco Central: una sola sincronización al navegar entre pantallas', async (b) => {
+  const page = await nuevaPagina(b)
+  const consultasBC = []
+  page.on('request', (r) => { if (r.url().startsWith(BC)) consultasBC.push(r.url()) })
+  await page.goto('/dashboard')
+  await pasarLoader(page)
+  await page.waitForTimeout(1000)
+  const alEntrar = consultasBC.length
+  assert.ok(alEntrar >= 1, 'al entrar debería sincronizar')
+  // Navegación dentro de la app (sin recargar), con la barra inferior.
+  const nav = page.locator('nav').last()
+  for (const destino of ['Transferir', 'Cuentas', 'Reservas', 'Inicio']) {
+    await nav.getByText(destino, { exact: true }).click()
+    await page.waitForTimeout(700)
+  }
+  assert.equal(consultasBC.length, alEntrar, `cada navegación volvía a consultar (${consultasBC.length} consultas)`)
+  await page.context().close()
+})
+
 prueba('Comprobante PDF: las librerías se bajan recién al abrir un movimiento y el PDF se descarga', async (b) => {
   const page = await nuevaPagina(b)
   const pedidos = []

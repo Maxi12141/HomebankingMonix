@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
 import { listarTransacciones } from '../services/bancoCentral'
 
-// Candado de módulo, no por instancia: la sync corre desde PageWrapper y
+// Candado de módulo, no por instancia: la sync corre desde App (CuentasGlobales) y
 // también desde la pantalla del QR mientras espera un pago. Dos pasadas en
 // paralelo podían acreditar dos veces la misma transferencia (el chequeo de
 // bc_transaccion_id y el insert no son atómicos).
@@ -99,9 +99,16 @@ export function useSyncTransferenciasEntrantes() {
 
   useEffect(() => {
     if (!cuentaIds) return
-    void sincronizarTransferenciasEntrantes()
-    const interval = setInterval(() => { void sincronizarTransferenciasEntrantes() }, 2 * 60 * 1000)
-    return () => clearInterval(interval)
+    // Con la app en segundo plano no se consulta al Banco Central: se ahorra
+    // red y batería, y al volver se sincroniza en el acto.
+    const sincronizarSiVisible = () => { if (!document.hidden) void sincronizarTransferenciasEntrantes() }
+    sincronizarSiVisible()
+    const interval = setInterval(sincronizarSiVisible, 2 * 60 * 1000)
+    document.addEventListener('visibilitychange', sincronizarSiVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', sincronizarSiVisible)
+    }
   }, [cuentaIds])
 
   return { sync: sincronizarTransferenciasEntrantes }

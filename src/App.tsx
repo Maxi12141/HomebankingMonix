@@ -20,6 +20,7 @@ import { LoginPage } from './pages/LoginPage'
 import { MovimientosSkeleton } from './components/ui/Skeleton'
 import { useBiometriaLock } from './hooks/useBiometriaLock'
 import { useCuenta } from './hooks/useCuenta'
+import { useSyncTransferenciasEntrantes } from './hooks/useSyncTransferenciasEntrantes'
 import { HuellaLockScreen } from './components/HuellaLockScreen'
 
 // Cada pantalla va en su propio chunk y se baja al visitarla. Landing y Login
@@ -84,6 +85,9 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 // espera a que la store tenga cuentas.
 function CuentasGlobales() {
   useCuenta()
+  // Una sola sincronización con el Banco Central para toda la app: antes cada
+  // pantalla montaba la suya y cada navegación repetía la consulta.
+  useSyncTransferenciasEntrantes()
   return null
 }
 

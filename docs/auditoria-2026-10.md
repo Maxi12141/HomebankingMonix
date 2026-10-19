@@ -92,7 +92,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | P0-6 | Medir el LCP | H5 | Hecho: el LCP se mide (7,6 s en 4G lento). El cambio de código propuesto se descartó |
 | P1-7 | Cargar jsPDF y html2canvas al generar el comprobante | H7 | Hecho: JS inicial de 462,8 a 285 kB gzip |
 | P1-8 | Cargar cada pantalla al visitarla | H7 | Hecho: JS inicial 181,6 kB; FCP 2,4 s; LCP 6,0 s |
-| P1-9 | Una sola sincronización con el Banco Central, pausada en segundo plano | H8, V2 (parte de performance) | Pendiente |
+| P1-9 | Una sola sincronización con el Banco Central, pausada en segundo plano | H8, V2 (parte de performance) | Hecho: 5 consultas pasaron a 1 navegando 4 pantallas |
 | P1-10 | Fuentes servidas desde la app | H9 | Pendiente |
 | P2-11 | Blur, cinta de cotizaciones y `meta no-store` | H10 | Pendiente |
 | P2-12 | Controles de desktop a 1024 y 1440 px en Playwright | Cobertura desktop | Pendiente |
@@ -197,3 +197,11 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
 - **Excepción E1 retirada:** el FCP medido (2,4 s) quedó por debajo del 3,8 s original, así que no hace falta.
 - **Sobre el control del piso:** al endurecer, el guard marcó dos hallazgos. Pasa porque el texto de justificación empezaba con los números y porque la fila "JS inicial" no tiene `≤`, así que no puede leer la dirección del cambio. Se revisó a mano que ambos son endurecimientos, y la justificación pasó a una etiqueta estable ("Presupuestos de performance").
 - **Verificación:** 18/18 pruebas, con una nueva que comprueba la precarga con sesión y que la Landing sin sesión no baje el Dashboard. `tsc` sin errores. Lighthouse en verde.
+
+### P1-9 · Sincronización con el Banco Central (2026-10-19)
+
+- **Una sola para toda la app:** `useSyncTransferenciasEntrantes` sale de `PageWrapper`, que se montaba en cada una de las 15 pantallas, y pasa a `CuentasGlobales` en `App.tsx`, que vive mientras dura la sesión. Entrar al Dashboard y moverse por Transferir, Cuentas, Reservas e Inicio generaba **5 consultas**; ahora genera **1**.
+- **Pausa en segundo plano:** con la pestaña o la app ocultas no se consulta. Al volver se sincroniza en el acto.
+- **QR, recomendación del auditor descartada:** la auditoría de performance sugería pasar el polling de 5 s del cobro con QR a tiempo real con respaldo cada 30 s. No aplica: las transferencias de **otros bancos** sólo aparecen al sincronizar con el Banco Central, no por el tiempo real de Supabase. Ese polling además ya estaba acotado a 10 minutos mientras se espera un pago. Pasarlo a 30 s haría esperar al comercio. Se mantuvieron los 5 s, con pausa cuando la pestaña está oculta y revisión inmediata al volver.
+- **Seguridad (V2):** esto mejora la performance, pero **no** resuelve que la acreditación escriba el saldo desde el navegador. Eso sigue en S-1.
+- **Verificación:** prueba nueva que navega con la barra inferior y cuenta los pedidos al Banco Central. Con el código anterior falla (5 consultas) y con el nuevo pasa (1). 19/19 pruebas.

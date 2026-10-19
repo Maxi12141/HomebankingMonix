@@ -8,7 +8,6 @@ import { MonixLogoNavbar } from '../MonixLogoNavbar'
 import { NotificationBell } from '../NotificationBell'
 import { AsistenteBubble } from '../AsistenteBubble'
 import { EscanearYPagar } from '../QrPanels'
-import { useSyncTransferenciasEntrantes } from '../../hooks/useSyncTransferenciasEntrantes'
 import { useThemeStore } from '../../stores/themeStore'
 import { useQrScanStore } from '../../stores/qrScanStore'
 
@@ -17,7 +16,6 @@ interface PageWrapperProps {
 }
 
 export function PageWrapper({ children }: PageWrapperProps) {
-  useSyncTransferenciasEntrantes()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const { theme, toggleTheme } = useThemeStore()
   const qrOpen = useQrScanStore((s) => s.open)

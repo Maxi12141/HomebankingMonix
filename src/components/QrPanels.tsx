@@ -243,7 +243,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
     let vivo = true
     const hasta = Date.now() + 10 * 60_000
     async function revisar() {
-      if (!vivo || Date.now() > hasta) return
+      if (!vivo || Date.now() > hasta || document.hidden) return
       await sincronizarTransferenciasEntrantes().catch(() => undefined)
       if (!vivo) return
       const { data } = await supabase
@@ -269,7 +269,10 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
     }
     void revisar()
     const t = window.setInterval(() => { void revisar() }, 5000)
-    return () => { vivo = false; window.clearInterval(t) }
+    // Al volver a la app se revisa en el acto, sin esperar el próximo tick.
+    const alVolver = () => { void revisar() }
+    document.addEventListener('visibilitychange', alVolver)
+    return () => { vivo = false; window.clearInterval(t); document.removeEventListener('visibilitychange', alVolver) }
   }, [esperaPago, cuenta?.id, cobro?.monto, refreshCuenta])
 
   useEffect(() => {
