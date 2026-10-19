@@ -27,7 +27,7 @@ Desde esa fecha se saca el `|| echo` y bloquean.
 | Marca | Texto visible ≥ 11 px; montos en mint tinta (claro) o mint (oscuro); foco visible con Tab; loader con los tiempos de `motion/monix-logo.aep` | `npm run test:e2e` (Playwright) | `check:task` |
 | Mobile | Sin scroll horizontal a 320 px en 9 pantallas | `npm run test:e2e` | `check:task` |
 | Toques | Ningún elemento interactivo de menos de 44×44 px en 6 pantallas con sesión (era 46 el 2026-10-18) | `npm run test:e2e` | `check:task` |
-| Accesibilidad | Violaciones axe serias o críticas (WCAG 2.1 AA) en 9 pantallas: como máximo 14 (no puede subir) | `@axe-core/playwright` en `npm run test:e2e` | `check:task` |
+| Accesibilidad | Cero violaciones axe serias o críticas (WCAG 2.1 AA) en 9 pantallas (eran 14 el 2026-10-18) | `@axe-core/playwright` en `npm run test:e2e` | `check:task` |
 | Bundle | JS inicial ≤ 465 kB gzip (no puede crecer) | `size-limit` (`.size-limit.json`) | `check:task` |
 | Performance | CLS ≤ 0.1 y FCP mobile ≤ 3800 ms en la Landing | Lighthouse 12.8.2 (`npm run check:perf`) | `check:full` |
 | Dependencias | Nada alto o crítico en dependencias de producción | `npm audit --omit=dev --audit-level=high` | `check:full` |
@@ -37,7 +37,7 @@ Por qué estos números:
 - **11 px:** el piso tipográfico del Manual de Marca v1.3 (etiquetas Inter Bold 11 px).
 - **44 px:** el mínimo táctil de iOS (Android pide 48 dp). La app se usa sobre todo en el celular.
 - **axe y Lighthouse son controles externos.** Miden contra WCAG y un navegador real, no contra nuestros propios tests.
-- **Los máximos de toques y axe** son los valores medidos hoy. Cada arreglo baja el número acá, y nunca se sube.
+- **Toques y axe** arrancaron como líneas de base medidas (46 y 14) y bajaron a 0 el 2026-10-19. Ahora cualquier caso nuevo hace fallar el control.
 - **FCP 3800 ms:** hoy da 3,7 s porque el splash dura como mínimo 2,4 s por decisión de producto. El presupuesto sólo impide que empeore.
 
 ## Medido, todavía no exigido

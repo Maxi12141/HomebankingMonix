@@ -523,7 +523,7 @@ export function RegisterPage() {
 
           <p className="text-center text-sm font-body text-slate-secondary mt-6">
             ¿Ya tenés cuenta?{' '}
-            <Link to="/login" className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
+            <Link to="/login" className="underline underline-offset-2 text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
               Iniciá sesión
             </Link>
           </p>

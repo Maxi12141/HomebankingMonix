@@ -460,7 +460,7 @@ export function LoginPage() {
           {step !== 'bio-offer' && (
             <p className="text-center text-sm font-body text-slate-secondary mt-6">
               ¿No tenés cuenta?{' '}
-              <Link to="/register" className="text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
+              <Link to="/register" className="underline underline-offset-2 text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
                 Registrate
               </Link>
             </p>

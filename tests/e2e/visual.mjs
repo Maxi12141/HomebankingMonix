@@ -296,7 +296,7 @@ prueba('Sin scroll horizontal a 320 px', async (b) => {
 
 // ── Controles con números (CONSTRAINTS.md): miden y no dejan empeorar ────────
 // Línea de base medida el 2026-10-18. Si un número mejora, bajalo acá; nunca subirlo.
-const BASE_AXE_SERIAS = 14
+const BASE_AXE_SERIAS = 0
 const BASE_TOQUES_CHICOS = 0
 const publicas = ['/', '/login', '/register']
 const privadas = ['/dashboard', '/transferir', '/depositar', '/historial', '/tarjeta', '/perfil']
@@ -313,7 +313,7 @@ prueba('Accesibilidad (axe, WCAG 2.1 AA): violaciones serias o críticas', async
       await page.waitForTimeout(800)
       const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
       for (const v of r.violations) {
-        if (v.impact === 'serious' || v.impact === 'critical') encontradas.push(`${ruta} ${v.id} (${v.nodes.length})`)
+        if (v.impact === 'serious' || v.impact === 'critical') encontradas.push(`${ruta} ${v.id} → ${v.nodes.map((n) => n.target.join(' ')).join(' | ').slice(0, 140)}`)
       }
     }
     await page.context().close()

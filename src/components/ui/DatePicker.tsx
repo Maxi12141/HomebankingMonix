@@ -167,6 +167,7 @@ export function DatePicker({ value, onChange, label, placeholder = 'DD/MM/AAAA' 
               type="button"
               tabIndex={-1}
               onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(false) }}
+              aria-label="Borrar fecha"
               className="toque [--toque:21px] text-slate-secondary hover:text-red-400 transition-colors"
             >
               <X size={13} />
@@ -176,6 +177,7 @@ export function DatePicker({ value, onChange, label, placeholder = 'DD/MM/AAAA' 
             type="button"
             tabIndex={-1}
             onClick={toggle}
+            aria-label="Abrir calendario"
             className="toque [--toque:23px] text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors"
           >
             <Calendar size={15} />

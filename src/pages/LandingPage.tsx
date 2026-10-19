@@ -367,7 +367,7 @@ export function LandingPage() {
             className="font-display text-[1.85rem] sm:text-4xl md:text-6xl font-bold text-navy dark:text-white leading-[1.15] mb-5 sm:mb-6 px-1"
           >
             <span className="block">Banca de verdad,</span>
-            <span className="block text-mint">desde tu celular.</span>
+            <span className="block text-navy dark:text-mint underline decoration-mint decoration-[6px] underline-offset-[10px] dark:no-underline">desde tu celular.</span>
           </motion.h1>
 
           <motion.p

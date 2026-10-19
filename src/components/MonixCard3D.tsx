@@ -145,21 +145,14 @@ export function MonixCard3D({
           className="relative w-full aspect-[1.45/1] sm:aspect-[1.586/1]"
         >
           {/* Flip layer */}
+          {/* Tocar la tarjeta la da vuelta. No es un botón porque adentro tiene los
+              de copiar CBU/alias; con teclado y lector de pantalla se usa "Dorso". */}
           <motion.div
-            role="button"
-            tabIndex={0}
-            aria-label={flipped ? 'Ver frente de la tarjeta' : 'Ver dorso de la tarjeta'}
             onClick={toggleFlip}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                toggleFlip()
-              }
-            }}
             initial={false}
             animate={{ rotateY: flipped ? 180 : 0 }}
             transition={{ duration: 0.75, ease: EASE_MONIX }}
-            className="relative w-full h-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-mint/50 rounded-2xl"
+            className="relative w-full h-full cursor-pointer rounded-2xl"
             style={{ transformStyle: 'preserve-3d' }}
           >
             {/* FRONT */}

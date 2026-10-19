@@ -474,6 +474,7 @@ export function TransferPage() {
                         type="button"
                         onClick={() => buscarDestinatario()}
                         disabled={!destino.trim() || buscando}
+                        aria-label="Buscar destinatario"
                         className="px-4 rounded-xl bg-mint/10 border border-mint/20 text-navy dark:text-mint hover:bg-mint/20 transition-colors disabled:opacity-40"
                       >
                         <Search size={18} />

@@ -86,7 +86,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | S-1 | RPC de servidor para cada escritura de saldo, y privilegios por columna | V2 | **Espera aprobación**: migración en la base de producción |
 | P0-1 | `npm audit fix` | V1 | Hecho: 1 alta y 5 moderadas pasaron a 0 altas y 2 moderadas |
 | P0-2 | Áreas táctiles de 44 px sin cambiar el aspecto | H1 | Hecho: 46 pasaron a 0 |
-| P0-3 | Nombres accesibles y link subrayado | H2 | Pendiente |
+| P0-3 | Nombres accesibles y link subrayado | H2 | Hecho: 14 pasaron a 0 |
 | P0-4 | `autocomplete` en Login y Registro | H3 | Pendiente |
 | P0-5 | Montos con `inputMode="decimal"` y un parser único | H4 | Pendiente |
 | P0-6 | Sacar la entrada desde opacidad 0 del contenedor | H5 | Pendiente |
@@ -115,3 +115,16 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
 - **Crecen un poco:** los campos de búsqueda de Historial, los filtros Todos, Entradas y Salidas, y el acordeón de la agenda en Transferir pasan a una altura mínima de 44 px. Crecen entre 2 y 6 px.
 - **Ajuste del test:** un checkbox dentro de su `<label>` se mide por el label, que es el área que recibe el toque (área equivalente en WCAG).
 - **Verificación:** el test de toques pasó de 46 a 0 y la línea de base de `CONSTRAINTS.md` quedó en 0. 14/14 pruebas. Las capturas del Dashboard y la Tarjeta a 390 y 320 px no muestran cambios visuales.
+
+### P0-3 · Accesibilidad con axe (2026-10-19)
+
+| Violación | Dónde | Arreglo |
+|---|---|---|
+| `link-name` | Logo del menú lateral, en 6 pantallas | `aria-label="Ir al inicio"`. El del encabezado ya lo había ganado en P0-2 |
+| `button-name` | Buscar destinatario (Transferir), borrar fecha y abrir calendario (Historial), switch de biometría (Perfil) | `aria-label` en los tres primeros; `aria-labelledby` hacia el título "Ingreso con biometría" en el switch |
+| `link-in-text-block` | "Registrate" (Login) e "Iniciá sesión" (Registro) | Subrayado: ya no se distinguen sólo por el color |
+| `nested-interactive` | Tarjeta 3D: era un botón con los botones de copiar adentro | La tarjeta deja de ser un botón: se sigue dando vuelta al tocarla, y con teclado y lector de pantalla se usa "Dorso" |
+| `color-contrast` | "desde tu celular." en la Landing (mint sobre blanco, 1,1:1) e iniciales del avatar en el Perfil | Azul noche en modo claro, mint en oscuro, como pide el manual. En la Landing el mint pasa a un subrayado grueso, que hace eco del arco del logo |
+
+- **Verificación:** axe pasó de 14 a 0 en 9 pantallas y la línea de base de `CONSTRAINTS.md` quedó en 0. 14/14 pruebas. Revisé las capturas de la Landing en móvil, en desktop y en modo oscuro.
+- **Ajuste del test:** ahora imprime el selector de cada violación, para poder ubicarla sin una segunda corrida.

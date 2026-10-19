@@ -293,7 +293,7 @@ export function ProfilePage() {
               />
             ) : (
               <div className="w-24 h-24 rounded-full bg-mint/20 ring-4 ring-white dark:ring-navy-card shadow-md flex items-center justify-center">
-                <span className="font-display text-2xl font-bold text-mint">{initials}</span>
+                <span className="font-display text-2xl font-bold text-navy dark:text-mint">{initials}</span>
               </div>
             )}
             <button
@@ -366,7 +366,7 @@ export function ProfilePage() {
           <div className="flex items-start gap-3">
             <Fingerprint size={22} className="text-navy dark:text-mint shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con biometría</p>
+              <p id="bio-titulo" className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con biometría</p>
               <p className="font-body text-xs text-slate-secondary mt-0.5">
                 {huellaDisponible
                   ? 'Usa la huella, la cara o el PIN que ya tengas configurado en el teléfono — el sistema elige solo cuál pedirte. Si sale mal o preferís no usarla, siempre podés entrar con tu contraseña.'
@@ -376,6 +376,7 @@ export function ProfilePage() {
             <button
               type="button"
               role="switch"
+              aria-labelledby="bio-titulo"
               aria-checked={bioActiva}
               disabled={!huellaDisponible}
               aria-busy={savingBio}
