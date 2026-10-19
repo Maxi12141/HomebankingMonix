@@ -93,7 +93,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | P1-7 | Cargar jsPDF y html2canvas al generar el comprobante | H7 | Hecho: JS inicial de 462,8 a 285 kB gzip |
 | P1-8 | Cargar cada pantalla al visitarla | H7 | Hecho: JS inicial 181,6 kB; FCP 2,4 s; LCP 6,0 s |
 | P1-9 | Una sola sincronización con el Banco Central, pausada en segundo plano | H8, V2 (parte de performance) | Hecho: 5 consultas pasaron a 1 navegando 4 pantallas |
-| P1-10 | Fuentes servidas desde la app | H9 | Pendiente |
+| P1-10 | Fuentes servidas desde la app | H9 | Hecho |
 | P2-11 | Blur, cinta de cotizaciones y `meta no-store` | H10 | Pendiente |
 | P2-12 | Controles de desktop a 1024 y 1440 px en Playwright | Cobertura desktop | Pendiente |
 
@@ -205,3 +205,11 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
 - **QR, recomendación del auditor descartada:** la auditoría de performance sugería pasar el polling de 5 s del cobro con QR a tiempo real con respaldo cada 30 s. No aplica: las transferencias de **otros bancos** sólo aparecen al sincronizar con el Banco Central, no por el tiempo real de Supabase. Ese polling además ya estaba acotado a 10 minutos mientras se espera un pago. Pasarlo a 30 s haría esperar al comercio. Se mantuvieron los 5 s, con pausa cuando la pestaña está oculta y revisión inmediata al volver.
 - **Seguridad (V2):** esto mejora la performance, pero **no** resuelve que la acreditación escriba el saldo desde el navegador. Eso sigue en S-1.
 - **Verificación:** prueba nueva que navega con la barra inferior y cuenta los pedidos al Banco Central. Con el código anterior falla (5 consultas) y con el nuevo pasa (1). 19/19 pruebas.
+
+### P1-10 · Fuentes servidas desde la app (2026-10-19)
+
+- **Qué se hizo:** se reemplazó Google Fonts por `@fontsource/inter` y `@fontsource/plus-jakarta-sans`, importadas en `src/main.tsx`. Sólo se incluyen caracteres latinos y los pesos que se usan: Inter 400, 500, 600 y 700, y Plus Jakarta Sans 600 y 700. Son 6 archivos `woff2`, de 12 a 24 kB cada uno. Se sacaron del `index.html` el link y los dos `preconnect`.
+- **Bug visual corregido:** Google Fonts servía Inter sólo en 400 y 500, pero la app usa `font-semibold` y `font-bold` con Inter en unos 19 elementos. El navegador **inventaba la negrita** deformando la letra. Ahora carga los pesos reales.
+- **Sin conexión:** regla `CacheFirst` para fuentes en el service worker (`vite.config.ts`). Como los archivos llevan hash, no hay riesgo de quedarse con una versión vieja.
+- **Medición, con honestidad:** Lighthouse no muestra cambio de tiempos (FCP 2,41 s, LCP 5,98 s), porque el FCP lo fija el splash de 2,4 s. La ganancia es de robustez: ningún servidor externo en el camino crítico y tipografía correcta sin conexión.
+- **Verificación:** prueba nueva que comprueba que no hay pedidos a `fonts.googleapis.com` ni `fonts.gstatic.com`, y que los 5 pesos están cargados. 20/20 pruebas. JS inicial de 183,6 kB, dentro del presupuesto de 185.

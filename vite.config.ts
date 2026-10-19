@@ -84,6 +84,13 @@ export default defineConfig({
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'monix-assets' },
           },
+          {
+            // Fuentes propias, también con hash en el nombre: sin conexión
+            // la app sigue con su tipografía.
+            urlPattern: ({ request }) => request.destination === 'font',
+            handler: 'CacheFirst',
+            options: { cacheName: 'monix-fuentes', expiration: { maxEntries: 12 } },
+          },
         ],
       },
       devOptions: {

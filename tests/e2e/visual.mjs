@@ -247,6 +247,23 @@ prueba('Pantallas diferidas: el Dashboard se baja durante el splash sólo si hay
   await sinSesion.context().close()
 })
 
+prueba('Fuentes propias: nada de Google Fonts y la negrita de Inter es real', async (b) => {
+  const page = await nuevaPagina(b)
+  const externos = []
+  page.on('request', (r) => { if (/fonts\.(googleapis|gstatic)\.com/.test(r.url())) externos.push(r.url()) })
+  await page.goto('/dashboard')
+  await pasarLoader(page)
+  await page.evaluate(() => document.fonts.ready)
+  assert.deepEqual(externos, [])
+  const cargadas = await page.evaluate(async () => {
+    const pedir = ['400 16px Inter', '600 16px Inter', '700 16px Inter', '600 16px "Plus Jakarta Sans"', '700 16px "Plus Jakarta Sans"']
+    await Promise.all(pedir.map((f) => document.fonts.load(f)))
+    return pedir.filter((f) => !document.fonts.check(f))
+  })
+  assert.deepEqual(cargadas, [], 'faltan pesos de fuente')
+  await page.context().close()
+})
+
 prueba('Banco Central: una sola sincronización al navegar entre pantallas', async (b) => {
   const page = await nuevaPagina(b)
   const consultasBC = []
