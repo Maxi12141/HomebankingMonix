@@ -72,7 +72,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | H2 | Violaciones de axe serias o críticas | 14: links e íconos sin nombre accesible, el link "Registrate" que se distingue sólo por color (1,8:1), un control interactivo anidado en Tarjeta |
 | H3 | Login y Registro sin `autocomplete` | Los gestores de contraseñas y el autocompletado del celular funcionan peor (WCAG 2.2, autenticación accesible) |
 | H4 | Montos con `type="number"` y un parser que lee mal el punto de miles | 9 campos. Maneja mal la coma decimal y en desktop la rueda del mouse cambia el valor. Además, **bug de dinero**: `parseFloat(texto.replace(',', '.'))` lee "1.500" como 1,5. En Depositar, que ya era un campo de texto, escribir "1.500" acreditaba $1,50 |
-| H5 | La app entra desde opacidad 0 después del splash | Lighthouse no puede medir el LCP (`NO_LCP`) |
+| H5 | Lighthouse no puede medir el LCP (`NO_LCP`) | Se atribuyó a la entrada desde opacidad 0. **Diagnóstico corregido en P0-6:** era el modo simulado de Lighthouse |
 | H6 | Splash de 2,4 s mínimos en cada carga | FCP mobile de 3,7 s. **Se mantiene por decisión de producto (2026-10-18)** |
 | H7 | Un solo bundle de JS sin carga diferida | 462,6 kB gzip. jsPDF y html2canvas, que sólo se usan para comprobantes, son unos 150 kB |
 | H8 | Polling y sincronización innecesarios | QR consulta cada 5 s con la pestaña oculta. Sincronización con el Banco Central en cada navegación (ver V2) |
@@ -89,7 +89,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | P0-3 | Nombres accesibles y link subrayado | H2 | Hecho: 14 pasaron a 0 |
 | P0-4 | `autocomplete` en Login y Registro | H3 | Hecho |
 | P0-5 | Montos con `inputMode="decimal"` y un parser único | H4 | Hecho |
-| P0-6 | Sacar la entrada desde opacidad 0 del contenedor | H5 | Pendiente |
+| P0-6 | Medir el LCP | H5 | Hecho: el LCP se mide (7,6 s en 4G lento). El cambio de código propuesto se descartó |
 | P1-7 | Cargar jsPDF y html2canvas al generar el comprobante | H7 | Pendiente |
 | P1-8 | Cargar cada pantalla al visitarla | H7 | Pendiente |
 | P1-9 | Una sola sincronización con el Banco Central, pausada en segundo plano | H8, V2 (parte de performance) | Pendiente |
@@ -150,3 +150,14 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
   - **Unitarias:** `tests/unit/monto.test.mjs`, 4 grupos con formato argentino, punto decimal, `$` y espacios, y 13 entradas inválidas. Corren en `npm run check:fast`.
   - **E2E:** la prueba nueva escribe "1.500" en Depositar y comprueba que la RPC reciba `p_monto: 1500` y que la pantalla diga "$ 1.500,00". Con el código anterior falla, porque recibe 1,5.
   - **Total:** 16/16 pruebas.
+
+### P0-6 · Medir el LCP (2026-10-19)
+
+- **Hipótesis inicial (auditor y Claude):** Lighthouse no medía el LCP porque la app entraba desde opacidad 0 después del splash.
+- **Qué se probó:** sacar el fundido del contenedor (`initial={false}`) y del título de la Landing. Con un `PerformanceObserver` en Chromium, el LCP aparecía (2644 ms sin throttling), pero Lighthouse seguía devolviendo `NO_LCP`.
+- **Causa real:** el modo de throttling **simulado** de Lighthouse 12.8.2, que con este Chromium tira errores del motor de trazas (`TraceEngine`). Con throttling **aplicado** (`throttlingMethod: 'devtools'`), el LCP se mide **también con el código original**: 7650 ms antes contra 7637 ms después, lo que es ruido.
+- **Decisión:** se revirtió el cambio de código, porque no mejoraba nada medible, y la app conserva su fundido. Quedó el arreglo real: `scripts/lighthouse.mjs` mide con throttling aplicado.
+- **Nuevas líneas de base** (mobile, 4G lento, throttling aplicado): FCP 4,0 s, **LCP 7,6 s**, CLS 0,041.
+- **Presupuestos:** LCP ≤ 7800 ms y CLS ≤ 0,1 pasan a exigirse. El FCP sube de 3800 a 4200 ms por el cambio de método: es la **excepción E1** de `CONSTRAINTS.md`, aprobada por Diego Urenda, que vence el 2027-01-19.
+- **Hallazgo sobre el propio control:** `floor-guard` compara contra `origin/main`, donde `CONSTRAINTS.md` todavía no existe, y por eso no veía un umbral aflojado dentro de esta rama. `check:fast` ahora corre también `--base HEAD`, que lo detecta antes del commit.
+- **Lectura:** 7,6 s hasta ver el contenido en un celular con red lenta es mucho para un banco. La mitad es el splash (decisión de producto) y la otra mitad el JS. Los pasos P1-7 y P1-8 atacan esa segunda mitad.

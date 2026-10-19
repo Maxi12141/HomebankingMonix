@@ -29,7 +29,7 @@ Desde esa fecha se saca el `|| echo` y bloquean.
 | Toques | Ningún elemento interactivo de menos de 44×44 px en 6 pantallas con sesión (era 46 el 2026-10-18) | `npm run test:e2e` | `check:task` |
 | Accesibilidad | Cero violaciones axe serias o críticas (WCAG 2.1 AA) en 9 pantallas (eran 14 el 2026-10-18) | `@axe-core/playwright` en `npm run test:e2e` | `check:task` |
 | Bundle | JS inicial ≤ 465 kB gzip (no puede crecer) | `size-limit` (`.size-limit.json`) | `check:task` |
-| Performance | CLS ≤ 0.1 y FCP mobile ≤ 3800 ms en la Landing | Lighthouse 12.8.2 (`npm run check:perf`) | `check:full` |
+| Performance | CLS ≤ 0.1, FCP ≤ 4200 ms y LCP ≤ 7800 ms en la Landing, mobile con throttling aplicado | Lighthouse 12.8.2 (`npm run check:perf`) | `check:full` |
 | Dependencias | Nada alto o crítico en dependencias de producción | `npm audit --omit=dev --audit-level=high` | `check:full` |
 
 Por qué estos números:
@@ -38,13 +38,12 @@ Por qué estos números:
 - **44 px:** el mínimo táctil de iOS (Android pide 48 dp). La app se usa sobre todo en el celular.
 - **axe y Lighthouse son controles externos.** Miden contra WCAG y un navegador real, no contra nuestros propios tests.
 - **Toques y axe** arrancaron como líneas de base medidas (46 y 14) y bajaron a 0 el 2026-10-19. Ahora cualquier caso nuevo hace fallar el control.
-- **FCP 3800 ms:** hoy da 3,7 s porque el splash dura como mínimo 2,4 s por decisión de producto. El presupuesto sólo impide que empeore.
+- **FCP 4200 ms y LCP 7800 ms:** hoy dan 4,0 s y 7,6 s con 4G lento, porque el splash dura como mínimo 2,4 s (decisión de producto) y antes de pintar se bajan 464 kB de JS. Los presupuestos sólo impiden que empeoren; la carga diferida de P1 los tiene que bajar.
 
 ## Medido, todavía no exigido
 
 | Métrica | Hoy (2026-10-18) | Dirección |
 |---------|------------------|-----------|
-| LCP mobile | no medible: el splash de 2,4 s (decisión de producto) y la entrada en opacidad 0 lo ocultan | medirlo apenas el shell deje de entrar desde opacidad 0 |
 | JS inicial | 462,6 kB gzip, un solo chunk | bajar con carga diferida por ruta y de jsPDF/html2canvas |
 | Vulnerabilidades en producción | 0 altas; 2 moderadas en `react-router` 6, que se arreglan recién en la v7 (versión mayor) | no puede subir; migrar a React Router 7 en un cambio aparte |
 | Supresiones existentes | 5 (`@ts-ignore` / `@ts-expect-error`) | no puede subir |
@@ -58,3 +57,4 @@ Por qué estos números:
 
 | ID | Regla | Ruta | Motivo | Dueño | Vence |
 |----|-------|------|--------|-------|-------|
+| E1 | Performance: FCP ≤ 3800 ms pasa a ≤ 4200 ms | Landing (`scripts/lighthouse.mjs`) | Cambio de método, no regresión: el modo simulado de Lighthouse no podía medir el LCP y se pasó a throttling aplicado. El mismo código da 3,7 s en un método y 4,0 s en el otro. Aprobado el 2026-10-19 | @Diego Urenda | 2027-01-19 |
