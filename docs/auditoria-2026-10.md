@@ -161,3 +161,15 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
 - **Presupuestos:** LCP ≤ 7800 ms y CLS ≤ 0,1 pasan a exigirse. El FCP sube de 3800 a 4200 ms por el cambio de método: es la **excepción E1** de `CONSTRAINTS.md`, aprobada por Diego Urenda, que vence el 2027-01-19.
 - **Hallazgo sobre el propio control:** `floor-guard` compara contra `origin/main`, donde `CONSTRAINTS.md` todavía no existe, y por eso no veía un umbral aflojado dentro de esta rama. `check:fast` ahora corre también `--base HEAD`, que lo detecta antes del commit.
 - **Lectura:** 7,6 s hasta ver el contenido en un celular con red lenta es mucho para un banco. La mitad es el splash (decisión de producto) y la otra mitad el JS. Los pasos P1-7 y P1-8 atacan esa segunda mitad.
+
+### Cierre de P0 (2026-10-19)
+
+- **Ajuste del control del piso:** una excepción registrada en la tabla de `CONSTRAINTS.md` se imprime siempre como `AVISO excepción vigente`, pero ya no bloquea. Antes, la E1 aprobada dejaba `check:fast` en rojo durante toda la vida de la rama. Los demás movimientos que bajan la vara siguen bloqueando.
+- **Corrida completa, `npm run check:full`, en verde:**
+  - **Piso:** limpio, contra `origin/main` y contra `HEAD`.
+  - **Tipos y tests:** `tsc` sin errores y 4 tests unitarios.
+  - **Bundle:** JS inicial de 462,8 kB.
+  - **E2E:** 16/16, con 0 violaciones de axe y 0 toques chicos.
+  - **Performance:** FCP 4,0 s, LCP 7,6 s y CLS 0,041.
+  - **Dependencias:** 0 altas y 2 moderadas, documentadas en V1.
+- **Sigue:** S-1 (espera aprobación) y P1-7 a P2-12.

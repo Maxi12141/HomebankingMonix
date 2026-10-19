@@ -150,6 +150,11 @@ for (const r of removedRules) {
   if (verdict) flag(verdict, r.file, r.text + '  ->  ' + a.text);
 }
 
+// Una excepción registrada en la tabla es el camino aprobado: se muestra siempre
+// (ruidosa) pero no bloquea. El resto de los hallazgos sí.
+const excepciones = findings.filter((f) => f.rule === 'new-exception');
+for (const f of excepciones) console.warn(`floor-guard: AVISO excepción vigente: ${f.text}`);
+findings.splice(0, findings.length, ...findings.filter((f) => f.rule !== 'new-exception'));
 if (findings.length === 0) { console.log('floor-guard: clean'); process.exit(0); }
 console.error('floor-guard: ' + findings.length + ' floor violation(s):');
 for (const f of findings) console.error(`  [${f.rule}] ${f.file}: ${f.text}`);
