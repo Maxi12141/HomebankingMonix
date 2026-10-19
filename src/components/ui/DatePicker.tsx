@@ -159,7 +159,7 @@ export function DatePicker({ value, onChange, label, placeholder = 'DD/MM/AAAA' 
           value={isoToDisplay(value)}
           placeholder={placeholder}
           onClick={toggle}
-          className="w-full rounded-xl px-4 py-2.5 pr-16 font-body text-sm text-navy dark:text-white bg-slate-input dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:outline-none focus:border-mint/50 placeholder-slate-secondary/60 transition-colors cursor-pointer select-none"
+          className="w-full min-h-11 rounded-xl px-4 py-2.5 pr-16 font-body text-sm text-navy dark:text-white bg-slate-input dark:bg-white/5 border border-slate-300 dark:border-white/10 focus:outline-none focus:border-mint/50 placeholder-slate-secondary/60 transition-colors cursor-pointer select-none"
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
           {value && (
@@ -167,7 +167,7 @@ export function DatePicker({ value, onChange, label, placeholder = 'DD/MM/AAAA' 
               type="button"
               tabIndex={-1}
               onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(false) }}
-              className="p-1 text-slate-secondary hover:text-red-400 transition-colors"
+              className="toque [--toque:21px] text-slate-secondary hover:text-red-400 transition-colors"
             >
               <X size={13} />
             </button>
@@ -176,7 +176,7 @@ export function DatePicker({ value, onChange, label, placeholder = 'DD/MM/AAAA' 
             type="button"
             tabIndex={-1}
             onClick={toggle}
-            className="p-1 text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors"
+            className="toque [--toque:23px] text-slate-secondary hover:text-navy dark:hover:text-mint transition-colors"
           >
             <Calendar size={15} />
           </button>

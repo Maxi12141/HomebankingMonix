@@ -175,7 +175,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             localStorage.setItem(MOSTRAR_SALDO_KEY, next ? '1' : '0')
             return next
           })}
-          className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors shrink-0"
+          className="toque [--toque:16px] text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
           aria-label={showData ? 'Ocultar saldo' : 'Mostrar saldo'}
         >
           {showData ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -246,7 +246,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
           <span className="font-body text-xs font-medium text-navy dark:text-white font-mono">
             {showData ? (cuenta.cbu ?? '—') : '•••••••••••••••••••••'}
           </span>
-          <button onClick={() => handleCopy(cuenta.cbu ?? '', 'cbu')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar CBU">
+          <button onClick={() => handleCopy(cuenta.cbu ?? '', 'cbu')} className="toque [--toque:13px] text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar CBU">
             {copiedCbu ? <Check size={13} className="text-navy dark:text-mint" /> : <Copy size={13} />}
           </button>
         </div>
@@ -258,7 +258,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
           <span className="font-body text-xs font-medium text-navy dark:text-white">
             {showData ? (cuenta.alias ?? '—') : '••••••••••••••'}
           </span>
-          <button onClick={() => handleCopy(cuenta.alias ?? '', 'alias')} className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar Alias">
+          <button onClick={() => handleCopy(cuenta.alias ?? '', 'alias')} className="toque [--toque:13px] text-slate-secondary hover:text-navy dark:hover:text-white transition-colors" aria-label="Copiar Alias">
             {copiedAlias ? <Check size={13} className="text-navy dark:text-mint" /> : <Copy size={13} />}
           </button>
         </div>
@@ -269,7 +269,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
             onClick={() => {
               void compartirTexto({ titulo: 'Mis datos de Monix', texto: textoDatosCuenta(cuenta, persona) })
             }}
-            className="ml-auto inline-flex items-center gap-1.5 font-body text-xs font-medium text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
+            className="ml-auto toque-texto gap-1.5 font-body text-xs font-medium text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
             aria-label="Compartir mis datos"
           >
             <Share2 size={13} />
@@ -437,7 +437,7 @@ export function DashboardPage() {
         <motion.div variants={itemVariants} id="tour-movimientos">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Últimos movimientos</h2>
-            <button onClick={() => navigate('/historial')} className="text-sm font-body text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
+            <button onClick={() => navigate('/historial')} className="toque-texto justify-end text-sm font-body text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors">
               Ver todos
             </button>
           </div>

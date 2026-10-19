@@ -875,7 +875,7 @@ function MobileAgendaAccordion({ onSelectContacto }: { onSelectContacto: (cbu: s
     <div className="lg:hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 transition-colors text-sm font-body text-slate-secondary hover:text-navy dark:hover:text-white"
+        className="w-full min-h-11 flex items-center justify-between px-4 py-2.5 rounded-xl bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 transition-colors text-sm font-body text-slate-secondary hover:text-navy dark:hover:text-white"
       >
         <span>Agenda de contactos</span>
         <span className="text-xs">{open ? '▲' : '▼'}</span>

@@ -125,10 +125,13 @@ export function MonixCard3D({
         <button
           type="button"
           onClick={toggleFlip}
-          className="absolute top-3 right-3 z-30 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-body font-medium text-white bg-black/30 backdrop-blur-sm border border-white/20 hover:border-mint/50 hover:bg-black/40 transition-colors"
+          // Área táctil de 44 px; la píldora visible queda igual (30 px, a 12 px del borde).
+          className="group absolute top-[5px] right-[5px] z-30 p-[7px]"
         >
-          <RotateCcw size={13} />
-          {flipped ? 'Frente' : 'Dorso'}
+          <span className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-body font-medium text-white bg-black/30 backdrop-blur-sm border border-white/20 group-hover:border-mint/50 group-hover:bg-black/40 transition-colors">
+            <RotateCcw size={13} />
+            {flipped ? 'Frente' : 'Dorso'}
+          </span>
         </button>
         {/* Tilt layer */}
         <motion.div
@@ -263,7 +266,7 @@ export function MonixCard3D({
                             e.stopPropagation()
                             void copyField(cbu ?? '', 'cbu')
                           }}
-                          className="shrink-0 text-slate-secondary transition-colors hover:text-mint"
+                          className="toque [--toque:14px] text-slate-secondary transition-colors hover:text-mint"
                           aria-label="Copiar CBU"
                         >
                           {copied === 'cbu' ? <Check size={14} className="text-mint" /> : <Copy size={14} />}
@@ -287,7 +290,7 @@ export function MonixCard3D({
                             e.stopPropagation()
                             void copyField(alias ?? '', 'alias')
                           }}
-                          className="shrink-0 text-slate-secondary transition-colors hover:text-mint"
+                          className="toque [--toque:14px] text-slate-secondary transition-colors hover:text-mint"
                           aria-label="Copiar Alias"
                         >
                           {copied === 'alias' ? <Check size={14} className="text-mint" /> : <Copy size={14} />}

@@ -86,7 +86,7 @@ export function HistorialPage() {
             <button
               key={f}
               onClick={() => setFiltro(f)}
-              className={`px-4 py-2 rounded-xl font-body text-sm font-medium transition-colors
+              className={`min-h-11 px-4 py-2 rounded-xl font-body text-sm font-medium transition-colors
                 ${filtro === f
                   ? 'bg-mint text-navy'
                   : 'bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 text-slate-secondary hover:text-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-white/20'
@@ -101,7 +101,7 @@ export function HistorialPage() {
         <div className="relative mb-3">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-secondary pointer-events-none" />
           <input
-            className="w-full bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-10 py-2.5 font-body text-sm text-navy dark:text-white placeholder-slate-secondary focus:outline-none focus:border-mint/50 transition-colors"
+            className="w-full min-h-11 bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-10 py-2.5 font-body text-sm text-navy dark:text-white placeholder-slate-secondary focus:outline-none focus:border-mint/50 transition-colors"
             placeholder="Buscar por nombre, descripción o CBU..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
@@ -122,7 +122,7 @@ export function HistorialPage() {
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-secondary font-body text-sm pointer-events-none select-none">@</span>
             <input
-              className="w-full bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 rounded-xl pl-8 pr-10 py-2.5 font-body text-sm text-navy dark:text-white placeholder-slate-secondary focus:outline-none focus:border-mint/50 transition-colors"
+              className="w-full min-h-11 bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 rounded-xl pl-8 pr-10 py-2.5 font-body text-sm text-navy dark:text-white placeholder-slate-secondary focus:outline-none focus:border-mint/50 transition-colors"
               placeholder="Filtrar por alias de destinatario o emisor..."
               value={aliasFilter}
               onChange={(e) => setAliasFilter(e.target.value)}

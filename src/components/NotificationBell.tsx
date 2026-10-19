@@ -68,7 +68,7 @@ export function NotificationBell() {
     <div className="relative">
       <button
         onClick={handleToggle}
-        className="relative p-2 rounded-xl text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-colors"
+        className="relative toque [--toque:34px] rounded-xl text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-colors"
         aria-label="Notificaciones"
       >
         <Bell size={18} />

@@ -210,6 +210,26 @@
     }
   }
 
+  /* Área táctil de 44×44 px (mínimo iOS) sin mover el diseño: el margen negativo
+     devuelve lo que se agrega. --toque es el tamaño visible del control. */
+  .toque {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    margin: calc((var(--toque, 24px) - 44px) / 2);
+  }
+  /* Lo mismo para links y botones de texto: 44 px de alto contra su propia línea. */
+  .toque-texto {
+    display: inline-flex;
+    align-items: center;
+    min-width: 44px;
+    min-height: 44px;
+    margin-block: calc((1lh - 44px) / 2);
+  }
+
   /* Loader del isologo (LoadingScreen). Tiempos de motion/monix-logo.aep. */
   @keyframes loader-fondo {
     from { opacity: 0; transform: scale(0.92); }

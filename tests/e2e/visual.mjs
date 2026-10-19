@@ -297,7 +297,7 @@ prueba('Sin scroll horizontal a 320 px', async (b) => {
 // ── Controles con números (CONSTRAINTS.md): miden y no dejan empeorar ────────
 // Línea de base medida el 2026-10-18. Si un número mejora, bajalo acá; nunca subirlo.
 const BASE_AXE_SERIAS = 14
-const BASE_TOQUES_CHICOS = 46
+const BASE_TOQUES_CHICOS = 0
 const publicas = ['/', '/login', '/register']
 const privadas = ['/dashboard', '/transferir', '/depositar', '/historial', '/tarjeta', '/perfil']
 
@@ -332,7 +332,9 @@ prueba('Toques: elementos interactivos de menos de 44×44 px en mobile', async (
     const lista = await page.evaluate(() => {
       const out = []
       for (const el of document.querySelectorAll('button,a[href],input:not([type=hidden]),select,textarea,[role=button]')) {
-        const r = el.getBoundingClientRect()
+        // Un checkbox dentro de su <label> se toca en todo el label (área equivalente en WCAG).
+        const label = el.matches('input[type=checkbox],input[type=radio]') && el.closest('label')
+        const r = (label || el).getBoundingClientRect()
         // Sólo lo que está en pantalla (el menú lateral cerrado queda afuera).
         if (!r.width || !r.height || r.right <= 0 || r.left >= innerWidth) continue
         if (r.width < 44 || r.height < 44) {

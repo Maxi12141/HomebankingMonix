@@ -69,12 +69,12 @@ export function PageWrapper({ children }: PageWrapperProps) {
               <button
                 id="tour-menu"
                 onClick={() => setDrawerOpen(true)}
-                className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
+                className="toque text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
                 aria-label="Abrir menú"
               >
                 <Menu size={24} />
               </button>
-              <Link to="/dashboard">
+              <Link to="/dashboard" aria-label="Ir al inicio" className="flex items-center py-2 -my-2">
                 <MonixLogoNavbar
                   variant={theme === 'dark' ? 'white' : 'default'}
                   className="h-7 w-auto"
@@ -86,7 +86,7 @@ export function PageWrapper({ children }: PageWrapperProps) {
               <NotificationBell />
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-xl text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-colors"
+                className="toque [--toque:34px] rounded-xl text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-colors"
                 aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
               >
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}

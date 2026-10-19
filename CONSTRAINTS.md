@@ -26,7 +26,7 @@ Desde esa fecha se saca el `|| echo` y bloquean.
 | Tipos | Cero errores de tipos | `tsc --noEmit` | `check:fast`, cada cambio |
 | Marca | Texto visible ≥ 11 px; montos en mint tinta (claro) o mint (oscuro); foco visible con Tab; loader con los tiempos de `motion/monix-logo.aep` | `npm run test:e2e` (Playwright) | `check:task` |
 | Mobile | Sin scroll horizontal a 320 px en 9 pantallas | `npm run test:e2e` | `check:task` |
-| Toques | Elementos interactivos de menos de 44×44 px: como máximo 46 (no puede subir) | `npm run test:e2e` | `check:task` |
+| Toques | Ningún elemento interactivo de menos de 44×44 px en 6 pantallas con sesión (era 46 el 2026-10-18) | `npm run test:e2e` | `check:task` |
 | Accesibilidad | Violaciones axe serias o críticas (WCAG 2.1 AA) en 9 pantallas: como máximo 14 (no puede subir) | `@axe-core/playwright` en `npm run test:e2e` | `check:task` |
 | Bundle | JS inicial ≤ 465 kB gzip (no puede crecer) | `size-limit` (`.size-limit.json`) | `check:task` |
 | Performance | CLS ≤ 0.1 y FCP mobile ≤ 3800 ms en la Landing | Lighthouse 12.8.2 (`npm run check:perf`) | `check:full` |

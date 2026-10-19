@@ -85,7 +85,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 |---|---|---|---|
 | S-1 | RPC de servidor para cada escritura de saldo, y privilegios por columna | V2 | **Espera aprobación**: migración en la base de producción |
 | P0-1 | `npm audit fix` | V1 | Hecho: 1 alta y 5 moderadas pasaron a 0 altas y 2 moderadas |
-| P0-2 | Áreas táctiles de 44 px sin cambiar el aspecto | H1 | Pendiente |
+| P0-2 | Áreas táctiles de 44 px sin cambiar el aspecto | H1 | Hecho: 46 pasaron a 0 |
 | P0-3 | Nombres accesibles y link subrayado | H2 | Pendiente |
 | P0-4 | `autocomplete` en Login y Registro | H3 | Pendiente |
 | P0-5 | Montos con `inputMode="decimal"` y un parser único | H4 | Pendiente |
@@ -106,3 +106,12 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
 - **Comando:** `npm audit fix` sin `--force`. Sólo cambió `package-lock.json` (21 líneas).
 - **Verificación:** `npm audit --omit=dev --audit-level=high` sale 0. `npm run check:task` en verde: floor-guard limpio, `tsc` sin errores, build OK, JS inicial de 462,48 kB y 14/14 pruebas de Playwright.
 - **Trampa encontrada:** `npm audit fix --omit=dev` borra de `node_modules` las dependencias de desarrollo, TypeScript incluido. Hay que correr `npm install` después, o no usar `--omit=dev` en el fix.
+
+### P0-2 · Áreas táctiles de 44 px (2026-10-19)
+
+- **Qué se hizo:** dos utilidades en `src/index.css`. `.toque` deja el control en 44×44 y con un margen negativo calculado a partir de `--toque`, el tamaño visible, devuelve lo que agrega: el diseño no se mueve. `.toque-texto` hace lo mismo con los links de texto, usando `1lh`.
+- **Dónde:** el encabezado (menú, logo, notificaciones, tema), copiar CBU y alias y ocultar saldo en el Dashboard y la Tarjeta, Ver todos, Compartir, el selector de fechas y los controles del Perfil.
+- **Por estructura:** el botón "Dorso" y el switch de huella pasan a ser un área transparente de 44 px con la píldora y el riel visibles adentro, del mismo tamaño que antes.
+- **Crecen un poco:** los campos de búsqueda de Historial, los filtros Todos, Entradas y Salidas, y el acordeón de la agenda en Transferir pasan a una altura mínima de 44 px. Crecen entre 2 y 6 px.
+- **Ajuste del test:** un checkbox dentro de su `<label>` se mide por el label, que es el área que recibe el toque (área equivalente en WCAG).
+- **Verificación:** el test de toques pasó de 46 a 0 y la línea de base de `CONSTRAINTS.md` quedó en 0. 14/14 pruebas. Las capturas del Dashboard y la Tarjeta a 390 y 320 px no muestran cambios visuales.

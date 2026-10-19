@@ -314,7 +314,7 @@ export function ProfilePage() {
           <div className="flex items-center gap-3 mt-3">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="font-body text-xs text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
+              className="toque-texto font-body text-xs text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
             >
               {avatarUrl ? 'Cambiar foto' : 'Subir foto'}
             </button>
@@ -380,15 +380,20 @@ export function ProfilePage() {
               disabled={!huellaDisponible}
               aria-busy={savingBio}
               onClick={() => { if (!savingBio) void toggleBiometria() }}
-              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
-                bioActiva ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
-              }`}
+              // 44 px de alto para el dedo; el riel visible sigue midiendo 24 px.
+              className="shrink-0 w-11 h-11 -my-2.5 flex items-center disabled:opacity-40"
             >
               <span
-                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  bioActiva ? 'translate-x-5' : ''
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  bioActiva ? 'bg-mint' : 'bg-slate-300 dark:bg-white/15'
                 }`}
-              />
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    bioActiva ? 'translate-x-5' : ''
+                  }`}
+                />
+              </span>
             </button>
           </div>
         </Card>
@@ -400,7 +405,7 @@ export function ProfilePage() {
             {!editMode && (
               <button
                 onClick={() => setEditMode(true)}
-                className="text-sm font-body text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
+                className="toque-texto justify-end text-sm font-body text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
               >
                 Editar
               </button>
@@ -448,7 +453,7 @@ export function ProfilePage() {
             <button
               type="button"
               onClick={() => setShowData((v) => !v)}
-              className="text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
+              className="toque [--toque:16px] text-slate-secondary hover:text-navy dark:hover:text-white transition-colors"
               aria-label={showData ? 'Ocultar CBU y alias' : 'Mostrar CBU y alias'}
             >
               {showData ? <EyeOff size={16} /> : <Eye size={16} />}
