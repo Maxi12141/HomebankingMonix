@@ -91,7 +91,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | P0-5 | Montos con `inputMode="decimal"` y un parser único | H4 | Hecho |
 | P0-6 | Medir el LCP | H5 | Hecho: el LCP se mide (7,6 s en 4G lento). El cambio de código propuesto se descartó |
 | P1-7 | Cargar jsPDF y html2canvas al generar el comprobante | H7 | Hecho: JS inicial de 462,8 a 285 kB gzip |
-| P1-8 | Cargar cada pantalla al visitarla | H7 | Pendiente |
+| P1-8 | Cargar cada pantalla al visitarla | H7 | Hecho: JS inicial 181,6 kB; FCP 2,4 s; LCP 6,0 s |
 | P1-9 | Una sola sincronización con el Banco Central, pausada en segundo plano | H8, V2 (parte de performance) | Pendiente |
 | P1-10 | Fuentes servidas desde la app | H9 | Pendiente |
 | P2-11 | Blur, cinta de cotizaciones y `meta no-store` | H10 | Pendiente |
@@ -180,3 +180,20 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
 - **Gesto de compartir:** compartir con Web Share exige un toque reciente. Para que la descarga del chunk no lo consuma, `precargarComprobante()` baja las librerías en segundo plano al abrir el detalle de un movimiento y al llegar a la pantalla de transferencia exitosa. Si igual se pierde el gesto, sigue el caso que ya existía: el PDF queda listo y un segundo toque comparte al instante.
 - **Resultado:** JS inicial de **462,8 kB a 285 kB gzip (−38 %)**. jsPDF (129 kB) y html2canvas (48 kB) quedan en chunks propios. El presupuesto de `size-limit` pasa de 465 a 290 kB.
 - **Verificación:** prueba nueva que comprueba que el Dashboard no pide jsPDF ni html2canvas, y que al tocar Descargar en un movimiento se bajan y se genera `monix_*.pdf`. 17/17 pruebas.
+
+### P1-8 · Cada pantalla en su propio chunk (2026-10-19)
+
+- **Qué se hizo:** en `src/App.tsx`, 18 pantallas pasan a `React.lazy` con un `<Suspense>` que muestra un esqueleto mientras baja el chunk. La Landing y el Login quedan en la carga inicial, porque son la puerta de entrada.
+- **Precarga:** con una sesión guardada en `localStorage`, el chunk del Dashboard (13,7 kB gzip) se pide **durante** el splash y no después. Sin sesión no se baja.
+- **Resultados** (Lighthouse mobile, 4G lento, throttling aplicado):
+
+| Métrica | Antes de P1 | Después de P1-7 | Después de P1-8 |
+|---|---|---|---|
+| JS inicial (gzip) | 462,8 kB | 285 kB | **181,6 kB (−61 %)** |
+| FCP | 4,0 s | 4,0 s | **2,4 s** |
+| LCP | 7,6 s | 7,6 s | **6,0 s** |
+
+- **Presupuestos ajustados:** `size-limit` en 185 kB, FCP ≤ 2600 ms y LCP ≤ 6200 ms.
+- **Excepción E1 retirada:** el FCP medido (2,4 s) quedó por debajo del 3,8 s original, así que no hace falta.
+- **Sobre el control del piso:** al endurecer, el guard marcó dos hallazgos. Pasa porque el texto de justificación empezaba con los números y porque la fila "JS inicial" no tiene `≤`, así que no puede leer la dirección del cambio. Se revisó a mano que ambos son endurecimientos, y la justificación pasó a una etiqueta estable ("Presupuestos de performance").
+- **Verificación:** 18/18 pruebas, con una nueva que comprueba la precarga con sesión y que la Landing sin sesión no baje el Dashboard. `tsc` sin errores. Lighthouse en verde.

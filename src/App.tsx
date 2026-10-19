@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense, type ComponentType } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { motion, MotionConfig } from 'framer-motion'
 import toast, { Toaster, useToasterStore } from 'react-hot-toast'
@@ -17,27 +17,54 @@ import { MissingEnvScreen } from './components/MissingEnvScreen'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
-import { RegisterPage } from './pages/RegisterPage'
-import { DashboardPage } from './pages/DashboardPage'
-import { TransferPage } from './pages/TransferPage'
-import { MetasPage } from './pages/MetasPage'
-import { HistorialPage } from './pages/HistorialPage'
-import { ProfilePage } from './pages/ProfilePage'
-import { DepositPage } from './pages/DepositPage'
-import { CuentasPage } from './pages/CuentasPage'
-import { CompraVentaDolaresPage } from './pages/CompraVentaDolaresPage'
-import { ContactosPage } from './pages/ContactosPage'
-import { TarjetaPage } from './pages/TarjetaPage'
-import { ReservasPage } from './pages/ReservasPage'
-import { MercadoMonixPage } from './pages/MercadoMonixPage'
-import { PromosPage } from './pages/PromosPage'
-import { CashbackPage } from './pages/CashbackPage'
-import { PrestamosPage } from './pages/PrestamosPage'
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
-import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { MovimientosSkeleton } from './components/ui/Skeleton'
 import { useBiometriaLock } from './hooks/useBiometriaLock'
 import { useCuenta } from './hooks/useCuenta'
 import { HuellaLockScreen } from './components/HuellaLockScreen'
+
+// Cada pantalla va en su propio chunk y se baja al visitarla. Landing y Login
+// quedan en la carga inicial porque son la puerta de entrada.
+const pagina = <K extends string>(cargar: () => Promise<Record<K, ComponentType>>, nombre: K) =>
+  lazy(() => cargar().then((m) => ({ default: m[nombre] })))
+const cargarDashboard = () => import('./pages/DashboardPage')
+const DashboardPage = pagina(cargarDashboard, 'DashboardPage')
+const RegisterPage = pagina(() => import('./pages/RegisterPage'), 'RegisterPage')
+const TransferPage = pagina(() => import('./pages/TransferPage'), 'TransferPage')
+const MetasPage = pagina(() => import('./pages/MetasPage'), 'MetasPage')
+const HistorialPage = pagina(() => import('./pages/HistorialPage'), 'HistorialPage')
+const ProfilePage = pagina(() => import('./pages/ProfilePage'), 'ProfilePage')
+const DepositPage = pagina(() => import('./pages/DepositPage'), 'DepositPage')
+const CuentasPage = pagina(() => import('./pages/CuentasPage'), 'CuentasPage')
+const CompraVentaDolaresPage = pagina(() => import('./pages/CompraVentaDolaresPage'), 'CompraVentaDolaresPage')
+const ContactosPage = pagina(() => import('./pages/ContactosPage'), 'ContactosPage')
+const TarjetaPage = pagina(() => import('./pages/TarjetaPage'), 'TarjetaPage')
+const ReservasPage = pagina(() => import('./pages/ReservasPage'), 'ReservasPage')
+const MercadoMonixPage = pagina(() => import('./pages/MercadoMonixPage'), 'MercadoMonixPage')
+const PromosPage = pagina(() => import('./pages/PromosPage'), 'PromosPage')
+const CashbackPage = pagina(() => import('./pages/CashbackPage'), 'CashbackPage')
+const PrestamosPage = pagina(() => import('./pages/PrestamosPage'), 'PrestamosPage')
+const ForgotPasswordPage = pagina(() => import('./pages/ForgotPasswordPage'), 'ForgotPasswordPage')
+const ResetPasswordPage = pagina(() => import('./pages/ResetPasswordPage'), 'ResetPasswordPage')
+
+// Con una sesión guardada, la primera pantalla va a ser el Dashboard: se baja
+// durante el splash en vez de después.
+function haySesionGuardada() {
+  try {
+    return Object.keys(localStorage).some((k) => k.startsWith('sb-') && k.endsWith('-auth-token'))
+  } catch {
+    return false
+  }
+}
+
+function PantallaCargando() {
+  return (
+    <div className="min-h-screen bg-slate-input dark:bg-navy p-6 pt-24">
+      <div className="max-w-2xl mx-auto">
+        <MovimientosSkeleton filas={3} label="Cargando la pantalla" />
+      </div>
+    </div>
+  )
+}
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -73,6 +100,7 @@ function AppRoutes() {
   return (
     <>
     {!loading && user && <CuentasGlobales />}
+    <Suspense fallback={<PantallaCargando />}>
     <Routes>
       <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />
       <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
@@ -96,6 +124,7 @@ function AppRoutes() {
       <Route path="/contactos" element={<RequireAuth><ContactosPage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
     </>
   )
 }
@@ -117,6 +146,10 @@ function AppShell() {
       .filter((_, i) => i >= TOASTS_VISIBLES_MAX)
       .forEach((t) => toast.dismiss(t.id))
   }, [toasts])
+
+  useEffect(() => {
+    if (haySesionGuardada()) void cargarDashboard().catch(() => undefined)
+  }, [])
 
   useEffect(() => {
     const min = window.setTimeout(() => setMinTimePassed(true), 2400)

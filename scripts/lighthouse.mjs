@@ -6,13 +6,13 @@ import lighthouse from 'lighthouse'
 import { launch } from 'chrome-launcher'
 import { chromium } from 'playwright'
 
-// Línea de base 2026-10-19 (Lighthouse 12.8.2, mobile, throttling aplicado por
+// Línea de base 2026-10-19, después de P1-8 (Lighthouse 12.8.2, mobile, throttling aplicado por
 // DevTools). El modo simulado por defecto devuelve NO_LCP con esta versión de
 // Chromium: por eso se mide con throttling real. Sólo se bajan, nunca se suben.
 const PRESUPUESTO = {
   cls: 0.1, // Core Web Vitals "bueno"; hoy 0.041
-  fcpMs: 4200, // hoy ~4.0 s: el splash dura 2,4 s mínimo por decisión de producto
-  lcpMs: 7800, // hoy ~7.6 s en 4G lento: splash + 464 kB de JS antes de pintar
+  fcpMs: 2600, // hoy ~2.4 s (era 4.0 s antes de P1-8); el splash dura 2,4 s mínimo
+  lcpMs: 6200, // hoy ~6.0 s en 4G lento (era 7.6 s antes de P1-7 y P1-8)
 }
 
 process.env.VITE_SUPABASE_URL = 'http://mock.supabase.local'

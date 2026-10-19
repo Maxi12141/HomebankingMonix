@@ -224,6 +224,29 @@ prueba('Card de movimiento: se abre con Tab + Enter', async (b) => {
   await page.context().close()
 })
 
+prueba('Pantallas diferidas: el Dashboard se baja durante el splash sólo si hay sesión', async (b) => {
+  const pidioDashboard = (u) => /DashboardPage/.test(u)
+  // Con sesión: el pedido sale mientras el splash sigue en pantalla.
+  const conSesion = await nuevaPagina(b)
+  let pedidoDuranteSplash = false
+  conSesion.on('request', async (r) => {
+    if (pidioDashboard(r.url())) pedidoDuranteSplash ||= (await conSesion.locator('[aria-label="Cargando Monix"]').count()) > 0
+  })
+  await conSesion.goto('/dashboard')
+  await pasarLoader(conSesion)
+  assert.ok(pedidoDuranteSplash, 'el Dashboard debería bajarse durante el splash')
+  await conSesion.context().close()
+  // Sin sesión: la Landing no lo baja.
+  const sinSesion = await nuevaPagina(b, { logueado: false })
+  const pedidos = []
+  sinSesion.on('request', (r) => pedidos.push(r.url()))
+  await sinSesion.goto('/')
+  await pasarLoader(sinSesion)
+  await sinSesion.waitForTimeout(800)
+  assert.equal(pedidos.filter(pidioDashboard).length, 0, 'la Landing no debería bajar el Dashboard')
+  await sinSesion.context().close()
+})
+
 prueba('Comprobante PDF: las librerías se bajan recién al abrir un movimiento y el PDF se descarga', async (b) => {
   const page = await nuevaPagina(b)
   const pedidos = []
