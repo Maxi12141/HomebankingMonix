@@ -8,7 +8,11 @@
     "dev:celular": "vite --host --port 5173 --strictPort",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test:e2e": "node tests/e2e/visual.mjs"
+    "test:e2e": "node tests/e2e/visual.mjs",
+    "check:fast": "node scripts/floor-guard.mjs && tsc --noEmit",
+    "check:task": "npm run check:fast && npm run build && (size-limit || echo AVISO: el bundle inicial empeoro, ver CONSTRAINTS.md) && (npm run test:e2e || echo AVISO: marca, accesibilidad o toques empeoro, ver CONSTRAINTS.md)",
+    "check:perf": "node scripts/lighthouse.mjs",
+    "check:full": "npm run check:task && (npm run check:perf || echo AVISO: la performance mobile empeoro, ver CONSTRAINTS.md) && (npm audit --omit=dev --audit-level=high || echo AVISO: la seguridad de dependencias empeoro, ver CONSTRAINTS.md)"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
@@ -27,14 +31,18 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@size-limit/file": "^11.2.0",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vite-pwa/assets-generator": "^1.0.4",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "lighthouse": "^12.8.2",
     "playwright": "^1.63.0",
     "postcss": "^8.4.49",
+    "size-limit": "^11.2.0",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
     "vite": "^6.0.3",

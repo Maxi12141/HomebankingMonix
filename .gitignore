@@ -26,3 +26,6 @@ Thumbs.db
 
 # Capturas de las pruebas visuales
 tests/e2e/screens/
+
+# Build temporal para Lighthouse (npm run check:perf)
+.perf/

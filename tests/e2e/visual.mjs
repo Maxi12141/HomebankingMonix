@@ -173,6 +173,30 @@ prueba('Dashboard (claro): montos en mint tinta, negativos en rojo legible', asy
   await page.context().close()
 })
 
+prueba('Saldo: cuenta desde 0 una sola vez por sesión', async (b) => {
+  const page = await nuevaPagina(b)
+  const saldo = page.locator('#tour-saldo p.font-display').first()
+  const FINAL = /150\.000,00/
+  await page.goto('/dashboard')
+  await pasarLoader(page)
+  await saldo.waitFor()
+  assert.doesNotMatch(await saldo.innerText(), FINAL, 'la primera vez debería estar contando')
+  await page.waitForTimeout(1300)
+  assert.match(await saldo.innerText(), FINAL)
+  // Volver al Dashboard (y recargar) no repite la animación.
+  for (const ruta of ['/historial', '/dashboard']) await page.goto(ruta)
+  await pasarLoader(page)
+  await saldo.waitFor()
+  assert.match(await saldo.innerText(), FINAL, 'al volver debería aparecer directo')
+  // Cerrar sesión borra la marca.
+  await page.evaluate(async () => {
+    const { useAuthStore } = await import('/src/store/authStore.ts')
+    useAuthStore.getState().clear()
+  })
+  assert.equal(await page.evaluate(() => sessionStorage.getItem('monix_saldo_animado')), null)
+  await page.context().close()
+})
+
 prueba('Dashboard (oscuro): montos en mint', async (b) => {
   const page = await nuevaPagina(b, { oscuro: true })
   await page.goto('/dashboard')
@@ -267,6 +291,61 @@ prueba('Sin scroll horizontal a 320 px', async (b) => {
     await page.screenshot({ path: `${SCREENS}320${ruta.replace(/\//g, '-')}.png` })
   }
   assert.deepEqual(desbordes, [])
+  await page.context().close()
+})
+
+// ── Controles con números (CONSTRAINTS.md): miden y no dejan empeorar ────────
+// Línea de base medida el 2026-10-18. Si un número mejora, bajalo acá; nunca subirlo.
+const BASE_AXE_SERIAS = 14
+const BASE_TOQUES_CHICOS = 46
+const publicas = ['/', '/login', '/register']
+const privadas = ['/dashboard', '/transferir', '/depositar', '/historial', '/tarjeta', '/perfil']
+
+prueba('Accesibilidad (axe, WCAG 2.1 AA): violaciones serias o críticas', async (b) => {
+  const { AxeBuilder } = await import('@axe-core/playwright')
+  const encontradas = []
+  for (const [logueado, rutas] of [[false, publicas], [true, privadas]]) {
+    // reducedMotion: axe mide el estado final, no un fundido a medias.
+    const page = await nuevaPagina(b, { logueado, reducedMotion: 'reduce' })
+    for (const ruta of rutas) {
+      await page.goto(ruta)
+      await pasarLoader(page)
+      await page.waitForTimeout(800)
+      const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+      for (const v of r.violations) {
+        if (v.impact === 'serious' || v.impact === 'critical') encontradas.push(`${ruta} ${v.id} (${v.nodes.length})`)
+      }
+    }
+    await page.context().close()
+  }
+  console.log(`  axe: ${encontradas.length} violaciones serias/críticas\n    ${encontradas.join('\n    ')}`)
+  assert.ok(encontradas.length <= BASE_AXE_SERIAS, `subieron de ${BASE_AXE_SERIAS} a ${encontradas.length}`)
+})
+
+prueba('Toques: elementos interactivos de menos de 44×44 px en mobile', async (b) => {
+  const page = await nuevaPagina(b)
+  const chicos = new Set()
+  for (const ruta of privadas) {
+    await page.goto(ruta)
+    await pasarLoader(page)
+    await page.waitForTimeout(700)
+    const lista = await page.evaluate(() => {
+      const out = []
+      for (const el of document.querySelectorAll('button,a[href],input:not([type=hidden]),select,textarea,[role=button]')) {
+        const r = el.getBoundingClientRect()
+        // Sólo lo que está en pantalla (el menú lateral cerrado queda afuera).
+        if (!r.width || !r.height || r.right <= 0 || r.left >= innerWidth) continue
+        if (r.width < 44 || r.height < 44) {
+          const nombre = (el.getAttribute('aria-label') || el.textContent || el.getAttribute('placeholder') || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 30)
+          out.push(`${nombre} ${Math.round(r.width)}×${Math.round(r.height)}`)
+        }
+      }
+      return out
+    })
+    for (const x of lista) chicos.add(`${ruta}: ${x}`)
+  }
+  console.log(`  toques chicos: ${chicos.size}\n    ${[...chicos].join('\n    ')}`)
+  assert.ok(chicos.size <= BASE_TOQUES_CHICOS, `subieron de ${BASE_TOQUES_CHICOS} a ${chicos.size}`)
   await page.context().close()
 })
 

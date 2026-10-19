@@ -1,0 +1,8 @@
+[
+  {
+    "name": "JS inicial (chunk principal, gzip)",
+    "path": "dist/assets/index-*.js",
+    "limit": "465 kB",
+    "gzip": true
+  }
+]
