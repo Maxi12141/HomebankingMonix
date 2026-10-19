@@ -71,7 +71,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | H1 | Elementos táctiles de menos de 44×44 px | 46 en 6 pantallas: copiar CBU y alias de 13 px, ocultar saldo de 16 px, menú de 24 px, notificaciones y tema de 34 px |
 | H2 | Violaciones de axe serias o críticas | 14: links e íconos sin nombre accesible, el link "Registrate" que se distingue sólo por color (1,8:1), un control interactivo anidado en Tarjeta |
 | H3 | Login y Registro sin `autocomplete` | Los gestores de contraseñas y el autocompletado del celular funcionan peor (WCAG 2.2, autenticación accesible) |
-| H4 | Montos con `type="number"` | 8 campos. Maneja mal la coma decimal y en desktop la rueda del mouse cambia el valor |
+| H4 | Montos con `type="number"` y un parser que lee mal el punto de miles | 9 campos. Maneja mal la coma decimal y en desktop la rueda del mouse cambia el valor. Además, **bug de dinero**: `parseFloat(texto.replace(',', '.'))` lee "1.500" como 1,5. En Depositar, que ya era un campo de texto, escribir "1.500" acreditaba $1,50 |
 | H5 | La app entra desde opacidad 0 después del splash | Lighthouse no puede medir el LCP (`NO_LCP`) |
 | H6 | Splash de 2,4 s mínimos en cada carga | FCP mobile de 3,7 s. **Se mantiene por decisión de producto (2026-10-18)** |
 | H7 | Un solo bundle de JS sin carga diferida | 462,6 kB gzip. jsPDF y html2canvas, que sólo se usan para comprobantes, son unos 150 kB |
@@ -88,7 +88,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | P0-2 | Áreas táctiles de 44 px sin cambiar el aspecto | H1 | Hecho: 46 pasaron a 0 |
 | P0-3 | Nombres accesibles y link subrayado | H2 | Hecho: 14 pasaron a 0 |
 | P0-4 | `autocomplete` en Login y Registro | H3 | Hecho |
-| P0-5 | Montos con `inputMode="decimal"` y un parser único | H4 | Pendiente |
+| P0-5 | Montos con `inputMode="decimal"` y un parser único | H4 | Hecho |
 | P0-6 | Sacar la entrada desde opacidad 0 del contenedor | H5 | Pendiente |
 | P1-7 | Cargar jsPDF y html2canvas al generar el comprobante | H7 | Pendiente |
 | P1-8 | Cargar cada pantalla al visitarla | H7 | Pendiente |
@@ -139,3 +139,14 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
   - **Alias del Perfil:** `off`, para que el navegador no ofrezca guardarlo como contraseña.
 - **Por qué importa en un banco:** el gestor de contraseñas del celular completa usuario y clave, y propone una clave fuerte al registrarse. Cumple WCAG 2.2, autenticación accesible: no obliga a recordar ni a transcribir.
 - **Verificación:** prueba nueva "Login y Registro: autocompletado y pegado habilitados". Comprueba los atributos y que ningún handler cancele el pegado en el email. 15/15 pruebas.
+
+### P0-5 · Montos: teclado decimal y un único parser (2026-10-19)
+
+- **Bug corregido:** el patrón `parseFloat(texto.replace(',', '.'))`, repetido en 11 lugares, interpretaba el punto como decimal. "1.500" (mil quinientos) se leía como 1,5, y "1.234,56" como 1,234. En Depositar se acreditaba un monto mil veces menor sin ningún aviso.
+- **Parser único:** `src/utils/monto.ts` (`parseMonto`). Punto de miles y coma decimal ("1.500,75"). Acepta el punto como decimal sólo cuando no puede ser de miles ("1500.5", "0.75"). Devuelve `NaN` ante cualquier formato ambiguo o con más de 2 decimales, y así la pantalla muestra "Ingresá un monto válido" en vez de adivinar.
+- **Dónde se usa:** reemplaza las 11 lecturas, en Depositar, Transferir, Dólares, Reservas, Préstamos, Cashback, Metas, Perfil (ingreso mensual) y los tres montos de cobro y pago con QR. No se tocó `lib/qrJwt.ts`, que lee montos de un QR firmado: son datos de máquina, no texto escrito por una persona.
+- **Teclado:** los 9 campos `type="number"` pasan a `type="text" inputMode="decimal"`. En el celular sale el teclado numérico con coma, y en desktop la rueda del mouse ya no cambia el monto.
+- **Verificación:**
+  - **Unitarias:** `tests/unit/monto.test.mjs`, 4 grupos con formato argentino, punto decimal, `$` y espacios, y 13 entradas inválidas. Corren en `npm run check:fast`.
+  - **E2E:** la prueba nueva escribe "1.500" en Depositar y comprueba que la RPC reciba `p_monto: 1500` y que la pantalla diga "$ 1.500,00". Con el código anterior falla, porque recibe 1,5.
+  - **Total:** 16/16 pruebas.

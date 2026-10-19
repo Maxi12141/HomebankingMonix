@@ -21,6 +21,7 @@ import { Modal } from '../components/ui/Modal'
 import type { Prestamo } from '../types'
 import { Monto } from '../components/ui/Monto'
 import { MovimientosSkeleton } from '../components/ui/Skeleton'
+import { parseMonto } from '../utils/monto'
 
 function formatARS(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -86,7 +87,7 @@ export function PrestamosPage() {
     if (plazos.length && !plazos.includes(cuotasSel)) setCuotasSel(plazos[plazos.length - 1])
   }, [plazos]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const montoNum = parseFloat(monto) || 0
+  const montoNum = parseMonto(monto) || 0
   const tablaSimulada = useMemo(
     () => calcularTablaAmortizacion(montoNum, oferta.tna, cuotasSel),
     [montoNum, oferta.tna, cuotasSel],
@@ -234,9 +235,8 @@ export function PrestamosPage() {
 
             <Input
               label="Monto a solicitar"
-              type="number"
-              min="1"
-              step="1000"
+              type="text"
+              inputMode="decimal"
               placeholder="0"
               value={monto}
               onChange={(e) => { setMonto(e.target.value); setError('') }}

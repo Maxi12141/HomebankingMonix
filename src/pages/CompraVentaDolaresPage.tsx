@@ -14,6 +14,7 @@ import { IconoExito } from '../components/ui/IconoExito'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
+import { parseMonto } from '../utils/monto'
 
 type Modo = 'comprar' | 'vender'
 type Step = 'form' | 'success'
@@ -46,7 +47,7 @@ export function CompraVentaDolaresPage() {
   const oficial = mercado?.dolares.find((d) => d.casa === 'oficial')
   const precio = oficial ? (modo === 'comprar' ? oficial.venta : oficial.compra) : null
 
-  const montoUsd = parseFloat(montoUsdStr) || 0
+  const montoUsd = parseMonto(montoUsdStr) || 0
   const montoArs = precio ? roundMoney(montoUsd * precio) : 0
 
   function handleReset() {
@@ -172,9 +173,8 @@ export function CompraVentaDolaresPage() {
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                   <Input
                     label={modo === 'comprar' ? 'Monto a comprar (USD)' : 'Monto a vender (USD)'}
-                    type="number"
-                    min="0.01"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="0.00"
                     value={montoUsdStr}
                     onChange={(e) => setMontoUsdStr(e.target.value)}

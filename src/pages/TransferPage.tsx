@@ -21,6 +21,7 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import type { Movimiento } from '../types'
 import { Monto } from '../components/ui/Monto'
+import { parseMonto } from '../utils/monto'
 
 type Step = 'buscar' | 'detalle' | 'resumen' | 'exito'
 type Moneda = 'ARS' | 'USD'
@@ -158,7 +159,7 @@ export function TransferPage() {
   const recientes = useTransferenciasRecientes(cuentaOrigen?.id, 6)
 
   const oficial = mercado?.dolares.find((d) => d.casa === 'oficial')
-  const montoNum = parseFloat(monto) || 0
+  const montoNum = parseMonto(monto) || 0
   const esConversion = !!(cuentaOrigen && destinatario && cuentaOrigen.moneda !== destinatario.moneda)
   const montoDestino = esConversion && oficial && cuentaOrigen && destinatario
     ? convertir(montoNum, cuentaOrigen.moneda, destinatario.moneda, oficial)
@@ -614,7 +615,7 @@ export function TransferPage() {
                   <Monto as="p" tamaño="grande" className="font-display text-2xl font-bold mb-6">{saldoFormateado}</Monto>
 
                   <form onSubmit={handleDetalleSubmit} className="flex flex-col gap-4">
-                    <Input label={`Monto en ${monedaActual === 'USD' ? 'dólares' : 'pesos'}`} type="number" min="0.01" step="0.01" placeholder="0.00"
+                    <Input label={`Monto en ${monedaActual === 'USD' ? 'dólares' : 'pesos'}`} type="text" inputMode="decimal" placeholder="0.00"
                       value={monto} onChange={(e) => setMonto(e.target.value)} required />
 
                     {esConversion && (

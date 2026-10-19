@@ -11,6 +11,7 @@ import { IconoExito } from '../components/ui/IconoExito'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
+import { parseMonto } from '../utils/monto'
 
 type Step = 'form' | 'success'
 
@@ -18,11 +19,6 @@ const stepVariants = {
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.3 } },
   exit: { opacity: 0, y: -16, transition: { duration: 0.2 } },
-}
-
-function parseMonto(raw: string) {
-  const n = parseFloat(raw.replace(/\s/g, '').replace(',', '.'))
-  return n
 }
 
 // El RPC depositar_en_cuenta es una sola transacción: si falla, no se movió nada.

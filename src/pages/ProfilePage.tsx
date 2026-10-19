@@ -24,6 +24,7 @@ import {
   soportaHuella,
 } from '../lib/biometria'
 import { pedirTodosLosPermisos } from '../lib/permisos'
+import { parseMonto } from '../utils/monto'
 
 export function ProfilePage() {
   const { persona, user, setPersona } = useAuthStore()
@@ -156,7 +157,7 @@ export function ProfilePage() {
     if (!persona) return
     setSavingCredito(true)
 
-    const ingresoNum = ingresoMensual.trim() === '' ? null : parseFloat(ingresoMensual)
+    const ingresoNum = ingresoMensual.trim() === '' ? null : parseMonto(ingresoMensual)
     const { error } = await supabase
       .from('personas')
       .update({ sueldo_acreditado: sueldoAcreditado, ingreso_mensual: ingresoNum })
@@ -506,9 +507,8 @@ export function ProfilePage() {
             </label>
             <Input
               label="Ingreso mensual declarado"
-              type="number"
-              min="0"
-              step="1000"
+              type="text"
+              inputMode="decimal"
               placeholder="0"
               value={ingresoMensual}
               onChange={(e) => setIngresoMensual(e.target.value)}

@@ -9,10 +9,11 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test:e2e": "node tests/e2e/visual.mjs",
-    "check:fast": "node scripts/floor-guard.mjs && tsc --noEmit",
+    "check:fast": "node scripts/floor-guard.mjs && tsc --noEmit && npm run test:unit",
     "check:task": "npm run check:fast && npm run build && (size-limit || echo AVISO: el bundle inicial empeoro, ver CONSTRAINTS.md) && (npm run test:e2e || echo AVISO: marca, accesibilidad o toques empeoro, ver CONSTRAINTS.md)",
     "check:perf": "node scripts/lighthouse.mjs",
-    "check:full": "npm run check:task && (npm run check:perf || echo AVISO: la performance mobile empeoro, ver CONSTRAINTS.md) && (npm audit --omit=dev --audit-level=high || echo AVISO: la seguridad de dependencias empeoro, ver CONSTRAINTS.md)"
+    "check:full": "npm run check:task && (npm run check:perf || echo AVISO: la performance mobile empeoro, ver CONSTRAINTS.md) && (npm audit --omit=dev --audit-level=high || echo AVISO: la seguridad de dependencias empeoro, ver CONSTRAINTS.md)",
+    "test:unit": "node --test tests/unit/monto.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

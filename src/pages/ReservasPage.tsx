@@ -11,6 +11,7 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
+import { parseMonto } from '../utils/monto'
 
 type Mode = 'ingresar' | 'retirar'
 
@@ -32,7 +33,7 @@ export function ReservasPage() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const montoNum = parseFloat(monto)
+  const montoNum = parseMonto(monto)
   const tasa = Number(reserva?.tasa_anual ?? 32)
   const saldoReserva = Number(reserva?.saldo ?? 0)
   const diario = estimacionDiaria(saldoReserva, tasa)
@@ -214,9 +215,8 @@ export function ReservasPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
               label={mode === 'ingresar' ? 'Monto a ingresar' : 'Monto a retirar'}
-              type="number"
-              min="0.01"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               placeholder="0.00"
               value={monto}
               onChange={(e) => setMonto(e.target.value)}

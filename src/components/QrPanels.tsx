@@ -50,6 +50,7 @@ import {
 } from '../services/cobrosQr'
 import { Monto } from './ui/Monto'
 
+import { parseMonto } from '../utils/monto'
 async function aplicarQr(
   raw: string,
   cargarCobro: (id: string) => Promise<void>,
@@ -305,8 +306,8 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
 
   useEffect(() => {
     if (!cuenta?.id) return
-    const raw = monto.trim().replace(',', '.')
-    const n = parseFloat(raw)
+    const raw = monto.trim()
+    const n = parseMonto(raw)
     const generacion = generacionRef.current
     const timer = window.setTimeout(() => {
       void (async () => {
@@ -436,7 +437,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
   const qrValue = jwtQr || (firmaFallida === claveQr ? fallbackQr : '')
   // El monto tipeado todavía no se convirtió en cobro (debounce + RPC): el QR
   // visible aún no lo incluye, así que también cuenta como "cargando".
-  const montoNum = parseFloat(monto.trim().replace(',', '.'))
+  const montoNum = parseMonto(monto)
   const montoValido = !isNaN(montoNum) && montoNum > 0
   const montoPendiente = montoValido ? cobro?.monto !== montoNum : !!cobro
   const cargandoQr = !!cuenta?.cbu && (!qrValue || montoPendiente)
@@ -529,9 +530,8 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         <div className="w-full max-w-xs mt-4">
           <Input
             label={`Monto en ${monedaQr === 'USD' ? 'dólares' : 'pesos'} (opcional)`}
-            type="number"
-            min="0.01"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             value={monto}
             onChange={(e) => setMonto(e.target.value)}
             placeholder="Lo carga quien paga"
@@ -590,9 +590,8 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
       <div className="mt-4">
         <Input
           label={`Monto en ${monedaQr === 'USD' ? 'dólares' : 'pesos'} (opcional)`}
-          type="number"
-          min="0.01"
-          step="0.01"
+          type="text"
+          inputMode="decimal"
           value={monto}
           onChange={(e) => setMonto(e.target.value)}
           placeholder="Lo carga quien paga"
@@ -887,7 +886,7 @@ export function EscanearYPagar({
 
   async function pagarCuenta() {
     if (!destino) return
-    const n = parseFloat(montoLibre.replace(',', '.'))
+    const n = parseMonto(montoLibre)
     if (isNaN(n) || n <= 0) {
       setError('Ingresá el monto a pagar')
       return
@@ -1010,9 +1009,8 @@ export function EscanearYPagar({
         <div className="mt-4">
           <Input
             label={`Monto en ${destino.moneda === 'USD' ? 'dólares' : 'pesos'}`}
-            type="number"
-            min="0.01"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             value={montoLibre}
             onChange={(e) => setMontoLibre(e.target.value)}
             placeholder="0.00"

@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Monto } from '../components/ui/Monto'
 
+import { parseMonto } from '../utils/monto'
 const COMERCIOS = [
   { id: 'c1', name: 'mercadoMONIX', pct: 8, icon: ShoppingBag, cat: 'Marketplace' },
   { id: 'c2', name: 'Restós MONIX', pct: 3, icon: Utensils, cat: 'Gastronomía' },
@@ -26,7 +27,7 @@ export function CashbackPage() {
   const [acumulado, setAcumulado] = useState(1840.5)
 
   const comercio = COMERCIOS.find((c) => c.id === selected) ?? COMERCIOS[0]
-  const montoNum = parseFloat(monto) || 0
+  const montoNum = parseMonto(monto) || 0
   const devolucion = useMemo(
     () => Math.round(((montoNum * comercio.pct) / 100) * 100) / 100,
     [montoNum, comercio.pct],
@@ -103,9 +104,8 @@ export function CashbackPage() {
           </p>
           <Input
             label={`Monto de compra en ${comercio.name}`}
-            type="number"
-            min="1"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             value={monto}
             onChange={(e) => setMonto(e.target.value)}
           />

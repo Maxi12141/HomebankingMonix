@@ -294,6 +294,24 @@ prueba('Sin scroll horizontal a 320 px', async (b) => {
   await page.context().close()
 })
 
+prueba('Depositar: "1.500" son mil quinientos (punto de miles) con teclado decimal', async (b) => {
+  const page = await nuevaPagina(b)
+  let montoEnviado = null
+  page.on('request', (req) => {
+    if (req.url().includes('/rpc/depositar_en_cuenta')) montoEnviado = JSON.parse(req.postData() ?? '{}').p_monto
+  })
+  await page.goto('/depositar')
+  await pasarLoader(page)
+  const campo = page.getByPlaceholder('0.00')
+  assert.equal(await campo.getAttribute('inputmode'), 'decimal')
+  await campo.fill('1.500')
+  await page.getByRole('button', { name: /depositar/i }).last().click()
+  await page.getByText('¡Depósito exitoso!').waitFor({ timeout: 5000 })
+  assert.equal(montoEnviado, 1500, 'antes del arreglo se depositaba 1,5')
+  await page.getByText(/Depositaste \$\s?1\.500,00/).waitFor()
+  await page.context().close()
+})
+
 prueba('Login y Registro: autocompletado y pegado habilitados', async (b) => {
   const page = await nuevaPagina(b, { logueado: false })
   await page.goto('/login')

@@ -24,6 +24,7 @@ import {
   type MetaResumen,
 } from '../services/metasComunes'
 import { Monto } from '../components/ui/Monto'
+import { parseMonto } from '../utils/monto'
 
 function ars(n: number) {
   return formatMonto(n, 'ARS')
@@ -116,7 +117,7 @@ export function MetasPage() {
     setEnviando(true)
     setError('')
     try {
-      const obj = parseFloat(objetivo.replace(',', '.'))
+      const obj = parseMonto(objetivo)
       const row = await crearMetaComun(
         titulo.trim(),
         proposito.trim(),
@@ -155,7 +156,7 @@ export function MetasPage() {
   async function onAportar(e: React.FormEvent) {
     e.preventDefault()
     if (!detalle || !cuentaArs) return
-    const n = parseFloat(monto.replace(',', '.'))
+    const n = parseMonto(monto)
     setEnviando(true)
     setError('')
     try {
