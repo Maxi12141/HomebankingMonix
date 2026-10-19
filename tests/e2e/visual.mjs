@@ -57,7 +57,7 @@ const session = {
 }
 
 // ── Mocks de red ────────────────────────────────────────────────────────────
-async function mockear(page, { demoraCuentasMs = 0, rpcFalla = false } = {}) {
+async function mockear(page, { demoraCuentasMs = 0, rpcFalla = false, cuentasExtra = [] } = {}) {
   await page.route(`${BC}/**`, (r) => r.fulfill({ json: [] }))
   await page.route(`${SUPABASE}/auth/v1/**`, (r) =>
     r.fulfill({ json: r.request().url().includes('/user') ? user : session }))
@@ -72,7 +72,7 @@ async function mockear(page, { demoraCuentasMs = 0, rpcFalla = false } = {}) {
     }
     if (r.request().method() !== 'GET') return r.fulfill({ status: 201, json: [] })
     if (recurso === 'cuentas' && demoraCuentasMs) await new Promise((res) => setTimeout(res, demoraCuentasMs))
-    let filas = tablas[recurso] ?? []
+    let filas = recurso === 'cuentas' ? [...tablas.cuentas, ...cuentasExtra] : tablas[recurso] ?? []
     for (const [k, v] of url.searchParams) {
       if (v.startsWith('eq.')) filas = filas.filter((f) => !(k in f) || String(f[k]) === v.slice(3))
     }
@@ -194,6 +194,33 @@ prueba('Saldo: cuenta desde 0 una sola vez por sesión', async (b) => {
     useAuthStore.getState().clear()
   })
   assert.equal(await page.evaluate(() => sessionStorage.getItem('monix_saldo_animado')), null)
+  await page.context().close()
+})
+
+prueba('Saldo: no vuelve a contar al ocultarlo y mostrarlo ni al cambiar de cuenta', async (b) => {
+  const usd = { ...cuenta, id: 'c-usd', moneda: 'USD', saldo: 1200, cbu: '0000003100047711870099', alias: 'sol.rio.usd' }
+  const page = await nuevaPagina(b, { cuentasExtra: [usd] })
+  const saldo = page.locator('#tour-saldo p.font-display').first()
+  await page.goto('/dashboard')
+  await pasarLoader(page)
+  await saldo.waitFor()
+  await page.waitForTimeout(1300) // termina la única animación de la sesión
+  const sinContar = async (prefijo, esperado, paso) => {
+    // La card que sale se ve 0,22 s: se espera a que aparezca la nueva (por su moneda).
+    await page.waitForFunction((p) => document.querySelector('#tour-saldo p.font-display')?.textContent?.startsWith(p), prefijo)
+    // Apenas aparece ya muestra el valor final y se queda ahí: no cuenta desde 0.
+    for (let i = 0; i < 5; i++) {
+      assert.equal(await saldo.innerText(), esperado, `${paso}: volvió a contar`)
+      await page.waitForTimeout(60)
+    }
+  }
+  await page.getByRole('button', { name: 'Ocultar saldo' }).click()
+  await page.getByRole('button', { name: 'Mostrar saldo' }).click()
+  await sinContar('$ ', '$ 150.000,00', 'ojito')
+  await page.getByRole('button', { name: 'Ver la otra cuenta' }).first().click()
+  await sinContar('US$', 'US$1,200.00', 'cambio a dólares')
+  await page.getByRole('button', { name: 'Ver la otra cuenta' }).first().click()
+  await sinContar('$ ', '$ 150.000,00', 'vuelta a pesos')
   await page.context().close()
 })
 

@@ -213,3 +213,11 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
 - **Sin conexión:** regla `CacheFirst` para fuentes en el service worker (`vite.config.ts`). Como los archivos llevan hash, no hay riesgo de quedarse con una versión vieja.
 - **Medición, con honestidad:** Lighthouse no muestra cambio de tiempos (FCP 2,41 s, LCP 5,98 s), porque el FCP lo fija el splash de 2,4 s. La ganancia es de robustez: ningún servidor externo en el camino crítico y tipografía correcta sin conexión.
 - **Verificación:** prueba nueva que comprueba que no hay pedidos a `fonts.googleapis.com` ni `fonts.gstatic.com`, y que los 5 pesos están cargados. 20/20 pruebas. JS inicial de 183,6 kB, dentro del presupuesto de 185.
+
+### Arreglo · El saldo volvía a contar al tocar el ojito (2026-10-19)
+
+- **Reporte:** el saldo del Dashboard tenía que contar desde 0 una sola vez por sesión, pero volvía a hacerlo al ocultarlo y mostrarlo con el ojito.
+- **Causa:** el número de partida del contador (`countStart`) quedaba en 0 después de la primera animación. Al mostrar de nuevo el saldo, el `CountUp` se volvía a montar y arrancaba desde 0.
+- **Arreglo:** una referencia (`inicioConteoRef`) que al terminar cada conteo (`onEnd`) pasa a valer el saldo ya mostrado.
+- **Cambio de card:** no se reprodujo que volviera a contar. Lo que se ve es el deslizamiento de 0,22 s entre la card de pesos y la de dólares, que es la transición y no el conteo.
+- **Verificación:** prueba nueva con una cuenta en dólares que oculta y muestra el saldo y cambia de card dos veces. En cada caso comprueba que el valor final aparece directo y no cambia. Con el código anterior falla en el ojito ("$ 0,00"). La suite completa pasa.

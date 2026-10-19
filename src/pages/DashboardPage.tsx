@@ -132,7 +132,10 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
   // desde 0) al cambiar de card o volver al Dashboard.
   const [yaAnimado] = useState(() => sessionStorage.getItem(SALDO_ANIMADO_KEY) === '1')
   const prevSaldoRef = useRef<number>(yaAnimado ? cuenta.saldo : 0)
-  const [countStart, setCountStart] = useState(yaAnimado ? cuenta.saldo : 0)
+  // Desde dónde cuenta el próximo CountUp. Al terminar cada conteo pasa a ser
+  // el saldo ya mostrado: ocultar y volver a mostrar el saldo (que vuelve a
+  // montar el CountUp) no lo hace contar de nuevo desde 0.
+  const inicioConteoRef = useRef<number>(yaAnimado ? cuenta.saldo : 0)
   const [animKey, setAnimKey] = useState(0)
   const [delta, setDelta] = useState<number | null>(null)
   const deltaTimerRef = useRef<ReturnType<typeof setTimeout>>()
@@ -147,7 +150,7 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
       clearTimeout(deltaTimerRef.current)
       deltaTimerRef.current = setTimeout(() => setDelta(null), 2500)
     }
-    setCountStart(prev)
+    inicioConteoRef.current = prev
     setAnimKey((k) => k + 1)
     prevSaldoRef.current = cuenta.saldo
   }, [cuenta.saldo])
@@ -185,7 +188,8 @@ function SaldoCard({ cuenta, interesHoy, titulo }: { cuenta: Cuenta; interesHoy:
         {showData ? (
           <CountUp
             key={animKey}
-            start={countStart}
+            start={inicioConteoRef.current}
+            onEnd={() => { inicioConteoRef.current = cuenta.saldo }}
             end={cuenta.saldo}
             duration={DURACION.contar}
             decimals={2}
