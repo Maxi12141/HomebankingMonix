@@ -90,7 +90,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | P0-4 | `autocomplete` en Login y Registro | H3 | Hecho |
 | P0-5 | Montos con `inputMode="decimal"` y un parser único | H4 | Hecho |
 | P0-6 | Medir el LCP | H5 | Hecho: el LCP se mide (7,6 s en 4G lento). El cambio de código propuesto se descartó |
-| P1-7 | Cargar jsPDF y html2canvas al generar el comprobante | H7 | Pendiente |
+| P1-7 | Cargar jsPDF y html2canvas al generar el comprobante | H7 | Hecho: JS inicial de 462,8 a 285 kB gzip |
 | P1-8 | Cargar cada pantalla al visitarla | H7 | Pendiente |
 | P1-9 | Una sola sincronización con el Banco Central, pausada en segundo plano | H8, V2 (parte de performance) | Pendiente |
 | P1-10 | Fuentes servidas desde la app | H9 | Pendiente |
@@ -173,3 +173,10 @@ Cada paso agrega acá qué se hizo, cómo se verificó y en qué commit quedó.
   - **Performance:** FCP 4,0 s, LCP 7,6 s y CLS 0,041.
   - **Dependencias:** 0 altas y 2 moderadas, documentadas en V1.
 - **Sigue:** S-1 (espera aprobación) y P1-7 a P2-12.
+
+### P1-7 · jsPDF y html2canvas fuera de la carga inicial (2026-10-19)
+
+- **Qué se hizo:** `src/utils/comprobante.ts` importa jsPDF y html2canvas adentro de `crearPdf()`, la única función que los usa. El tipo `jsPDF` queda como `import type`, que no suma bytes.
+- **Gesto de compartir:** compartir con Web Share exige un toque reciente. Para que la descarga del chunk no lo consuma, `precargarComprobante()` baja las librerías en segundo plano al abrir el detalle de un movimiento y al llegar a la pantalla de transferencia exitosa. Si igual se pierde el gesto, sigue el caso que ya existía: el PDF queda listo y un segundo toque comparte al instante.
+- **Resultado:** JS inicial de **462,8 kB a 285 kB gzip (−38 %)**. jsPDF (129 kB) y html2canvas (48 kB) quedan en chunks propios. El presupuesto de `size-limit` pasa de 465 a 290 kB.
+- **Verificación:** prueba nueva que comprueba que el Dashboard no pide jsPDF ni html2canvas, y que al tocar Descargar en un movimiento se bajan y se genera `monix_*.pdf`. 17/17 pruebas.

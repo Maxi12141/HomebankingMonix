@@ -1,5 +1,4 @@
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
+import type jsPDF from 'jspdf'
 import type { Movimiento } from '../types'
 import { formatMonto } from './cuenta'
 import logoBlanco from '../assets/logos/logo-blanco.png'
@@ -189,7 +188,19 @@ function nombreArchivo(mov: Movimiento): string {
   return `monix_${tipo}_${mov.id.slice(0, 8)}.pdf`
 }
 
+// jsPDF y html2canvas pesan ~150 kB gzip y sólo se usan acá: van en su propio
+// chunk y se bajan cuando hacen falta (o antes, con precargarComprobante).
+function cargarLibrerias() {
+  return Promise.all([import('jspdf'), import('html2canvas')])
+}
+
+/** Baja las librerías del PDF en segundo plano, para que compartir no espere la red. */
+export function precargarComprobante(): void {
+  void cargarLibrerias().catch(() => undefined)
+}
+
 async function crearPdf(mov: Movimiento, bankName?: string): Promise<jsPDF> {
+  const [{ default: JsPDF }, { default: html2canvas }] = await cargarLibrerias()
   const container = document.createElement('div')
   container.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;'
   container.innerHTML = buildHTML(mov, bankName)
@@ -214,7 +225,7 @@ async function crearPdf(mov: Movimiento, bankName?: string): Promise<jsPDF> {
     const pdfW = 210
     const pdfH = (canvas.height / canvas.width) * pdfW
 
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
+    const doc = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
     doc.addImage(imgData, 'JPEG', 0, 0, pdfW, pdfH)
     return doc
   } finally {

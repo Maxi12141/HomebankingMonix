@@ -12,7 +12,7 @@ import { useTransferenciasRecientes } from '../hooks/useTransferenciasRecientes'
 import { useMercadoFinanciero } from '../hooks/useMercadoFinanciero'
 import { formatMonto } from '../utils/cuenta'
 import { esCelular } from '../lib/biometria'
-import { comprobantePdfFile, compartirArchivo, downloadComprobante, puedeCompartirArchivos } from '../utils/comprobante'
+import { comprobantePdfFile, compartirArchivo, downloadComprobante, precargarComprobante, puedeCompartirArchivos } from '../utils/comprobante'
 import { AgendaContactosPanel } from '../components/AgendaContactosPanel'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
@@ -134,6 +134,11 @@ export function TransferPage() {
   const { data: mercado } = useMercadoFinanciero(REFRESH_COTIZACION_MS)
 
   const [step, setStep] = useState<Step>('buscar')
+
+  // El comprobante se ofrece al terminar: bajar el PDF antes de que lo pidan.
+  useEffect(() => {
+    if (step === 'exito') precargarComprobante()
+  }, [step])
   const [monedaOrigen, setMonedaOrigen] = useState<Moneda>('ARS')
   const [destino, setDestino] = useState('')
   const [destinatario, setDestinatario] = useState<Destinatario | null>(null)

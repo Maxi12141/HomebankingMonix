@@ -28,7 +28,7 @@ Desde esa fecha se saca el `|| echo` y bloquean.
 | Mobile | Sin scroll horizontal a 320 px en 9 pantallas | `npm run test:e2e` | `check:task` |
 | Toques | Ningún elemento interactivo de menos de 44×44 px en 6 pantallas con sesión (era 46 el 2026-10-18) | `npm run test:e2e` | `check:task` |
 | Accesibilidad | Cero violaciones axe serias o críticas (WCAG 2.1 AA) en 9 pantallas (eran 14 el 2026-10-18) | `@axe-core/playwright` en `npm run test:e2e` | `check:task` |
-| Bundle | JS inicial ≤ 465 kB gzip (no puede crecer) | `size-limit` (`.size-limit.json`) | `check:task` |
+| Bundle | JS inicial ≤ 290 kB gzip (no puede crecer; era 465 kB hasta P1-7) | `size-limit` (`.size-limit.json`) | `check:task` |
 | Performance | CLS ≤ 0.1, FCP ≤ 4200 ms y LCP ≤ 7800 ms en la Landing, mobile con throttling aplicado | Lighthouse 12.8.2 (`npm run check:perf`) | `check:full` |
 | Dependencias | Nada alto o crítico en dependencias de producción | `npm audit --omit=dev --audit-level=high` | `check:full` |
 
@@ -44,7 +44,7 @@ Por qué estos números:
 
 | Métrica | Hoy (2026-10-18) | Dirección |
 |---------|------------------|-----------|
-| JS inicial | 462,6 kB gzip, un solo chunk | bajar con carga diferida por ruta y de jsPDF/html2canvas |
+| JS inicial | 285 kB gzip desde P1-7 (era 462,6 kB); jsPDF y html2canvas ya van aparte | bajar con carga diferida por ruta (P1-8) |
 | Vulnerabilidades en producción | 0 altas; 2 moderadas en `react-router` 6, que se arreglan recién en la v7 (versión mayor) | no puede subir; migrar a React Router 7 en un cambio aparte |
 | Supresiones existentes | 5 (`@ts-ignore` / `@ts-expect-error`) | no puede subir |
 

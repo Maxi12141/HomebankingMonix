@@ -224,6 +224,25 @@ prueba('Card de movimiento: se abre con Tab + Enter', async (b) => {
   await page.context().close()
 })
 
+prueba('Comprobante PDF: las librerías se bajan recién al abrir un movimiento y el PDF se descarga', async (b) => {
+  const page = await nuevaPagina(b)
+  const pedidos = []
+  page.on('request', (r) => pedidos.push(r.url()))
+  const libreriaPdf = (u) => /jspdf|html2canvas/i.test(u)
+  await page.goto('/dashboard')
+  await pasarLoader(page)
+  await page.locator('[role="button"][tabindex="0"]').filter({ hasText: 'Alquiler' }).waitFor()
+  assert.equal(pedidos.filter(libreriaPdf).length, 0, 'el Dashboard no debería bajar jsPDF ni html2canvas')
+  await page.locator('[role="button"][tabindex="0"]').filter({ hasText: 'Alquiler' }).click()
+  const [descarga] = await Promise.all([
+    page.waitForEvent('download', { timeout: 15000 }),
+    page.getByRole('button', { name: /descargar/i }).click(),
+  ])
+  assert.match(descarga.suggestedFilename(), /^monix_.*\.pdf$/)
+  assert.ok(pedidos.some(libreriaPdf), 'al pedir el comprobante se bajan las librerías')
+  await page.context().close()
+})
+
 prueba('Depositar: éxito con check mint sobre azul noche', async (b) => {
   const page = await nuevaPagina(b)
   await page.goto('/depositar')

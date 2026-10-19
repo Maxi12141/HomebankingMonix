@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Download, Loader2, Share2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Modal } from './ui/Modal'
@@ -8,6 +8,7 @@ import {
   comprobantePdfFile,
   compartirArchivo,
   downloadComprobante,
+  precargarComprobante,
   puedeCompartirArchivos,
 } from '../utils/comprobante'
 import { formatMonto } from '../utils/cuenta'
@@ -46,6 +47,10 @@ export function TransactionDetailModal({ movimiento, bankName, onClose }: Props)
   // PDF ya generado de este movimiento, para que un segundo toque comparta al
   // instante si el primero tardó demasiado (ver compartirArchivo).
   const pdfRef = useRef<{ id: string; file: File } | null>(null)
+
+  useEffect(() => {
+    if (movimiento) precargarComprobante()
+  }, [movimiento])
 
   if (!movimiento) return null
 
