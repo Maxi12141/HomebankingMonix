@@ -101,8 +101,8 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 | P1-8 | Cargar cada pantalla al visitarla | H7 | Hecho: JS inicial 181,6 kB; FCP 2,4 s; LCP 6,0 s |
 | P1-9 | Una sola sincronización con el Banco Central, pausada en segundo plano | H8, V2 (parte de performance) | Hecho: 5 consultas pasaron a 1 navegando 4 pantallas |
 | P1-10 | Fuentes servidas desde la app | H9 | Hecho |
-| P2-11 | Blur, cinta de cotizaciones y `meta no-store` | H10 | Pendiente |
-| P2-12 | Controles de desktop a 1024 y 1440 px en Playwright | Cobertura desktop | Pendiente |
+| P2-11 | Blur, cinta de cotizaciones y `meta no-store` | H10 | Hecho |
+| P2-12 | Controles de desktop a 1024 y 1440 px en Playwright | Cobertura desktop | Hecho |
 
 ## Registro de cambios
 
@@ -259,3 +259,13 @@ Aprobado por Diego Urenda. Hecho en código y probado, **sin aplicar en producci
 - **SQL, 12/12:** el test "V2 antes de S-1" demuestra que el usuario podía escribirse 99.999.999 de saldo. Después de revocar, 6 escrituras prohibidas devuelven `permission denied`, las ediciones permitidas siguen funcionando y cada RPC valida montos, saldos, propiedad de la cuenta, la oferta de préstamo e idempotencia.
 - **E2E, 22/22:** con una prueba nueva que comprueba que, al recorrer Dashboard, Préstamos y Reservas e ingresar a la reserva, el navegador no hace ninguna escritura directa a tablas de dinero.
 - **Sin probar:** la Edge Function no se ejecutó, porque no hay Deno en esta máquina; se revisó a mano contra el contrato de la RPC. Tampoco se probó nada contra el Supabase real.
+
+### P2-11 y P2-12 · Detalles de performance y cobertura de desktop (2026-10-19)
+
+- **Blur:** el `backdrop-blur` de las barras fijas que quedan sobre contenido que se desplaza se re-rasteriza en cada frame, y eso pesa en celulares de gama media. Se sacó de la barra inferior (sólo móvil, ya con fondo al 95 %). En los encabezados de la app y la Landing, en móvil va fondo al 95 % sin blur, y desde `md:` queda como estaba. Los modales y el escáner QR conservan el blur, porque debajo no hay nada desplazándose.
+- **Cinta de cotizaciones:** con `IntersectionObserver`, fuera de pantalla queda `data-en-pantalla="false"` y el CSS la pausa. Se usó un atributo en vez de un estilo en línea para no pisar la pausa al pasar el mouse.
+- **`meta no-store`:** se sacó del `index.html`. Los navegadores la ignoran y el header real ya está en `vercel.json` para `/` e `/index.html`.
+- **Desktop:** prueba nueva sin scroll horizontal a 1024 y 1440 px en las 9 pantallas, con captura del Dashboard.
+- **Tests más robustos:** la suite simula dolarapi.com y argentinadatos.com. Antes dependía de la red real.
+- **Observación de UX para desktop, sin implementar:** a 1440 px la navegación sigue siendo el menú hamburguesa. Existe `src/components/layout/Sidebar.tsx`, que podría quedar fijo desde `lg:` y aprovechar el ancho. Queda como propuesta.
+- **Verificación:** 24/24 pruebas. Hay una nueva que comprueba que la cinta está `running`, pasa a `paused` al desplazarse, y que el encabezado no tiene blur en móvil y sí en desktop.

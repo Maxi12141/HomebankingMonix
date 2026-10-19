@@ -61,7 +61,7 @@ export function PageWrapper({ children }: PageWrapperProps) {
       {/* Content area */}
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/80 dark:bg-navy-card/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 shrink-0 pt-[env(safe-area-inset-top)]">
+        <header className="sticky top-0 z-30 bg-white/95 dark:bg-navy-card/95 md:bg-white/80 md:dark:bg-navy-card/90 md:backdrop-blur-md border-b border-slate-200 dark:border-white/10 shrink-0 pt-[env(safe-area-inset-top)]">
           <div className="flex items-center justify-between px-4 h-14">
             <div className="flex items-center gap-3">
               <button

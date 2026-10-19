@@ -323,7 +323,7 @@ export function LandingPage() {
     <div className="min-h-screen bg-white dark:bg-navy text-navy dark:text-white transition-colors duration-300">
 
       {/* Navbar */}
-      <header className="sticky top-0 z-30 bg-white/80 dark:bg-navy-card/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 transition-colors duration-300 pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-30 bg-white/95 dark:bg-navy-card/95 md:bg-white/80 md:dark:bg-navy-card/90 md:backdrop-blur-md border-b border-slate-200 dark:border-white/10 transition-colors duration-300 pt-[env(safe-area-inset-top)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
           <MonixLogoNavbar className="h-6 sm:h-8 w-auto shrink-0" variant={theme === 'dark' ? 'white' : 'default'} />
           <nav className="flex items-center gap-1.5 sm:gap-3">

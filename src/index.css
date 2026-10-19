@@ -30,7 +30,8 @@
   .animate-marquee {
     animation: marquee 55s linear infinite;
   }
-  .animate-marquee:hover {
+  .animate-marquee:hover,
+  .animate-marquee[data-en-pantalla='false'] {
     animation-play-state: paused;
   }
 

@@ -60,6 +60,14 @@ const session = {
 async function mockear(page, { demoraCuentasMs = 0, rpcFalla = false, cuentasExtra = [] } = {}) {
   await page.route(`${BC}/**`, (r) => r.fulfill({ json: [] }))
   await page.route(`${SUPABASE}/functions/v1/**`, (r) => r.fulfill({ json: { acreditadas: 0 } }))
+  // Cotizaciones de la cinta: simuladas para no depender de la red.
+  await page.route('https://dolarapi.com/**', (r) => r.fulfill({ json: [
+    { moneda: 'USD', casa: 'oficial', nombre: 'Oficial', compra: 1485, venta: 1535, fechaActualizacion: ahora },
+    { moneda: 'USD', casa: 'bolsa', nombre: 'Bolsa', compra: 1534, venta: 1543, fechaActualizacion: ahora },
+  ] }))
+  await page.route('https://api.argentinadatos.com/**', (r) => r.fulfill({ json: r.request().url().includes('plazoFijo')
+    ? [{ entidad: 'Banco', tnaClientes: 0.202, tnaNoClientes: 0.19 }]
+    : [{ entidad: 'Banco', tna: 0.674, tea: 0.9, moneda: 'ARS' }] }))
   await page.route(`${SUPABASE}/auth/v1/**`, (r) =>
     r.fulfill({ json: r.request().url().includes('/user') ? user : session }))
   await page.route(`${SUPABASE}/rest/v1/**`, async (r) => {
@@ -475,6 +483,44 @@ prueba('Login y Registro: autocompletado y pegado habilitados', async (b) => {
   assert.equal(await page.locator('input[name="email"]').getAttribute('autocomplete'), 'email')
   assert.equal(await page.locator('input[name="password"]').getAttribute('autocomplete'), 'new-password')
   await page.context().close()
+})
+
+prueba('Mobile: cinta pausada fuera de pantalla y sin blur en barras fijas', async (b) => {
+  const page = await nuevaPagina(b, { logueado: false })
+  await page.goto('/')
+  await pasarLoader(page)
+  const cinta = page.locator('.animate-marquee')
+  await cinta.waitFor()
+  const estado = () => cinta.evaluate((el) => getComputedStyle(el).animationPlayState)
+  assert.equal(await estado(), 'running')
+  await page.mouse.wheel(0, 3000)
+  await page.waitForFunction(() => document.querySelector('.animate-marquee')?.dataset.enPantalla === 'false')
+  assert.equal(await estado(), 'paused')
+  const blurMobile = await page.locator('header').first().evaluate((el) => getComputedStyle(el).backdropFilter)
+  assert.equal(blurMobile, 'none')
+  await page.context().close()
+  const desktop = await nuevaPagina(b, { logueado: false, ancho: 1440, alto: 900 })
+  await desktop.goto('/')
+  await pasarLoader(desktop)
+  assert.match(await desktop.locator('header').first().evaluate((el) => getComputedStyle(el).backdropFilter), /blur/)
+  await desktop.context().close()
+})
+
+prueba('Desktop: sin scroll horizontal a 1024 y 1440 px', async (b) => {
+  const desbordes = []
+  for (const [ancho, alto] of [[1024, 768], [1440, 900]]) {
+    const page = await nuevaPagina(b, { ancho, alto })
+    for (const ruta of pantallas) {
+      await page.goto(ruta)
+      await pasarLoader(page)
+      await page.waitForTimeout(500)
+      const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }))
+      if (sw > cw) desbordes.push(`${ancho}px ${ruta}: ${sw} > ${cw}`)
+      if (ruta === '/dashboard') await page.screenshot({ path: `${SCREENS}desktop-${ancho}-dashboard.png` })
+    }
+    await page.context().close()
+  }
+  assert.deepEqual(desbordes, [])
 })
 
 // ── Controles con números (CONSTRAINTS.md): miden y no dejan empeorar ────────

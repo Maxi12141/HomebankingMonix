@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { DollarSign, Landmark } from 'lucide-react'
 import { useMercadoFinanciero } from '../hooks/useMercadoFinanciero'
 
@@ -31,6 +31,7 @@ export function MarketTicker() {
   const { data, loading } = useMercadoFinanciero()
   const trackRef = useRef<HTMLDivElement>(null)
   const [duration, setDuration] = useState(40)
+  const [enPantalla, setEnPantalla] = useState(true)
 
   const items: TickerItem[] = useMemo(() => {
     if (!data) return []
@@ -85,6 +86,16 @@ export function MarketTicker() {
     return () => window.removeEventListener('resize', measure)
   }, [block])
 
+  // Fuera de pantalla la cinta se pausa: no gasta batería animando algo que
+  // nadie ve (al hacer scroll en la Landing, por ejemplo).
+  useEffect(() => {
+    const el = trackRef.current
+    if (!el) return
+    const io = new IntersectionObserver(([entrada]) => setEnPantalla(entrada.isIntersecting))
+    io.observe(el)
+    return () => io.disconnect()
+  }, [items.length])
+
   if (loading || !data || items.length === 0) return null
 
   return (
@@ -96,6 +107,7 @@ export function MarketTicker() {
       <div
         ref={trackRef}
         className="flex w-max animate-marquee"
+        data-en-pantalla={enPantalla}
         style={{ animationDuration: `${duration}s` }}
       >
         {loop.map((item, i) => (
