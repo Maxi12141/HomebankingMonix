@@ -29,7 +29,6 @@ import {
 import { descartarOnboarding } from '../lib/onboarding'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
-import { mensajeError } from '../lib/errores'
 
 type Step = 'email' | 'password' | 'bio' | 'bio-offer'
 
@@ -136,7 +135,7 @@ export function LoginPage() {
       toast.success('Biometría activada. La próxima vez entrás más rápido.')
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
-        toast.error(mensajeError(err, 'No pudimos activar la biometría. Podés probar de nuevo desde tu Perfil.'))
+        toast.error((await import('../lib/errores')).mensajeError(err, 'No pudimos activar la biometría. Podés probar de nuevo desde tu Perfil.'))
       }
     } finally {
       setBioLoading(false)
@@ -183,7 +182,7 @@ export function LoginPage() {
       }
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
-        setError(mensajeError(err, 'No pudimos validar. Usá la contraseña.'))
+        setError((await import('../lib/errores')).mensajeError(err, 'No pudimos validar. Usá la contraseña.'))
       }
     } finally {
       setBioLoading(false)
@@ -210,7 +209,7 @@ export function LoginPage() {
       await finalizarLogin(email.trim(), password)
       setIntentosFallidos(0)
     } catch (err) {
-      setError(mensajeError(err, 'Email o contraseña incorrectos.'))
+      setError((await import('../lib/errores')).mensajeError(err, 'Email o contraseña incorrectos.'))
       const nuevosIntentos = intentosFallidos + 1
       setIntentosFallidos(nuevosIntentos)
       if (nuevosIntentos >= UMBRAL_INTENTOS) {

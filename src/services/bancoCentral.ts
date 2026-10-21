@@ -33,6 +33,8 @@ export class BancoCentralError extends Error {
   status: number
   body: unknown
   endpoint: string
+  // Lo lee lib/errores.ts sin importar este módulo, que así queda fuera del chunk inicial.
+  amigable: string
 
   constructor(status: number, body: unknown, endpoint: string) {
     const bodyMessage = (body as { message?: string } | null)?.message
@@ -41,6 +43,7 @@ export class BancoCentralError extends Error {
     this.status = status
     this.body = body
     this.endpoint = endpoint
+    this.amigable = mensajeAmigableBC(this)
   }
 }
 

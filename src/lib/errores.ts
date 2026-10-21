@@ -1,5 +1,3 @@
-import { BancoCentralError, mensajeAmigableBC } from '../services/bancoCentral'
-
 // Tono del Manual de Marca: "no pudimos…", qué pasó y qué hacer ahora, sin jerga.
 const SESION_VENCIDA = 'Tu sesión venció. Ingresá de nuevo y probá otra vez.'
 
@@ -40,7 +38,7 @@ const TECNICO = /schema cache|\bfunction\b|relation|column|constraint|violates|s
  * `fallback`; el crudo queda sólo en la consola.
  */
 export function mensajeError(err: unknown, fallback: string): string {
-  if (err instanceof BancoCentralError) return mensajeAmigableBC(err)
+  if (err instanceof Error && err.name === 'BancoCentralError' && 'amigable' in err) return String(err.amigable)
   const raw = typeof err === 'string'
     ? err
     : err && typeof err === 'object' && 'message' in err ? String(err.message ?? '') : ''
