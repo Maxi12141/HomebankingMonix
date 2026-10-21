@@ -26,6 +26,7 @@ import { PasswordInput } from '../components/ui/PasswordInput'
 import { PasswordStrengthMeter } from '../components/ui/PasswordStrengthMeter'
 import { DatePicker } from '../components/ui/DatePicker'
 import { TermsModal } from '../components/TermsModal'
+import Stepper, { Step } from '../components/Stepper'
 import type { RegisterFormData } from '../types'
 
 interface BioOfferInfo {
@@ -36,6 +37,15 @@ interface BioOfferInfo {
 
 const STEP_TITLES = ['Creá tu cuenta', 'Tus datos', 'Confirmá y listo']
 const TOTAL_STEPS = STEP_TITLES.length
+
+function StepHeading({ paso }: { paso: number }) {
+  return (
+    <h2 className="font-display text-xl font-semibold text-navy dark:text-white">
+      {STEP_TITLES[paso]}
+      <span className="sr-only"> (paso {paso + 1} de {TOTAL_STEPS})</span>
+    </h2>
+  )
+}
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -296,33 +306,19 @@ export function RegisterPage() {
             </>
           ) : (
           <>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display text-xl font-semibold text-navy dark:text-white">{STEP_TITLES[step]}</h2>
-            <span className="font-body text-xs text-slate-secondary shrink-0 ml-3">Paso {step + 1} de {TOTAL_STEPS}</span>
-          </div>
-
-          <div className="flex gap-1.5 mb-6">
-            {STEP_TITLES.map((title, i) => (
-              <span
-                key={title}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === step ? 'w-8 bg-mint' : i < step ? 'w-4 bg-mint/40' : 'w-4 bg-slate-200 dark:bg-white/10'
-                }`}
-              />
-            ))}
-          </div>
-
-          <AnimatePresence mode="wait">
-            {step === 0 && (
-              <motion.form
-                key="step-0"
-                onSubmit={handleNext}
-                className="flex flex-col gap-4"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -16 }}
-                transition={{ duration: 0.25 }}
-              >
+          {/* Controlado y sin footer: avanzar pasa siempre por el submit de cada form, que valida. */}
+          <Stepper
+            step={step + 1}
+            theme={theme}
+            frame={false}
+            width="100%"
+            radius={20}
+            showFooter={false}
+            disableStepIndicators
+          >
+            <Step title="Cuenta">
+              <form onSubmit={handleNext} className="flex flex-col gap-4">
+                <StepHeading paso={0} />
                 <Input
                   label="Email"
                   autoComplete="email"
@@ -357,19 +353,12 @@ export function RegisterPage() {
                 <Button type="submit" className="w-full mt-2">
                   Continuar
                 </Button>
-              </motion.form>
-            )}
+              </form>
+            </Step>
 
-            {step === 1 && (
-              <motion.form
-                key="step-1"
-                onSubmit={handleNext}
-                className="flex flex-col gap-4"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -16 }}
-                transition={{ duration: 0.25 }}
-              >
+            <Step title="Datos">
+              <form onSubmit={handleNext} className="flex flex-col gap-4">
+                <StepHeading paso={1} />
                 <div className="grid grid-cols-2 gap-4">
                   <Input label="Nombre" name="nombre" autoComplete="given-name" placeholder="Juan" value={form.nombre} onChange={handleChange} required autoFocus />
                   <Input label="Apellido" name="apellido" autoComplete="family-name" placeholder="Pérez" value={form.apellido} onChange={handleChange} required />
@@ -407,19 +396,12 @@ export function RegisterPage() {
                     Continuar
                   </Button>
                 </div>
-              </motion.form>
-            )}
+              </form>
+            </Step>
 
-            {step === 2 && (
-              <motion.form
-                key="step-2"
-                onSubmit={handleSubmit}
-                className="flex flex-col gap-4"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -16 }}
-                transition={{ duration: 0.25 }}
-              >
+            <Step title="Confirmar">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <StepHeading paso={2} />
                 <div className="rounded-xl bg-slate-input dark:bg-white/5 border border-slate-200 dark:border-white/10 p-4 flex flex-col gap-2">
                   <div className="flex justify-between gap-3">
                     <span className="font-body text-xs text-slate-secondary">Nombre</span>
@@ -494,9 +476,9 @@ export function RegisterPage() {
                     Crear cuenta
                   </Button>
                 </div>
-              </motion.form>
-            )}
-          </AnimatePresence>
+              </form>
+            </Step>
+          </Stepper>
 
           <p className="text-center text-sm font-body text-slate-secondary mt-6">
             ¿Ya tenés cuenta?{' '}
