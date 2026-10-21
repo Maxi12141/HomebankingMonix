@@ -4,11 +4,14 @@ import { ArrowRightLeft, BarChart2, ShieldCheck, ArrowRight, Sun, Moon, CheckCir
 import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import { MarketTicker } from '../components/MarketTicker'
-import { MonixLogoAnimated } from '../components/MonixLogoAnimated'
+import { lazy, Suspense } from 'react'
 import { MonixLogoNavbar } from '../components/MonixLogoNavbar'
 import { useThemeStore } from '../stores/themeStore'
 import { usePwaInstall } from '../hooks/usePwaInstall'
 import monixLogoWhite from '../assets/logos/logo-blanco.svg'
+
+// Decorativa: va en su propio chunk para no sumar al JS inicial (CONSTRAINTS.md, Bundle).
+const TarjetaHero = lazy(() => import('../components/TarjetaHero').then((m) => ({ default: m.TarjetaHero })))
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -348,46 +351,40 @@ export function LandingPage() {
       <MarketTicker />
 
       {/* Hero */}
-      <section className="flex items-center justify-center px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-20 md:min-h-[70vh]">
+      <section className="overflow-hidden px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-20">
+        <div className="max-w-6xl mx-auto grid items-center gap-6 lg:grid-cols-2 lg:gap-12 md:min-h-[60vh]">
         <motion.div
-          className="w-full max-w-2xl mx-auto text-center"
+          className="w-full max-w-xl mx-auto text-center lg:mx-0 lg:text-left"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          <motion.div variants={itemVariants} className="mb-6 sm:mb-8 flex justify-center">
-            <MonixLogoAnimated
-              className="h-12 sm:h-16 md:h-20 w-auto max-w-[80vw]"
-              variant={theme === 'dark' ? 'white' : 'default'}
-            />
-          </motion.div>
-
           <motion.h1
             variants={itemVariants}
-            className="font-display text-[1.85rem] sm:text-4xl md:text-6xl font-bold text-navy dark:text-white leading-[1.15] mb-5 sm:mb-6 px-1"
+            className="font-display text-[1.85rem] sm:text-[2.25rem] lg:text-[3.25rem] font-bold text-navy dark:text-white leading-[1.12] mb-5 sm:mb-6 text-balance"
           >
-            <span className="block">Banca de verdad,</span>
-            <span className="block text-navy dark:text-mint underline decoration-mint decoration-[6px] underline-offset-[10px] dark:no-underline">desde tu celular.</span>
+            La tarjeta que da vuelta tu forma de manejar{' '}
+            <span className="whitespace-nowrap underline decoration-mint decoration-[6px] underline-offset-[10px] dark:text-mint dark:no-underline">la plata.</span>
           </motion.h1>
 
           <motion.p
             variants={itemVariants}
-            className="font-body text-lg text-slate-secondary leading-relaxed mb-10 max-w-lg mx-auto"
+            className="font-body text-lg text-slate-secondary leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0"
           >
-            Todo lo que necesitás de un banco, sin la complejidad de uno.
-            Cuenta en pesos, dólares y crédito en un solo lugar.
+            Pesos, dólares y 2% de cashback en una sola app.
+            Abrís tu cuenta online en 5 minutos, sin costo.
           </motion.p>
 
-          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 lg:items-start">
             <Link to="/register">
               <Button variant="primary" className="px-8 py-3.5 text-base font-semibold flex items-center gap-2">
                 Abrí tu cuenta gratis
                 <ArrowRight size={18} />
               </Button>
             </Link>
-            <Link to="/login">
-              <Button variant="secondary-light" className="px-8 py-3.5 text-base">Iniciá sesión</Button>
-            </Link>
+            <p className="font-body text-sm text-slate-secondary">
+              <span className="font-semibold text-navy dark:text-white">+120.000 personas</span> ya usan Monix · 4,8 ★ en las tiendas
+            </p>
           </motion.div>
 
           {mostrarInstalar && (
@@ -402,6 +399,12 @@ export function LandingPage() {
             </motion.button>
           )}
         </motion.div>
+
+        {/* El fallback reserva el mismo lugar que la tarjeta para que no haya salto de layout */}
+        <Suspense fallback={<div className="mx-auto w-full max-w-[340px] py-8 sm:max-w-[420px] lg:max-w-[460px]"><div className="aspect-[856/540]" /></div>}>
+          <TarjetaHero />
+        </Suspense>
+        </div>
       </section>
 
       {/* Features */}
