@@ -1,5 +1,13 @@
 Leé CONSTRAINTS.md antes de escribir código. No lo aflojes para que un cambio pase.
 
+## Manual de marca: obligatorio en todo cambio de interfaz
+
+Antes de tocar cualquier cosa que se vea o se lea en la app (colores, componentes, textos, animaciones, íconos, tipografía, espaciados o el logo), leé el Manual de Marca: https://claude.ai/artifact/2Gor1dGN4Tb5HZkcoEWCPG
+
+- Leelo con la herramienta Artifact (`action: "read"`), no con WebFetch. Pesa ~1,9 MB por las imágenes embebidas: leé sólo las secciones que toca el cambio (Logo, Color, Tipografía, Espacios y bordes, Elementos, Movimiento, Contraste, Tono de voz, Usos incorrectos).
+- Si el cambio contradice el manual, frená y avisá antes de escribir código. No lo resuelvas por tu cuenta.
+- Si el manual no cubre el caso, decilo y proponé cómo extenderlo, en vez de inventar un valor.
+
 ## Componentes de React Bits (registro `@react-bits` vía shadcn)
 
 Antes de instalar o usar cualquiera, sin excepción:
