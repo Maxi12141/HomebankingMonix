@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button'
 import { MarketTicker } from '../components/MarketTicker'
 import { lazy, Suspense } from 'react'
 import { TarjetaMini } from '../components/TarjetaPiezas'
+import SpecularButton from '../components/SpecularButton'
 import { MonixLogoNavbar } from '../components/MonixLogoNavbar'
 import { useThemeStore } from '../stores/themeStore'
 import { usePwaInstall } from '../hooks/usePwaInstall'
@@ -213,10 +214,21 @@ export function LandingPage() {
 
           <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 lg:items-start">
             <Link to="/register">
-              <Button variant="primary" className="px-8 py-3.5 text-base font-semibold flex items-center gap-2">
+              <SpecularButton
+                size="md"
+                radius={12}
+                tint="#26FFC1"
+                tintOpacity={1}
+                textColor="#001A3D"
+                // Luz blanca sobre fondo oscuro; en claro no se vería, va en mint tinta fuerte.
+                lineColor={theme === 'dark' ? '#FFFFFF' : '#007A5A'}
+                baseColor="#1FE6AF"
+                idleIntensity={0.5}
+                className="font-body font-semibold"
+              >
                 Abrí tu cuenta gratis
                 <ArrowRight size={18} />
-              </Button>
+              </SpecularButton>
             </Link>
             <p className="font-body text-sm text-slate-secondary">
               <span className="font-semibold text-navy dark:text-white">+120.000 personas</span> ya usan Monix · 4,8 ★ en las tiendas
