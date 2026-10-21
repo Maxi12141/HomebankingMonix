@@ -15,6 +15,7 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
+import { mensajeError } from '../lib/errores'
 
 type Modo = 'comprar' | 'vender'
 type Step = 'form' | 'success'
@@ -96,8 +97,8 @@ export function CompraVentaDolaresPage() {
       setStep('success')
       toast.success(modo === 'comprar' ? '¡Compra realizada con éxito!' : '¡Venta realizada con éxito!')
     } catch (err) {
-      // PostgrestError puede no ser instanceof Error — se lee el message directamente.
-      const msg = (err as { message?: string } | null)?.message || 'No pudimos completar la operación. Tu plata no se movió: probá de nuevo en unos minutos.'
+      // PostgrestError puede no ser instanceof Error: mensajeError lee el message igual.
+      const msg = mensajeError(err, 'No pudimos completar la operación. Tu plata no se movió: probá de nuevo en unos minutos.')
       setError(msg)
       toast.error(msg)
     } finally {

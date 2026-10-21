@@ -8,6 +8,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { MonixCard3D, buildPan, buildCvv } from '../components/MonixCard3D'
 import { setTarjetaFlags } from '../services/cobrosQr'
+import { mensajeError } from '../lib/errores'
 
 function freezeKey(cuentaId: string) {
   return `monix_card_frozen_${cuentaId}`
@@ -47,7 +48,7 @@ export function TarjetaPage() {
       setFrozen(!next)
       if (prevLocal == null) localStorage.removeItem(freezeKey(cuentaMostrada.id))
       else localStorage.setItem(freezeKey(cuentaMostrada.id), prevLocal)
-      toast.error(err instanceof Error ? err.message : 'No pudimos actualizar')
+      toast.error(mensajeError(err, 'No pudimos guardar el cambio. Probá de nuevo en un momento.'))
     }
   }
 

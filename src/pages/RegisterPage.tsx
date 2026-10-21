@@ -8,7 +8,7 @@ import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import monixLogoDark from '../assets/logos/logo-blanco.svg'
 import monixLogoLight from '../assets/logos/logo-azul.svg'
-import { registrarPersona, asignarAlias, informarSituacionCrediticia, BancoCentralError, mensajeAmigableBC } from '../services/bancoCentral'
+import { registrarPersona, asignarAlias, informarSituacionCrediticia, BancoCentralError } from '../services/bancoCentral'
 import { generateNumeroCuenta, generateAlias } from '../utils/cuenta'
 import {
   activarBiometria,
@@ -28,6 +28,7 @@ import { DatePicker } from '../components/ui/DatePicker'
 import { TermsModal } from '../components/TermsModal'
 import Stepper, { Step } from '../components/Stepper'
 import type { RegisterFormData } from '../types'
+import { mensajeError } from '../lib/errores'
 
 interface BioOfferInfo {
   userId: string
@@ -127,7 +128,7 @@ export function RegisterPage() {
       toast.success('Biometría activada. La próxima vez entrás más rápido.')
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
-        toast.error(err instanceof Error ? err.message : 'No pudimos activar la biometría')
+        toast.error(mensajeError(err, 'No pudimos activar la biometría. Podés probar de nuevo desde tu Perfil.'))
       }
     } finally {
       setBioLoading(false)
@@ -236,18 +237,9 @@ export function RegisterPage() {
       if (userId) {
         await supabase.auth.signOut().catch(() => undefined)
       }
-      const msg = err instanceof Error ? err.message : 'No pudimos crear tu cuenta. Probá de nuevo en unos minutos.'
-      if (msg.includes('already registered')) {
-        setError('Ese email ya está registrado')
-      } else if (msg.includes('duplicate') && msg.includes('dni')) {
-        setError('Ese DNI ya está registrado')
-      } else if (err instanceof BancoCentralError && err.status === 409) {
-        setError('Ese DNI ya está registrado en el Banco Central')
-      } else if (err instanceof BancoCentralError) {
-        setError(mensajeAmigableBC(err))
-      } else {
-        setError(msg)
-      }
+      setError(err instanceof BancoCentralError && err.status === 409
+        ? 'Ese DNI ya está registrado en el Banco Central.'
+        : mensajeError(err, 'No pudimos crear tu cuenta. Probá de nuevo en unos minutos.'))
     } finally {
       setLoading(false)
       if (!quedaOfertaBioPendiente) setProvisioning(false)

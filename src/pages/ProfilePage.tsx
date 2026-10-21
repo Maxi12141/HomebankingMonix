@@ -25,6 +25,7 @@ import {
 } from '../lib/biometria'
 import { pedirTodosLosPermisos } from '../lib/permisos'
 import { parseMonto } from '../utils/monto'
+import { mensajeError } from '../lib/errores'
 
 export function ProfilePage() {
   const { persona, user, setPersona } = useAuthStore()
@@ -218,7 +219,7 @@ export function ProfilePage() {
         borrarNombreBio(user.email ?? persona.email)
         toast.success('Biometría desactivada')
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'No pudimos desactivar'
+        const msg = mensajeError(err, 'No pudimos desactivar la biometría. Probá de nuevo.')
         toast.error(msg)
       } finally {
         setSavingBio(false)
@@ -256,7 +257,7 @@ export function ProfilePage() {
       setConfirmandoBio(false)
       setConfirmPass('')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'No pudimos configurar el desbloqueo'
+      const msg = mensajeError(err, 'No pudimos configurar el desbloqueo. Probá de nuevo.')
       toast.error(msg, { id: 'bio' })
     } finally {
       setSavingBio(false)
@@ -270,7 +271,7 @@ export function ProfilePage() {
       localStorage.setItem('monix_permisos_ok', '1')
       toast.success('Listo. Si el navegador no preguntó, habilitalos desde el candado de la barra de direcciones.')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No pudimos pedir los permisos')
+      toast.error(mensajeError(err, 'No pudimos pedir los permisos. Habilitalos desde los ajustes del navegador.'))
     } finally {
       setSavingPermisos(false)
     }

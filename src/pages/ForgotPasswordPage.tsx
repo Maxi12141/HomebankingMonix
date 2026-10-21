@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { MailCheck } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { mensajeError } from '../lib/errores'
 import { useThemeStore } from '../stores/themeStore'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -66,8 +67,8 @@ export function ForgotPasswordPage() {
       localStorage.setItem(COOLDOWN_KEY, String(hasta))
       setBloqueadoHasta(hasta)
       setEnviado(true)
-    } catch {
-      setError('No pudimos enviar el mail. Probá de nuevo en un momento.')
+    } catch (err) {
+      setError(mensajeError(err, 'No pudimos enviar el mail. Probá de nuevo en un momento.'))
     } finally {
       setLoading(false)
     }

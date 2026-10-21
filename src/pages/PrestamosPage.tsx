@@ -22,6 +22,7 @@ import type { Prestamo } from '../types'
 import { Monto } from '../components/ui/Monto'
 import { MovimientosSkeleton } from '../components/ui/Skeleton'
 import { parseMonto } from '../utils/monto'
+import { mensajeError } from '../lib/errores'
 
 function formatARS(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -146,7 +147,7 @@ export function PrestamosPage() {
       await Promise.all([refreshCuenta(), refreshPrestamos()])
       toast.success('¡Préstamo acreditado en tu cuenta!')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'No pudimos solicitar el préstamo'
+      const msg = mensajeError(err, 'No pudimos pedir el préstamo. Probá de nuevo en unos minutos.')
       setError(msg)
       toast.error(msg)
     } finally {

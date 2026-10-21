@@ -1,3 +1,5 @@
+import { mensajeError } from './errores'
+
 export const MONIX_QR_PREFIX = 'MONIXPAY:'
 export const MONIX_CUENTA_QR_PREFIX = 'MONIXQR:'
 
@@ -30,7 +32,5 @@ export function parseQrPayload(raw: string): { kind: 'cobro' | 'cuenta'; value: 
 }
 
 export function rpcMessage(error: { message?: string } | null | undefined, fallback: string) {
-  const raw = error?.message ?? ''
-  const cut = raw.replace(/^.*error: /i, '').split('\n')[0]?.trim()
-  return cut || fallback
+  return mensajeError(error, fallback)
 }

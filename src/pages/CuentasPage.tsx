@@ -13,6 +13,7 @@ import { Modal } from '../components/ui/Modal'
 import { compartirTexto, textoDatosCuenta } from '../utils/compartir'
 import type { Cuenta, Persona } from '../types'
 import { Monto } from '../components/ui/Monto'
+import { mensajeError } from '../lib/errores'
 
 type Estado = 'idle' | 'confirmar' | 'abriendo'
 
@@ -116,7 +117,7 @@ export function CuentasPage() {
     } catch (err) {
       const msg = err instanceof BancoCentralError
         ? mensajeAmigableBC(err)
-        : err instanceof Error ? err.message : 'No pudimos abrir la cuenta'
+        : mensajeError(err, 'No pudimos abrir la cuenta. Probá de nuevo en unos minutos.')
       setError(msg)
       setEstado('idle')
       toast.error(msg)

@@ -51,6 +51,7 @@ import {
 import { Monto } from './ui/Monto'
 
 import { parseMonto } from '../utils/monto'
+import { mensajeError } from '../lib/errores'
 async function aplicarQr(
   raw: string,
   cargarCobro: (id: string) => Promise<void>,
@@ -336,7 +337,7 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
           setCobro(await obtenerCobroQr(id))
           setError('')
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'No pudimos armar el cobro')
+          setError(mensajeError(err, 'No pudimos armar el cobro. Probá de nuevo en un momento.'))
         }
       })()
     }, 650)
@@ -728,7 +729,7 @@ export function EscanearYPagar({
       setCobro(await obtenerCobroQr(id))
       setDestino(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se encontró el cobro')
+      setError(mensajeError(err, 'No encontramos ese cobro. Pedile a quien te cobra un QR nuevo.'))
     } finally {
       setLoading(false)
     }
@@ -756,7 +757,7 @@ export function EscanearYPagar({
       setCobro(null)
       setMontoLibre('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos leer ese QR')
+      setError(mensajeError(err, 'No pudimos leer ese QR. Acercate un poco más y probá de nuevo.'))
     } finally {
       setLoading(false)
     }
@@ -858,7 +859,7 @@ export function EscanearYPagar({
       const raw = await leerQrDeArchivo(file)
       await aplicarQr(raw, cargarCobro, cargarCuenta, cargarDestinoJwt)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos leer la foto')
+      setError(mensajeError(err, 'No pudimos leer el QR de la foto. Probá con otra más nítida.'))
     } finally {
       setLoading(false)
     }
@@ -881,7 +882,7 @@ export function EscanearYPagar({
       })
       toast.success('Pago realizado')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos pagar')
+      setError(mensajeError(err, 'No pudimos completar el pago. Tu plata no se movió: probá de nuevo en unos minutos.'))
     } finally {
       setLoading(false)
     }
@@ -908,7 +909,7 @@ export function EscanearYPagar({
       })
       toast.success('Pago realizado')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos pagar')
+      setError(mensajeError(err, 'No pudimos completar el pago. Tu plata no se movió: probá de nuevo en unos minutos.'))
     } finally {
       setLoading(false)
     }

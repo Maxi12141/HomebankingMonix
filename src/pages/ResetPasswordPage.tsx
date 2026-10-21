@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { KeyRound } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
+import { mensajeError } from '../lib/errores'
 import { useThemeStore } from '../stores/themeStore'
 import { Button } from '../components/ui/Button'
 import { PasswordInput } from '../components/ui/PasswordInput'
@@ -48,8 +49,8 @@ export function ResetPasswordPage() {
       if (err) throw err
       toast.success('Contraseña actualizada')
       navigate('/dashboard')
-    } catch {
-      setError('No pudimos actualizar la contraseña. Pedí un link nuevo e intentá de nuevo.')
+    } catch (err) {
+      setError(mensajeError(err, 'No pudimos actualizar la contraseña. Pedí un link nuevo y probá de nuevo.'))
     } finally {
       setLoading(false)
     }

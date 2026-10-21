@@ -12,6 +12,7 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
+import { mensajeError } from '../lib/errores'
 
 type Step = 'form' | 'success'
 
@@ -85,7 +86,7 @@ export function DepositPage() {
       toast.success('¡Depósito realizado con éxito!')
       void refreshCuenta()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : ERROR_DEPOSITO
+      const msg = mensajeError(err, ERROR_DEPOSITO)
       setError(msg)
       toast.error(msg)
     } finally {

@@ -7,6 +7,7 @@ import { verificarHuella, esCancelacionBiometrica } from '../lib/biometria'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import monixLogo from '../assets/logos/logo-blanco.svg'
+import { mensajeError } from '../lib/errores'
 
 interface Props {
   onUnlock: () => void
@@ -31,7 +32,7 @@ export function HuellaLockScreen({ onUnlock }: Props) {
       onUnlock()
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
-        setError(err instanceof Error ? err.message : 'No pudimos validar. Usá la contraseña de Monix.')
+        setError(mensajeError(err, 'No pudimos validar. Usá la contraseña de Monix.'))
       }
     } finally {
       setLoadingBio(false)

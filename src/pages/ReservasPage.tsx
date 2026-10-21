@@ -12,6 +12,7 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
+import { mensajeError } from '../lib/errores'
 
 type Mode = 'ingresar' | 'retirar'
 
@@ -60,7 +61,7 @@ export function ReservasPage() {
       setMonto('')
       await Promise.all([refreshCuenta(), refreshReserva()])
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'No pudimos completar la operación'
+      const msg = mensajeError(err, 'No pudimos completar la operación. Tu plata no se movió: probá de nuevo en unos minutos.')
       setError(msg)
       toast.error(msg)
     } finally {

@@ -25,6 +25,7 @@ import {
 } from '../services/metasComunes'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
+import { mensajeError } from '../lib/errores'
 
 function ars(n: number) {
   return formatMonto(n, 'ARS')
@@ -72,7 +73,7 @@ export function MetasPage() {
     try {
       setLista(await listarMetasComunes())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos cargar las metas')
+      setError(mensajeError(err, 'No pudimos cargar tus metas. Probá de nuevo en un momento.'))
     } finally {
       setCargando(false)
     }
@@ -95,7 +96,7 @@ export function MetasPage() {
         toast.success(`Entraste a ${row.titulo}`)
         setLista(await listarMetasComunes())
       } catch (err) {
-        if (vivo) setError(err instanceof Error ? err.message : 'No pudimos entrar con ese código')
+        if (vivo) setError(mensajeError(err, 'No pudimos sumarte con ese código. Revisalo y probá de nuevo.'))
       } finally {
         if (vivo) setEnviando(false)
       }
@@ -108,7 +109,7 @@ export function MetasPage() {
     try {
       setDetalle(await detalleMetaComun(id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos abrir la meta')
+      setError(mensajeError(err, 'No pudimos abrir la meta. Probá de nuevo en un momento.'))
     }
   }
 
@@ -130,7 +131,7 @@ export function MetasPage() {
       setObjetivo('')
       await cargarLista()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos crear la meta')
+      setError(mensajeError(err, 'No pudimos crear la meta. Probá de nuevo en un momento.'))
     } finally {
       setEnviando(false)
     }
@@ -147,7 +148,7 @@ export function MetasPage() {
       await cargarLista()
       toast.success(`Entraste a ${row.titulo}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos entrar')
+      setError(mensajeError(err, 'No pudimos sumarte a la meta. Probá de nuevo en un momento.'))
     } finally {
       setEnviando(false)
     }
@@ -167,7 +168,7 @@ export function MetasPage() {
       await cargarLista()
       toast.success('Aporte acreditado en la meta')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos aportar')
+      setError(mensajeError(err, 'No pudimos hacer el aporte. Tu plata no se movió: probá de nuevo en unos minutos.'))
     } finally {
       setEnviando(false)
     }
@@ -184,7 +185,7 @@ export function MetasPage() {
       setAliasInvitar('')
       toast.success('Se sumó a la meta')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos invitar')
+      setError(mensajeError(err, 'No pudimos sumar a esa persona. Probá de nuevo en un momento.'))
     } finally {
       setEnviando(false)
     }
@@ -209,7 +210,7 @@ export function MetasPage() {
       if (row.estado === 'desembolsada') toast.success('El desembolso salió')
       else toast.success('Quedó abierta la votación')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos proponer')
+      setError(mensajeError(err, 'No pudimos crear la votación. Probá de nuevo en un momento.'))
     } finally {
       setEnviando(false)
     }
@@ -226,7 +227,7 @@ export function MetasPage() {
       await cargarLista()
       if (row.estado === 'desembolsada') toast.success('La mayoría aprobó y salió el pago')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos votar')
+      setError(mensajeError(err, 'No pudimos registrar tu voto. Probá de nuevo en un momento.'))
     } finally {
       setEnviando(false)
     }

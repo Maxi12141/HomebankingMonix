@@ -28,6 +28,7 @@ import {
   type ProductoMercado,
 } from '../data/mercadoMonixProductos'
 import { Monto } from '../components/ui/Monto'
+import { mensajeError } from '../lib/errores'
 
 function formatARS(n: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -143,7 +144,7 @@ export function MercadoMonixPage() {
       setSuccess(true)
       toast.success('¡Compra realizada con tu tarjeta MONIX!')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'No pudimos completar la compra'
+      const msg = mensajeError(err, 'No pudimos completar la compra. Tu plata no se movió: probá de nuevo en unos minutos.')
       setError(msg)
       toast.error(msg)
     } finally {
