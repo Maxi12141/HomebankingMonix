@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { Check, Copy, RotateCcw } from 'lucide-react'
 import { EASE_MONIX } from '../lib/motion'
+import { ArcosTarjeta, ChipTarjeta, FONDO_FRENTE } from './TarjetaPiezas'
 
 interface MonixCard3DProps {
   titular: string
@@ -31,6 +32,18 @@ export function buildCvv(numeroCuenta?: string | null) {
   let hash = 0
   for (const ch of digits || 'monix') hash = (hash * 31 + ch.charCodeAt(0)) % 900
   return String(hash + 100)
+}
+
+// La de pesos va en azul noche con brillo mint; la de dólares, en grafito con brillo plateado.
+const FONDOS = {
+  ARS: {
+    frente: FONDO_FRENTE.ars,
+    dorso: 'linear-gradient(160deg, #001A3D 0%, #0D2B52 50%, #00112A 100%)',
+  },
+  USD: {
+    frente: FONDO_FRENTE.usd,
+    dorso: 'linear-gradient(160deg, #1E2631 0%, #3A4554 50%, #11161D 100%)',
+  },
 }
 
 const faceBaseStyle: CSSProperties = {
@@ -76,6 +89,8 @@ export function MonixCard3D({
   const cvv = useMemo(() => buildCvv(numeroCuenta), [numeroCuenta])
   const tipoLabel = tipo === 'cuenta_corriente' ? 'Cuenta Corriente' : 'Caja de Ahorro'
   const nombre = (titular || 'Titular MONIX').toUpperCase()
+  const esUsd = moneda === 'USD'
+  const fondo = FONDOS[esUsd ? 'USD' : 'ARS']
 
   function handlePointerMove(e: React.PointerEvent) {
     const el = containerRef.current
@@ -159,8 +174,7 @@ export function MonixCard3D({
             <div
               style={{
                 ...faceBaseStyle,
-                background:
-                  'radial-gradient(120% 90% at 10% 0%, rgba(38,255,193,0.22) 0%, transparent 45%), linear-gradient(145deg, #0D2B52 0%, #001A3D 55%, #00112A 100%)',
+                background: fondo.frente,
                 boxShadow: '0 20px 50px -12px rgba(0,26,61,0.55)',
                 border: '1px solid rgba(255,255,255,0.1)',
               }}
@@ -169,8 +183,9 @@ export function MonixCard3D({
                 className="pointer-events-none absolute inset-0 opacity-60 mix-blend-soft-light rounded-2xl"
                 style={{ background: glareBackground }}
               />
-              <div className="absolute -right-10 -top-16 h-40 w-40 rounded-full bg-mint/15 blur-2xl pointer-events-none" />
+              <div className={`absolute -right-10 -top-16 h-40 w-40 rounded-full ${esUsd ? 'bg-white/10' : 'bg-mint/15'} blur-2xl pointer-events-none`} />
               <div className="absolute -left-8 bottom-0 h-32 w-32 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+              <ArcosTarjeta />
 
               <div className="relative z-10 flex h-full flex-col justify-between p-5 sm:p-6 text-left">
                 <div className="flex items-start justify-between">
@@ -183,17 +198,7 @@ export function MonixCard3D({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                  <div
-                    className={`h-8 w-11 rounded-md shadow-inner relative overflow-hidden ${
-                      moneda === 'USD'
-                        ? 'bg-gradient-to-br from-[#dfe4ea] via-[#f4f6f8] to-[#b7bdc6]'
-                        : 'bg-gradient-to-br from-[#f0c040] via-[#f8de80] to-[#c8980a]'
-                    }`}
-                  >
-                    <div className={`absolute inset-x-0 top-[30%] h-px ${moneda === 'USD' ? 'bg-[#6b7280]/55' : 'bg-[#8B6914]/55'}`} />
-                    <div className={`absolute inset-x-0 top-[55%] h-px ${moneda === 'USD' ? 'bg-[#6b7280]/55' : 'bg-[#8B6914]/55'}`} />
-                    <div className={`absolute inset-y-0 left-[40%] w-px ${moneda === 'USD' ? 'bg-[#6b7280]/55' : 'bg-[#8B6914]/55'}`} />
-                  </div>
+                  <ChipTarjeta metal={esUsd ? 'plata' : 'oro'} className="h-8 w-auto" />
                   <svg viewBox="0 0 36 36" className="w-9 h-9 text-white/80" aria-hidden="true">
                     <circle cx="8" cy="18" r="2.2" fill="currentColor" />
                     <path d="M13 10.5a11 11 0 0 1 0 15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
@@ -232,7 +237,7 @@ export function MonixCard3D({
               style={{
                 ...faceBaseStyle,
                 transform: 'rotateY(180deg)',
-                background: 'linear-gradient(160deg, #001A3D 0%, #0D2B52 50%, #00112A 100%)',
+                background: fondo.dorso,
                 boxShadow: '0 20px 50px -12px rgba(0,26,61,0.55)',
                 border: '1px solid rgba(255,255,255,0.1)',
               }}

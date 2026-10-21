@@ -5,10 +5,10 @@ import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import { MarketTicker } from '../components/MarketTicker'
 import { lazy, Suspense } from 'react'
+import { TarjetaMini } from '../components/TarjetaPiezas'
 import { MonixLogoNavbar } from '../components/MonixLogoNavbar'
 import { useThemeStore } from '../stores/themeStore'
 import { usePwaInstall } from '../hooks/usePwaInstall'
-import monixLogoWhite from '../assets/logos/logo-blanco.svg'
 
 // Decorativa: va en su propio chunk para no sumar al JS inicial (CONSTRAINTS.md, Bundle).
 const TarjetaHero = lazy(() => import('../components/TarjetaHero').then((m) => ({ default: m.TarjetaHero })))
@@ -41,228 +41,13 @@ const features = [
   },
 ]
 
-/* ─── Chip EMV reutilizable ─────────────────────────────────────── */
-function Chip({ x, y }: { x: number; y: number }) {
-  return (
-    <g>
-      <defs>
-        <linearGradient id="chipGold" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#f0c040" />
-          <stop offset="50%" stopColor="#f8de80" />
-          <stop offset="100%" stopColor="#c8980a" />
-        </linearGradient>
-      </defs>
-      <rect x={x} y={y} width="44" height="34" rx="6" fill="url(#chipGold)" />
-      <line x1={x} y1={y + 12} x2={x + 44} y2={y + 12} stroke="#8B6914" strokeWidth="1" strokeOpacity="0.55" />
-      <line x1={x} y1={y + 22} x2={x + 44} y2={y + 22} stroke="#8B6914" strokeWidth="1" strokeOpacity="0.55" />
-      <line x1={x + 18} y1={y} x2={x + 18} y2={y + 34} stroke="#8B6914" strokeWidth="1" strokeOpacity="0.55" />
-      <line x1={x + 28} y1={y} x2={x + 28} y2={y + 34} stroke="#8B6914" strokeWidth="1" strokeOpacity="0.55" />
-    </g>
-  )
-}
-
-/* ─── Símbolo de pago sin contacto ──────────────────────────────────── */
-function SimboloContactless({ cx, cy }: { cx: number; cy: number }) {
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r="2.8" fill="white" fillOpacity="0.7" />
-      <path d={`M ${cx} ${cy - 10} A 10 10 0 0 1 ${cx} ${cy + 10}`} fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeOpacity="0.7" />
-      <path d={`M ${cx} ${cy - 16} A 16 16 0 0 1 ${cx} ${cy + 16}`} fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeOpacity="0.7" />
-      <path d={`M ${cx} ${cy - 22} A 22 22 0 0 1 ${cx} ${cy + 22}`} fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.62" />
-    </g>
-  )
-}
-
-/* ─── Tarjeta de Débito (Cuenta ARS) ────────────────────────────── */
-function DebitCardSVG() {
-  return (
-    <svg viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg" className="w-full">
-      <defs>
-        <linearGradient id="debitBg" x1="0" y1="0" x2="360" y2="220" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#062d52" />
-          <stop offset="100%" stopColor="#001e3a" />
-        </linearGradient>
-        <linearGradient id="debitGloss" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="white" stopOpacity="0.07" />
-          <stop offset="55%" stopColor="white" stopOpacity="0" />
-        </linearGradient>
-        <clipPath id="debitClip">
-          <rect width="360" height="220" rx="16" />
-        </clipPath>
-      </defs>
-
-      <rect width="360" height="220" rx="16" fill="url(#debitBg)" />
-
-      <g clipPath="url(#debitClip)">
-        {/* Diagonal mint stripes – bottom-left corner */}
-        <line x1="-30" y1="210" x2="130" y2="50" stroke="#26ffc1" strokeWidth="40" strokeOpacity="0.07" />
-        <line x1="10" y1="240" x2="170" y2="80" stroke="#26ffc1" strokeWidth="28" strokeOpacity="0.055" />
-        <line x1="50" y1="260" x2="210" y2="100" stroke="#26ffc1" strokeWidth="18" strokeOpacity="0.04" />
-        {/* Mint accent line – top edge */}
-        <rect x="0" y="0" width="360" height="3" rx="0" fill="#26ffc1" fillOpacity="0.55" />
-        {/* Gloss */}
-        <rect width="360" height="110" fill="url(#debitGloss)" />
-        <rect x="0" y="0" width="360" height="1" fill="white" fillOpacity="0.08" />
-      </g>
-
-      {/* Logo Monix – top left */}
-      <image href={monixLogoWhite} x="18" y="14" width="128" height="32" opacity="0.92" />
-
-      {/* DÉBITO badge */}
-      <rect x="18" y="52" width="54" height="14" rx="7" fill="#26ffc1" fillOpacity="0.18" />
-      <text x="45" y="63" fontFamily="'Inter', sans-serif" fontSize="8" fontWeight="600" fill="#26ffc1" textAnchor="middle" letterSpacing="1">DÉBITO</text>
-
-      <Chip x={26} y={86} />
-      <SimboloContactless cx={84} cy={103} />
-
-      {/* Número */}
-      <text x="26" y="148" fontFamily="'Courier New', Courier, monospace" fontSize="19" fill="white" letterSpacing="3" fillOpacity="0.9">
-        •••• •••• •••• 7234
-      </text>
-
-      {/* Valid thru */}
-      <text x="26" y="176" fontFamily="'Inter', sans-serif" fontSize="8" fill="white" fillOpacity="0.5" letterSpacing="1.5">VÁLIDA HASTA</text>
-      <text x="26" y="194" fontFamily="'Courier New', Courier, monospace" fontSize="14" fill="white" fillOpacity="0.85" letterSpacing="2">09/27</text>
-
-      {/* Titular */}
-      <text x="118" y="176" fontFamily="'Inter', sans-serif" fontSize="8" fill="white" fillOpacity="0.5" letterSpacing="1.5">TITULAR</text>
-      <text x="118" y="194" fontFamily="'Inter', sans-serif" fontSize="13" fill="white" fillOpacity="0.85" letterSpacing="1">MARÍA GÓMEZ</text>
-
-      {/* Visa Débito – bottom right */}
-      <text x="334" y="194" fontFamily="'Times New Roman', Georgia, serif" fontSize="22" fontWeight="900" fill="white" fontStyle="italic" textAnchor="end" fillOpacity="0.9">VISA</text>
-      <text x="334" y="208" fontFamily="'Inter', sans-serif" fontSize="8" fill="white" textAnchor="end" fillOpacity="0.55" letterSpacing="0.5">Débito</text>
-    </svg>
-  )
-}
-
-/* ─── Tarjeta USD ────────────────────────────────────────────────── */
-function UsdCardSVG() {
-  return (
-    <svg viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg" className="w-full">
-      <defs>
-        <linearGradient id="usdBg" x1="0" y1="0" x2="360" y2="220" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#0a0f1e" />
-          <stop offset="100%" stopColor="#040812" />
-        </linearGradient>
-        <linearGradient id="usdGloss" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="white" stopOpacity="0.06" />
-          <stop offset="55%" stopColor="white" stopOpacity="0" />
-        </linearGradient>
-        <clipPath id="usdClip">
-          <rect width="360" height="220" rx="16" />
-        </clipPath>
-      </defs>
-
-      <rect width="360" height="220" rx="16" fill="url(#usdBg)" />
-
-      <g clipPath="url(#usdClip)">
-        {/* Amber/gold arc decorations – bottom right */}
-        <circle cx="360" cy="220" r="150" fill="none" stroke="#c9a227" strokeWidth="55" opacity="0.08" />
-        <circle cx="360" cy="220" r="96" fill="none" stroke="#c9a227" strokeWidth="38" opacity="0.07" />
-        {/* $ watermark */}
-        <text x="248" y="198" fontFamily="'Georgia', serif" fontSize="115" fill="#c9a227" fillOpacity="0.05" fontWeight="bold">$</text>
-        {/* Amber accent line – top */}
-        <rect x="0" y="0" width="360" height="3" rx="0" fill="#c9a227" fillOpacity="0.5" />
-        {/* Gloss */}
-        <rect width="360" height="110" fill="url(#usdGloss)" />
-        <rect x="0" y="0" width="360" height="1" fill="white" fillOpacity="0.07" />
-      </g>
-
-      {/* Logo Monix – top left */}
-      <image href={monixLogoWhite} x="18" y="14" width="128" height="32" opacity="0.9" />
-
-      {/* USD badge */}
-      <rect x="18" y="52" width="42" height="14" rx="7" fill="#c9a227" fillOpacity="0.2" />
-      <text x="39" y="63" fontFamily="'Inter', sans-serif" fontSize="8" fontWeight="600" fill="#c9a227" textAnchor="middle" letterSpacing="1">USD</text>
-
-      <Chip x={26} y={86} />
-      <SimboloContactless cx={84} cy={103} />
-
-      {/* Número */}
-      <text x="26" y="148" fontFamily="'Courier New', Courier, monospace" fontSize="19" fill="white" letterSpacing="3" fillOpacity="0.9">
-        •••• •••• •••• 9102
-      </text>
-
-      {/* Valid thru */}
-      <text x="26" y="176" fontFamily="'Inter', sans-serif" fontSize="8" fill="white" fillOpacity="0.5" letterSpacing="1.5">VÁLIDA HASTA</text>
-      <text x="26" y="194" fontFamily="'Courier New', Courier, monospace" fontSize="14" fill="white" fillOpacity="0.85" letterSpacing="2">03/29</text>
-
-      {/* Titular */}
-      <text x="118" y="176" fontFamily="'Inter', sans-serif" fontSize="8" fill="white" fillOpacity="0.5" letterSpacing="1.5">TITULAR</text>
-      <text x="118" y="194" fontFamily="'Inter', sans-serif" fontSize="13" fill="white" fillOpacity="0.85" letterSpacing="1">JUAN PÉREZ</text>
-
-      {/* Mastercard – bottom right (dos círculos) */}
-      <circle cx="314" cy="188" r="13" fill="#eb001b" fillOpacity="0.85" />
-      <circle cx="330" cy="188" r="13" fill="#f79e1b" fillOpacity="0.85" />
-      <text x="322" y="208" fontFamily="'Inter', sans-serif" fontSize="7" fill="white" textAnchor="middle" fillOpacity="0.5" letterSpacing="0.3">mastercard</text>
-    </svg>
-  )
-}
-
-/* ─── Tarjeta de Crédito ─────────────────────────────────────────── */
-function CreditCardSVG() {
-  return (
-    <svg viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg" className="w-full">
-      <defs>
-        <linearGradient id="creditBg" x1="0" y1="0" x2="360" y2="220" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#052548" />
-          <stop offset="100%" stopColor="#001128" />
-        </linearGradient>
-        <linearGradient id="creditGloss" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="white" stopOpacity="0.06" />
-          <stop offset="55%" stopColor="white" stopOpacity="0" />
-        </linearGradient>
-        <clipPath id="creditClip">
-          <rect width="360" height="220" rx="16" />
-        </clipPath>
-      </defs>
-
-      <rect width="360" height="220" rx="16" fill="url(#creditBg)" />
-
-      <g clipPath="url(#creditClip)">
-        {/* Mint arc decorations – bottom right */}
-        <circle cx="360" cy="220" r="150" fill="none" stroke="#26ffc1" strokeWidth="55" opacity="0.07" />
-        <circle cx="360" cy="220" r="95" fill="none" stroke="#26ffc1" strokeWidth="36" opacity="0.07" />
-        {/* Mint accent line – top */}
-        <rect x="0" y="0" width="360" height="3" rx="0" fill="#26ffc1" fillOpacity="0.55" />
-        {/* Gloss */}
-        <rect width="360" height="110" fill="url(#creditGloss)" />
-        <rect x="0" y="0" width="360" height="1" fill="white" fillOpacity="0.09" />
-      </g>
-
-      {/* Logo Monix – top left */}
-      <image href={monixLogoWhite} x="18" y="14" width="128" height="32" opacity="0.92" />
-
-      {/* CRÉDITO badge */}
-      <rect x="18" y="52" width="58" height="14" rx="7" fill="#26ffc1" fillOpacity="0.18" />
-      <text x="47" y="63" fontFamily="'Inter', sans-serif" fontSize="8" fontWeight="600" fill="#26ffc1" textAnchor="middle" letterSpacing="1">CRÉDITO</text>
-
-      <Chip x={26} y={86} />
-      <SimboloContactless cx={84} cy={103} />
-
-      {/* Número */}
-      <text x="26" y="148" fontFamily="'Courier New', Courier, monospace" fontSize="19" fill="white" letterSpacing="3" fillOpacity="0.9">
-        •••• •••• •••• 4821
-      </text>
-
-      {/* Valid thru */}
-      <text x="26" y="176" fontFamily="'Inter', sans-serif" fontSize="8" fill="white" fillOpacity="0.5" letterSpacing="1.5">VÁLIDA HASTA</text>
-      <text x="26" y="194" fontFamily="'Courier New', Courier, monospace" fontSize="14" fill="white" fillOpacity="0.85" letterSpacing="2">12/28</text>
-
-      {/* Titular */}
-      <text x="118" y="176" fontFamily="'Inter', sans-serif" fontSize="8" fill="white" fillOpacity="0.5" letterSpacing="1.5">TITULAR</text>
-      <text x="118" y="194" fontFamily="'Inter', sans-serif" fontSize="13" fill="white" fillOpacity="0.85" letterSpacing="1">JUAN PÉREZ</text>
-
-      {/* VISA – bottom right */}
-      <text x="334" y="194" fontFamily="'Times New Roman', Georgia, serif" fontSize="26" fontWeight="900" fill="white" fontStyle="italic" textAnchor="end" fillOpacity="0.9">VISA</text>
-    </svg>
-  )
-}
-
 /* ─── Datos de productos ─────────────────────────────────────────── */
 const products = [
   {
     accentColor: '#26ffc1',
+    variante: 'ars' as const,
+    pan: '4532 •••• •••• 2481',
+    etiqueta: 'Débito',
     badge: 'Cuenta ARS',
     title: 'Cuenta en Pesos',
     subtitle: 'Sin costo de mantenimiento',
@@ -274,10 +59,12 @@ const products = [
       'Acceso 24/7 desde la app',
     ],
     cta: 'Abrí tu cuenta',
-    CardMockup: DebitCardSVG,
   },
   {
-    accentColor: '#c9a227',
+    accentColor: '#AEB8C4',
+    variante: 'usd' as const,
+    pan: '5591 •••• •••• 7730',
+    etiqueta: 'Débito USD',
     badge: 'Cuenta USD',
     title: 'Cuenta en Dólares',
     subtitle: 'Sin límite de saldo',
@@ -289,10 +76,12 @@ const products = [
       'Disponible 24 hs, los 365 días',
     ],
     cta: 'Abrí tu cuenta en USD',
-    CardMockup: UsdCardSVG,
   },
   {
-    accentColor: '#26ffc1',
+    accentColor: '#D6BA80',
+    variante: 'credito' as const,
+    pan: '4970 •••• •••• 1408',
+    etiqueta: 'Crédito',
     badge: 'Crédito',
     title: 'Tarjeta Monix',
     subtitle: '2% cashback en QR y débito',
@@ -304,7 +93,6 @@ const products = [
       'Sin costo el primer año',
     ],
     cta: 'Solicitá la tuya',
-    CardMockup: CreditCardSVG,
   },
 ]
 
@@ -470,8 +258,8 @@ export function LandingPage() {
 
                 <div className="p-6 flex flex-col flex-1">
                   <span
-                    className="inline-block self-start text-xs font-body font-semibold rounded-full px-3 py-1 mb-4"
-                    style={{ color: product.accentColor, backgroundColor: `${product.accentColor}22` }}
+                    className="inline-block self-start text-xs font-body font-semibold rounded-full px-3 py-1 mb-4 text-navy dark:text-white"
+                    style={{ backgroundColor: `${product.accentColor}33` }}
                   >
                     {product.badge}
                   </span>
@@ -481,7 +269,7 @@ export function LandingPage() {
 
                   {/* Card mockup */}
                   <div className="mb-5 rounded-xl overflow-hidden shadow-lg ring-1 ring-black/10">
-                    <product.CardMockup />
+                    <TarjetaMini variante={product.variante} pan={product.pan} etiqueta={product.etiqueta} />
                   </div>
 
                   <ul className="flex flex-col gap-2.5 mb-6 flex-1">
