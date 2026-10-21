@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import svgr from 'vite-plugin-svgr'
 import { VitePWA } from 'vite-plugin-pwa'
+import { fileURLToPath } from 'node:url'
 
 const bcProxy = {
   '/bc-api': {
@@ -25,6 +26,8 @@ function monixBuildId() {
 }
 
 export default defineConfig({
+  // Alias que pide shadcn (components.json) para instalar componentes de React Bits.
+  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   plugins: [
     svgr(),
     react(),
