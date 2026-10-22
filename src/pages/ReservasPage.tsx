@@ -13,6 +13,7 @@ import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
+import Segmentado from '../components/ui/Segmentado'
 
 type Mode = 'ingresar' | 'retirar'
 
@@ -133,30 +134,13 @@ export function ReservasPage() {
         </Card>
 
         <Card className="p-6">
-          <div className="grid grid-cols-2 gap-2 mb-5 p-1 rounded-xl bg-slate-input dark:bg-white/5">
-            <button
-              type="button"
-              onClick={() => { setMode('ingresar'); setError('') }}
-              className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
-                mode === 'ingresar'
-                  ? 'bg-mint text-navy'
-                  : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-              }`}
-            >
-              Ingresar
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode('retirar'); setError('') }}
-              className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
-                mode === 'retirar'
-                  ? 'bg-mint text-navy'
-                  : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-              }`}
-            >
-              Retirar
-            </button>
-          </div>
+          <Segmentado
+            ariaLabel="Operación"
+            value={mode}
+            onChange={(m) => { setMode(m); setError('') }}
+            opciones={[{ value: 'ingresar', label: 'Ingresar' }, { value: 'retirar', label: 'Retirar' }]}
+            className="mb-5"
+          />
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input

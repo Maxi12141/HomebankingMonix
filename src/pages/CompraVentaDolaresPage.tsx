@@ -16,6 +16,7 @@ import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
+import Segmentado from '../components/ui/Segmentado'
 
 type Modo = 'comprar' | 'vender'
 type Step = 'form' | 'success'
@@ -140,26 +141,13 @@ export function CompraVentaDolaresPage() {
           {step === 'form' && (
             <motion.div key="form" variants={stepVariants} initial="initial" animate="animate" exit="exit">
               <Card className="p-8">
-                <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
-                  <button
-                    type="button"
-                    onClick={() => { setModo('comprar'); setError('') }}
-                    className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
-                      modo === 'comprar' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-                    }`}
-                  >
-                    Comprar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setModo('vender'); setError('') }}
-                    className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
-                      modo === 'vender' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-                    }`}
-                  >
-                    Vender
-                  </button>
-                </div>
+                <Segmentado
+                  ariaLabel="Operación"
+                  value={modo}
+                  onChange={(m) => { setModo(m); setError('') }}
+                  opciones={[{ value: 'comprar', label: 'Comprar' }, { value: 'vender', label: 'Vender' }]}
+                  className="mb-6"
+                />
 
                 <div className="flex items-center justify-between gap-3 mb-6 rounded-xl bg-slate-input dark:bg-white/5 px-4 py-3">
                   <div>

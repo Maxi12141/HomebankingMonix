@@ -13,6 +13,7 @@ import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
+import Segmentado from '../components/ui/Segmentado'
 
 type Step = 'form' | 'success'
 
@@ -112,30 +113,13 @@ export function DepositPage() {
             <motion.div key="form" variants={stepVariants} initial="initial" animate="animate" exit="exit">
               <Card className="p-8">
                 {cuentaUSD && cuentaARS && (
-                  <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
-                    <button
-                      type="button"
-                      onClick={() => setCuentaId(cuentaARS.id)}
-                      className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
-                        moneda === 'ARS'
-                          ? 'bg-mint text-navy'
-                          : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-                      }`}
-                    >
-                      Cuenta en pesos
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCuentaId(cuentaUSD.id)}
-                      className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
-                        moneda === 'USD'
-                          ? 'bg-mint text-navy'
-                          : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-                      }`}
-                    >
-                      Cuenta en dólares
-                    </button>
-                  </div>
+                  <Segmentado
+                    ariaLabel="Cuenta"
+                    value={moneda}
+                    onChange={(m) => setCuentaId(m === 'ARS' ? cuentaARS.id : cuentaUSD.id)}
+                    opciones={[{ value: 'ARS', label: 'Cuenta en pesos' }, { value: 'USD', label: 'Cuenta en dólares' }]}
+                    className="mb-6"
+                  />
                 )}
 
                 <p className="font-body text-sm text-slate-secondary mb-1">Saldo actual</p>

@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button'
 import { MonixCard3D, buildPan, buildCvv } from '../components/MonixCard3D'
 import { setTarjetaFlags } from '../services/cobrosQr'
 import { mensajeError } from '../lib/errores'
+import Segmentado from '../components/ui/Segmentado'
 
 function freezeKey(cuentaId: string) {
   return `monix_card_frozen_${cuentaId}`
@@ -70,26 +71,13 @@ export function TarjetaPage() {
         </div>
 
         {cuentaUSD && (
-          <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
-            <button
-              type="button"
-              onClick={() => setMonedaActiva('ARS')}
-              className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
-                monedaActiva === 'ARS' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-              }`}
-            >
-              Tarjeta en pesos
-            </button>
-            <button
-              type="button"
-              onClick={() => setMonedaActiva('USD')}
-              className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
-                monedaActiva === 'USD' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-              }`}
-            >
-              Tarjeta en dólares
-            </button>
-          </div>
+          <Segmentado
+            ariaLabel="Moneda de la tarjeta"
+            value={monedaActiva}
+            onChange={setMonedaActiva}
+            opciones={[{ value: 'ARS', label: 'Tarjeta en pesos' }, { value: 'USD', label: 'Tarjeta en dólares' }]}
+            className="mb-6"
+          />
         )}
 
         {frozen && (

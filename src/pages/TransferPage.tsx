@@ -22,6 +22,7 @@ import { Button } from '../components/ui/Button'
 import type { Movimiento } from '../types'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
+import Segmentado from '../components/ui/Segmentado'
 
 type Step = 'buscar' | 'detalle' | 'resumen' | 'exito'
 type Moneda = 'ARS' | 'USD'
@@ -594,26 +595,13 @@ export function TransferPage() {
                   )}
 
                   {cuentaUSD && (
-                    <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-xl bg-slate-input dark:bg-white/5">
-                      <button
-                        type="button"
-                        onClick={() => setMonedaOrigen('ARS')}
-                        className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
-                          monedaOrigen === 'ARS' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-                        }`}
-                      >
-                        Desde pesos
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMonedaOrigen('USD')}
-                        className={`rounded-lg py-2.5 font-body text-sm font-medium transition-colors ${
-                          monedaOrigen === 'USD' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-                        }`}
-                      >
-                        Desde dólares
-                      </button>
-                    </div>
+                    <Segmentado
+                      ariaLabel="Cuenta de origen"
+                      value={monedaOrigen}
+                      onChange={setMonedaOrigen}
+                      opciones={[{ value: 'ARS', label: 'Desde pesos' }, { value: 'USD', label: 'Desde dólares' }]}
+                      className="mb-6"
+                    />
                   )}
 
                   <p className="font-body text-sm text-slate-secondary mb-1">Saldo disponible</p>

@@ -10,6 +10,7 @@ import { Monto } from '../components/ui/Monto'
 import { MovimientosSkeleton } from '../components/ui/Skeleton'
 import { TransactionDetailModal } from '../components/TransactionDetailModal'
 import type { Movimiento } from '../types'
+import Segmentado from '../components/ui/Segmentado'
 
 type Filtro = 'todos' | 'entradas' | 'salidas'
 
@@ -81,21 +82,13 @@ export function HistorialPage() {
         <h1 className="font-display text-2xl font-semibold text-navy dark:text-white mb-6">Historial</h1>
 
         {/* Filtros por tipo */}
-        <div className="flex gap-2 mb-4">
-          {(['todos', 'entradas', 'salidas'] as Filtro[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFiltro(f)}
-              className={`min-h-11 px-4 py-2 rounded-xl font-body text-sm font-medium transition-colors
-                ${filtro === f
-                  ? 'bg-mint text-navy'
-                  : 'bg-white dark:bg-navy-card border border-slate-200 dark:border-white/10 text-slate-secondary hover:text-navy dark:hover:text-white hover:border-slate-300 dark:hover:border-white/20'
-                }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
+        <Segmentado
+          ariaLabel="Filtrar movimientos"
+          value={filtro}
+          onChange={setFiltro}
+          opciones={[{ value: 'todos', label: 'Todos' }, { value: 'entradas', label: 'Entradas' }, { value: 'salidas', label: 'Salidas' }]}
+          className="mb-4 !bg-white dark:!bg-navy-card"
+        />
 
         {/* Búsqueda por texto */}
         <div className="relative mb-3">

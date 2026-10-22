@@ -52,6 +52,7 @@ import { Monto } from './ui/Monto'
 
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
+import Segmentado from './ui/Segmentado'
 async function aplicarQr(
   raw: string,
   cargarCobro: (id: string) => Promise<void>,
@@ -499,28 +500,14 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
           Que te lo escaneen. Si ponés un monto, ya lo ven.
         </p>
         {cuentaUsd && (
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-white/10 w-full max-w-xs mb-4">
-            <button
-              type="button"
-              aria-pressed={monedaQr === 'ARS'}
-              onClick={() => cambiarMoneda('ARS')}
-              className={`rounded-lg py-2 font-body text-sm font-medium transition-colors ${
-                monedaQr === 'ARS' ? 'bg-mint text-navy' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              Pesos
-            </button>
-            <button
-              type="button"
-              aria-pressed={monedaQr === 'USD'}
-              onClick={() => cambiarMoneda('USD')}
-              className={`rounded-lg py-2 font-body text-sm font-medium transition-colors ${
-                monedaQr === 'USD' ? 'bg-mint text-navy' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              Dólares
-            </button>
-          </div>
+          <Segmentado
+            ariaLabel="Moneda del QR"
+            value={monedaQr}
+            onChange={cambiarMoneda}
+            opciones={[{ value: 'ARS', label: 'Pesos' }, { value: 'USD', label: 'Dólares' }]}
+            oscuro
+            className="max-w-xs mb-4"
+          />
         )}
         <QrConCarga value={qrMostrado} cargando={cargandoQr} />
         {cuenta?.alias && (
@@ -557,28 +544,13 @@ export function MiCodigoQr({ variante = 'pagina' }: { variante?: 'pagina' | 'ove
         Mostralo para cobrar. Si ponés un monto, el que paga ya ve esa cifra; si lo dejás vacío, la carga en el momento.
       </p>
       {cuentaUsd && (
-        <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-input dark:bg-white/5 mb-4">
-          <button
-            type="button"
-            aria-pressed={monedaQr === 'ARS'}
-            onClick={() => cambiarMoneda('ARS')}
-            className={`rounded-lg py-2 font-body text-sm font-medium transition-colors ${
-              monedaQr === 'ARS' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-            }`}
-          >
-            Pesos
-          </button>
-          <button
-            type="button"
-            aria-pressed={monedaQr === 'USD'}
-            onClick={() => cambiarMoneda('USD')}
-            className={`rounded-lg py-2 font-body text-sm font-medium transition-colors ${
-              monedaQr === 'USD' ? 'bg-mint text-navy' : 'text-slate-secondary hover:text-navy dark:hover:text-white'
-            }`}
-          >
-            Dólares
-          </button>
-        </div>
+        <Segmentado
+          ariaLabel="Moneda del QR"
+          value={monedaQr}
+          onChange={cambiarMoneda}
+          opciones={[{ value: 'ARS', label: 'Pesos' }, { value: 'USD', label: 'Dólares' }]}
+          className="mb-4"
+        />
       )}
       <QrConCarga value={qrMostrado} cargando={cargandoQr} />
       {cuenta?.alias && (
