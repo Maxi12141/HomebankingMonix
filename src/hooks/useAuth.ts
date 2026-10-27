@@ -25,8 +25,11 @@ export function useAuth() {
   useEffect(() => {
     let cancelled = false
 
-    if (esModoPrueba()) {
-      entrarModoPrueba()
+    // /prueba no espera la sesión guardada: si este celular ya tenía una cuenta
+    // con huella, esa pantalla tapaba el banco de prueba antes de entrar.
+    const abrirPrueba = window.location.pathname === '/prueba'
+    if (abrirPrueba || esModoPrueba()) {
+      entrarModoPrueba(abrirPrueba ? { reiniciarTour: true } : undefined)
       return () => { cancelled = true }
     }
 

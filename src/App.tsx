@@ -99,8 +99,10 @@ function AppRoutes() {
   const { locked, unlock } = useBiometriaLock(loading ? null : user)
   const location = useLocation()
 
+  // La prueba no pide huella: entra directo, aunque este celular tenga otra cuenta.
+  const enPrueba = esModoPrueba() || location.pathname === '/prueba'
   // El link de recuperación no debería toparse con el bloqueo por huella.
-  if (!loading && user && locked && !esModoPrueba() && location.pathname !== '/restablecer-contrasena') {
+  if (!loading && user && locked && !enPrueba && location.pathname !== '/restablecer-contrasena') {
     return <HuellaLockScreen onUnlock={unlock} />
   }
 

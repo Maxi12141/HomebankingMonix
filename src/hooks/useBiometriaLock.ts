@@ -5,6 +5,7 @@ import {
   esCelular,
   huellaActiva,
 } from '../lib/biometria'
+import { esModoPrueba } from '../lib/modoPrueba'
 
 const GRACIA_MS = 30_000
 // localStorage: al salir, Android suele matar el WebView y sessionStorage no llega al regreso.
@@ -37,7 +38,7 @@ export function useBiometriaLock(user: User | null) {
   const lockedRef = useRef(false)
 
   const [locked, setLocked] = useState(() => {
-    if (!user) return false
+    if (!user || esModoPrueba() || window.location.pathname === '/prueba') return false
     if (sessionStorage.getItem('monix_just_authed') === '1' || dentroDeGracia()) {
       sesionAbierta.current = true
       return false
@@ -47,6 +48,7 @@ export function useBiometriaLock(user: User | null) {
   lockedRef.current = locked
 
   const shouldLock = useCallback((uid: string) => {
+    if (esModoPrueba() || window.location.pathname === '/prueba') return false
     return esCelular() && huellaActiva(uid)
   }, [])
 
