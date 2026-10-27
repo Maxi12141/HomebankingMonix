@@ -70,6 +70,11 @@ const TOUR_DESKTOP: TourStep[] = [
     description: 'Las últimas operaciones. Tocá cualquiera para ver el comprobante.',
   },
   {
+    targetId: 'tour-asistente',
+    title: 'Moni, tu asistente',
+    description: 'Preguntale cómo hacer cualquier cosa del banco. Te responde por texto o por voz, y te lleva a la pantalla que necesitás.',
+  },
+  {
     targetId: 'tour-drawer-intro',
     title: 'El menú',
     description: 'Cuentas, dólares, tarjetas, préstamos y tu perfil. Todo el banco está acá; no hace falta que lo recorras ahora.',
@@ -100,6 +105,11 @@ const TOUR_MOBILE: TourStep[] = [
     targetId: 'tour-movimientos',
     title: 'Tus movimientos',
     description: 'Las últimas operaciones. Tocá cualquiera para ver el comprobante.',
+  },
+  {
+    targetId: 'tour-asistente',
+    title: 'Moni, tu asistente',
+    description: 'Preguntale cómo hacer cualquier cosa del banco. Te responde por texto o por voz, y te lleva a la pantalla que necesitás.',
   },
   {
     targetId: 'tour-drawer-intro',

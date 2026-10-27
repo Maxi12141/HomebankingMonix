@@ -101,21 +101,33 @@ export function OnboardingTour({ steps, onComplete }: Props) {
 
   useEffect(() => { measure(0) }, [measure])
 
+  const posRef = useRef(pos)
+  posRef.current = pos
+
   useLayoutEffect(() => {
-    if (!pos || !tipRef.current) return
-    const tipH = tipRef.current.offsetHeight
-    if (tipH === 0) return
+    const tip = tipRef.current
+    if (!tip) return
 
-    const { spot } = pos
-    const isLower = spot.top + spot.height / 2 > window.innerHeight * 0.55
-    const correctedTipT = isLower
-      ? Math.max(16, spot.top - tipH - 8)
-      : Math.min(spot.top + spot.height + 8, window.innerHeight - tipH - 16)
+    const apply = () => {
+      const current = posRef.current
+      if (!current) return
+      const tipH = tip.offsetHeight
+      if (tipH === 0) return
 
-    if (Math.abs(correctedTipT - pos.tip.top) > 1) {
+      const { spot } = current
+      const isLower = spot.top + spot.height / 2 > window.innerHeight * 0.55
+      const correctedTipT = isLower
+        ? Math.max(16, spot.top - tipH - 8)
+        : Math.min(spot.top + spot.height + 8, window.innerHeight - tipH - 16)
+
+      if (Math.abs(correctedTipT - current.tip.top) <= 1) return
       setPos((p) => (p ? { ...p, tip: { ...p.tip, top: correctedTipT } } : p))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    apply()
+    const observer = new ResizeObserver(apply)
+    observer.observe(tip)
+    return () => observer.disconnect()
   }, [step, pos?.spot.top, pos?.spot.height])
 
   useEffect(() => {

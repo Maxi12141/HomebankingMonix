@@ -431,6 +431,8 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
 
         {!open && !hidden && !tecladoAbierto && (
           <button
+            id="tour-asistente"
+            data-tour-fixed
             type="button"
             onClick={() => abrirChat()}
             aria-label="Abrir asistente Monix"
