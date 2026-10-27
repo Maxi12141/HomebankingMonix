@@ -3,8 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
 import { registrarEmailUid } from '../lib/biometria'
-import { entrarModoPrueba, esModoPrueba } from '../lib/modoPrueba'
-import { useSalidaPruebaStore } from '../stores/salidaPruebaStore'
+import { entrarModoPrueba, esModoPrueba, salirModoPrueba } from '../lib/modoPrueba'
 import type { Persona } from '../types'
 
 const AUTH_TIMEOUT_MS = 8000
@@ -130,7 +129,7 @@ export function useAuth() {
 
   async function logout() {
     if (esModoPrueba()) {
-      useSalidaPruebaStore.getState().abrir()
+      salirModoPrueba()
       return
     }
     await supabase.auth.signOut()

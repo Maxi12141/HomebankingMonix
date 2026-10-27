@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { Menu, Sun, Moon } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { MobileDrawer } from './MobileDrawer'
 import { Navbar } from './Navbar'
 import { MonixLogoNavbar } from '../MonixLogoNavbar'
 import { NotificationBell } from '../NotificationBell'
 import { AsistenteBubble } from '../AsistenteBubble'
 import { EscanearYPagar } from '../QrPanels'
-import { SalidaPruebaModal } from '../SalidaPruebaModal'
-import { esModoPrueba } from '../../lib/modoPrueba'
+import { CartelRegistroPrueba } from '../CensuraPrueba'
+import { esModoPrueba, pantallaCensuradaEnPrueba } from '../../lib/modoPrueba'
 import { useThemeStore } from '../../stores/themeStore'
 import { useQrScanStore } from '../../stores/qrScanStore'
 
@@ -22,6 +22,16 @@ export function PageWrapper({ children }: PageWrapperProps) {
   const { theme, toggleTheme } = useThemeStore()
   const qrOpen = useQrScanStore((s) => s.open)
   const closeQr = useQrScanStore((s) => s.close)
+  const { pathname } = useLocation()
+  const censurada = pantallaCensuradaEnPrueba(pathname)
+  const contenidoRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const nodo = contenidoRef.current
+    if (!nodo) return
+    if (censurada) nodo.setAttribute('inert', '')
+    else nodo.removeAttribute('inert')
+  }, [censurada])
 
   useEffect(() => {
     function onTourDrawer(e: Event) {
@@ -101,11 +111,21 @@ export function PageWrapper({ children }: PageWrapperProps) {
         </header>
 
         <main className="flex-1 p-6 pb-28 md:pb-6 overflow-y-auto no-scrollbar">
-          {children}
+          {censurada && (
+            <div className="sticky top-0 z-20 mb-6 flex justify-center">
+              <CartelRegistroPrueba />
+            </div>
+          )}
+          <div
+            ref={contenidoRef}
+            className={censurada ? 'pointer-events-none select-none blur-md' : undefined}
+            aria-hidden={censurada || undefined}
+          >
+            {children}
+          </div>
         </main>
         <Navbar />
-        <AsistenteBubble hidden={drawerOpen || qrOpen} />
-        <SalidaPruebaModal />
+        <AsistenteBubble hidden={drawerOpen || qrOpen || censurada} />
         {qrOpen && (
           <EscanearYPagar overlay onCerrarScan={closeQr} />
         )}

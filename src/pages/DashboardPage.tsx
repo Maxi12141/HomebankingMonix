@@ -33,6 +33,7 @@ import {
   limpiarClavesViejas,
 } from '../lib/onboarding'
 import { esModoPrueba, USUARIO_PRUEBA_ID } from '../lib/modoPrueba'
+import { CensuraPrueba } from '../components/CensuraPrueba'
 import { Monto } from '../components/ui/Monto'
 
 function formatMonto(monto: number, tipo: string, moneda: 'ARS' | 'USD') {
@@ -380,11 +381,21 @@ export function DashboardPage() {
                   else if (info.offset.x > umbral || info.velocity.x > 500) toggleCuenta(-1)
                 }}
               >
-                <SaldoCard
-                  cuenta={cuentaMostrada}
-                  interesHoy={interesHoyPorCuenta[cuentaMostrada.id] ?? 0}
-                  titulo={cuentaUSD ? (monedaActiva === 'USD' ? 'Saldo disponible en dólares' : 'Saldo disponible en pesos') : 'Saldo disponible'}
-                />
+                {esModoPrueba() && monedaActiva === 'USD' ? (
+                  <CensuraPrueba>
+                    <SaldoCard
+                      cuenta={cuentaMostrada}
+                      interesHoy={interesHoyPorCuenta[cuentaMostrada.id] ?? 0}
+                      titulo="Saldo disponible en dólares"
+                    />
+                  </CensuraPrueba>
+                ) : (
+                  <SaldoCard
+                    cuenta={cuentaMostrada}
+                    interesHoy={interesHoyPorCuenta[cuentaMostrada.id] ?? 0}
+                    titulo={cuentaUSD ? (monedaActiva === 'USD' ? 'Saldo disponible en dólares' : 'Saldo disponible en pesos') : 'Saldo disponible'}
+                  />
+                )}
               </motion.div>
             )}
           </AnimatePresence>

@@ -1,9 +1,9 @@
 import type { User } from '@supabase/supabase-js'
 import type { Cuenta, Movimiento, Persona, Reserva } from '../types'
 import { marcarUsuarioNuevo, descartarOnboarding } from './onboarding'
+import toast from 'react-hot-toast'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
-import { useSalidaPruebaStore } from '../stores/salidaPruebaStore'
 
 const MODO_PRUEBA_KEY = 'monix_modo_prueba'
 const MOSTRAR_SALDO_KEY = 'monix_mostrar_saldo'
@@ -207,6 +207,24 @@ export function entrarModoPrueba(opts?: { reiniciarTour?: boolean }) {
   }
 }
 
+/** Pantallas que en la prueba se ven, pero no se usan: el resto (transferir, QR, tarjetas, reservas) queda abierto. */
+const RUTAS_CENSURADAS = new Set([
+  '/dolares',
+  '/metas',
+  '/prestamos',
+  '/depositar',
+  '/historial',
+  '/contactos',
+  '/perfil',
+  '/promos',
+  '/cashback',
+  '/mercado-monix',
+])
+
+export function pantallaCensuradaEnPrueba(pathname: string) {
+  return esModoPrueba() && RUTAS_CENSURADAS.has(pathname)
+}
+
 export function salirModoPrueba() {
   try {
     sessionStorage.removeItem(MODO_PRUEBA_KEY)
@@ -214,14 +232,13 @@ export function salirModoPrueba() {
     /* modo privado */
   }
   descartarOnboarding()
-  useSalidaPruebaStore.getState().cerrar()
   useAuthStore.getState().clear()
   useCuentaStore.getState().clear()
 }
 
-/** Si estamos en la prueba, abre la invitación a registrarse y frena la acción real. */
+/** En la prueba no se confirman operaciones reales. No invita a registrarse: eso vive en las pantallas censuradas. */
 export function frenarSiEsPrueba() {
   if (!esModoPrueba()) return false
-  useSalidaPruebaStore.getState().abrir()
+  toast('En la prueba no se confirma esta operación.', { id: 'prueba-freno' })
   return true
 }
