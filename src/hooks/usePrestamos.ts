@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
+import { esModoPrueba } from '../lib/modoPrueba'
 import type { Cuenta, Prestamo } from '../types'
 
 /**
@@ -16,6 +17,11 @@ export function usePrestamos(cuenta: Cuenta | null) {
   const processingRef = useRef(false)
 
   const fetchAndAccrue = useCallback(async (cta: Cuenta) => {
+    if (esModoPrueba()) {
+      setPrestamos([])
+      setLoading(false)
+      return
+    }
     if (processingRef.current) return
     processingRef.current = true
     setLoading(true)

@@ -8,6 +8,8 @@ import { MonixLogoNavbar } from '../MonixLogoNavbar'
 import { NotificationBell } from '../NotificationBell'
 import { AsistenteBubble } from '../AsistenteBubble'
 import { EscanearYPagar } from '../QrPanels'
+import { SalidaPruebaModal } from '../SalidaPruebaModal'
+import { esModoPrueba } from '../../lib/modoPrueba'
 import { useThemeStore } from '../../stores/themeStore'
 import { useQrScanStore } from '../../stores/qrScanStore'
 
@@ -72,11 +74,16 @@ export function PageWrapper({ children }: PageWrapperProps) {
               >
                 <Menu size={24} />
               </button>
-              <Link to="/dashboard" aria-label="Ir al inicio" className="flex items-center py-2 -my-2">
+              <Link to="/dashboard" aria-label="Ir al inicio" className="flex items-center gap-2 py-2 -my-2">
                 <MonixLogoNavbar
                   variant={theme === 'dark' ? 'white' : 'default'}
                   className="h-7 w-auto"
                 />
+                {esModoPrueba() && (
+                  <span className="rounded-full bg-mint/15 text-mint font-body text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5">
+                    Prueba
+                  </span>
+                )}
               </Link>
             </div>
 
@@ -98,6 +105,7 @@ export function PageWrapper({ children }: PageWrapperProps) {
         </main>
         <Navbar />
         <AsistenteBubble hidden={drawerOpen || qrOpen} />
+        <SalidaPruebaModal />
         {qrOpen && (
           <EscanearYPagar overlay onCerrarScan={closeQr} />
         )}

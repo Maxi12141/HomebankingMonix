@@ -22,6 +22,8 @@ import { useBiometriaLock } from './hooks/useBiometriaLock'
 import { useCuenta } from './hooks/useCuenta'
 import { useSyncTransferenciasEntrantes } from './hooks/useSyncTransferenciasEntrantes'
 import { HuellaLockScreen } from './components/HuellaLockScreen'
+import { PruebaEntrada } from './pages/PruebaEntrada'
+import { esModoPrueba } from './lib/modoPrueba'
 
 // Cada pantalla va en su propio chunk y se baja al visitarla. Landing y Login
 // quedan en la carga inicial porque son la puerta de entrada.
@@ -69,6 +71,7 @@ function PantallaCargando() {
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
+  if (esModoPrueba()) return <>{children}</>
   if (loading) return null
   return user ? <>{children}</> : <Navigate to="/" replace />
 }
@@ -97,7 +100,7 @@ function AppRoutes() {
   const location = useLocation()
 
   // El link de recuperación no debería toparse con el bloqueo por huella.
-  if (!loading && user && locked && location.pathname !== '/restablecer-contrasena') {
+  if (!loading && user && locked && !esModoPrueba() && location.pathname !== '/restablecer-contrasena') {
     return <HuellaLockScreen onUnlock={unlock} />
   }
 
@@ -109,6 +112,7 @@ function AppRoutes() {
       <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />
       <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
       <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
+      <Route path="/prueba" element={<PruebaEntrada />} />
       <Route path="/recuperar-contrasena" element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
       <Route path="/restablecer-contrasena" element={<ResetPasswordPage />} />
       <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />

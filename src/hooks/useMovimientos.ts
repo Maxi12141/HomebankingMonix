@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
+import { esModoPrueba, movimientosPrueba } from '../lib/modoPrueba'
 import type { Movimiento } from '../types'
 
 export function useMovimientos(limit?: number) {
@@ -13,6 +14,12 @@ export function useMovimientos(limit?: number) {
   const monedaPorCuenta = new Map(cuentas.map((c) => [c.id, c.moneda]))
 
   const fetchMovimientos = useCallback(async () => {
+    if (esModoPrueba()) {
+      const todos = movimientosPrueba()
+      setMovimientos(limit ? todos.slice(0, limit) : todos)
+      setLoading(false)
+      return
+    }
     if (!cuentaIds) {
       setMovimientos([])
       // Solo salimos de loading si useCuenta() ya respondió (con éxito, vacío o error).

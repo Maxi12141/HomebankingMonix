@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
 import { registrarEmailUid } from '../lib/biometria'
+import { entrarModoPrueba, esModoPrueba } from '../lib/modoPrueba'
+import { useSalidaPruebaStore } from '../stores/salidaPruebaStore'
 import type { Persona } from '../types'
 
 const AUTH_TIMEOUT_MS = 8000
@@ -24,12 +26,21 @@ export function useAuth() {
   useEffect(() => {
     let cancelled = false
 
+    if (esModoPrueba()) {
+      entrarModoPrueba()
+      return () => { cancelled = true }
+    }
+
     // En un reload en frío (p. ej. "pull to refresh" en el celular, o volver
     // de background) la red puede tardar un instante en estar lista —
     // reintentamos una vez antes de dar la sesión por perdida, para no
     // expulsar a alguien con una sesión guardada válida por un hueco de red
     // de un segundo.
     async function restaurarSesion(intento = 1): Promise<void> {
+      if (esModoPrueba()) {
+        entrarModoPrueba()
+        return
+      }
       try {
         const { data: { session } } = await withTimeout(
           supabase.auth.getSession(),
@@ -37,6 +48,10 @@ export function useAuth() {
           'Tiempo agotado al restaurar la sesión',
         )
         if (cancelled) return
+        if (esModoPrueba()) {
+          entrarModoPrueba()
+          return
+        }
         setUser(session?.user ?? null)
         if (session?.user) {
           if (session.user.email) registrarEmailUid(session.user.email, session.user.id)
@@ -52,6 +67,10 @@ export function useAuth() {
           return
         }
         console.error('Error al restaurar la sesión:', err)
+        if (esModoPrueba()) {
+          entrarModoPrueba()
+          return
+        }
         clear()
         clearCuenta()
         setLoading(false)
@@ -61,6 +80,10 @@ export function useAuth() {
     void restaurarSesion()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (esModoPrueba()) {
+        entrarModoPrueba()
+        return
+      }
       setUser(session?.user ?? null)
       if (session?.user) {
         if (session.user.email) registrarEmailUid(session.user.email, session.user.id)
@@ -106,6 +129,10 @@ export function useAuth() {
   }
 
   async function logout() {
+    if (esModoPrueba()) {
+      useSalidaPruebaStore.getState().abrir()
+      return
+    }
     await supabase.auth.signOut()
   }
 

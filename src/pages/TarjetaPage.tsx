@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button'
 import { MonixCard3D, buildPan, buildCvv } from '../components/MonixCard3D'
 import { setTarjetaFlags } from '../services/cobrosQr'
 import { mensajeError } from '../lib/errores'
+import { frenarSiEsPrueba } from '../lib/modoPrueba'
 
 function freezeKey(cuentaId: string) {
   return `monix_card_frozen_${cuentaId}`
@@ -35,6 +36,7 @@ export function TarjetaPage() {
   }, [cuentaMostrada?.id, cuentaMostrada?.tarjeta_congelada])
 
   async function toggleFreeze() {
+    if (frenarSiEsPrueba()) return
     if (!cuentaMostrada?.id) return
     const next = !frozen
     const prevLocal = localStorage.getItem(freezeKey(cuentaMostrada.id))

@@ -213,6 +213,22 @@ export function LandingPage() {
           </motion.p>
 
           <motion.div variants={itemVariants} className="flex flex-col items-center gap-4 lg:items-start">
+            <Link to="/prueba">
+              <SpecularButton
+                size="md"
+                radius={12}
+                tint="#26FFC1"
+                tintOpacity={1}
+                textColor="#001A3D"
+                lineColor={theme === 'dark' ? '#FFFFFF' : '#007A5A'}
+                baseColor="#001A3D"
+                idleIntensity={0.5}
+                className="font-body font-semibold"
+              >
+                Probar el banco
+                <ArrowRight size={18} />
+              </SpecularButton>
+            </Link>
             <Link to="/register">
               <SpecularButton
                 size="md"

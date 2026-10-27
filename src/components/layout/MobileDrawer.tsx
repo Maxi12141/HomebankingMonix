@@ -1,6 +1,7 @@
 import { NavLink, Link } from 'react-router-dom'
 import { LayoutDashboard, ArrowRightLeft, History, User, LogOut, X, PiggyBank, BookUser, CreditCard, Landmark, Repeat, HandCoins, DollarSign, ArrowDown, Target } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { esModoPrueba } from '../../lib/modoPrueba'
 import { useThemeStore } from '../../stores/themeStore'
 import { MonixLogoNavbar } from '../MonixLogoNavbar'
 
@@ -83,7 +84,7 @@ export function MobileDrawer({ onClose }: Props) {
         className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-body font-medium text-sm text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-[transform,background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:translate-x-1 shrink-0"
       >
         <LogOut size={18} />
-        Cerrar sesión
+        {esModoPrueba() ? 'Salir de la prueba' : 'Cerrar sesión'}
       </button>
     </div>
   )

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
 import { useAuthStore } from '../store/authStore'
+import { CUENTA_PRUEBA_ARS_ID, CUENTA_PRUEBA_USD_ID, esModoPrueba } from '../lib/modoPrueba'
 import type { Cuenta } from '../types'
 
 /**
@@ -86,7 +87,7 @@ function useCuentaRealtime() {
   const cuentaIds = cuentas.map((c) => c.id).join(',')
 
   useEffect(() => {
-    if (!cuentaIds) return
+    if (!cuentaIds || esModoPrueba()) return
     return retainCuentaRealtime(cuentaIds.split(','))
   }, [cuentaIds])
 }
@@ -142,6 +143,15 @@ export function useCuenta() {
   useCuentaRealtime()
 
   useEffect(() => {
+    if (esModoPrueba()) {
+      setInteresHoy(186.3)
+      setInteresHoyPorCuenta({
+        [CUENTA_PRUEBA_ARS_ID]: 186.3,
+        [CUENTA_PRUEBA_USD_ID]: 0.02,
+      })
+      setCuentasLoaded(true)
+      return
+    }
     if (userId) fetchCuentas(userId)
   }, [userId])
 
@@ -167,6 +177,7 @@ export function useCuenta() {
   }
 
   async function refreshCuenta() {
+    if (esModoPrueba()) return
     if (user) await fetchCuentas(user.id)
   }
 

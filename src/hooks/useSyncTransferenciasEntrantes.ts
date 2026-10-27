@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
+import { esModoPrueba } from '../lib/modoPrueba'
 
 // Candado de módulo: la sync corre desde App (CuentasGlobales) y también desde
 // la pantalla del QR mientras espera un pago. El servidor ya no acredita dos
@@ -23,6 +24,7 @@ export function sincronizarTransferenciasEntrantes(): Promise<void> {
 // sincronizar-entrantes (S-1, docs/auditoria-2026-10.md): el navegador ya no
 // puede escribir saldos, y así tampoco puede inventarse una transferencia.
 async function sincronizar() {
+  if (esModoPrueba()) return
   const { cuentas, triggerRefresh } = useCuentaStore.getState()
   if (cuentas.length === 0) return
   try {

@@ -12,6 +12,7 @@ import { useTransferenciasRecientes } from '../hooks/useTransferenciasRecientes'
 import { useMercadoFinanciero } from '../hooks/useMercadoFinanciero'
 import { formatMonto } from '../utils/cuenta'
 import { esCelular } from '../lib/biometria'
+import { frenarSiEsPrueba } from '../lib/modoPrueba'
 import { comprobantePdfFile, compartirArchivo, downloadComprobante, precargarComprobante, puedeCompartirArchivos } from '../utils/comprobante'
 import { AgendaContactosPanel } from '../components/AgendaContactosPanel'
 import { PageWrapper } from '../components/layout/PageWrapper'
@@ -304,6 +305,7 @@ export function TransferPage() {
   }
 
   async function handleConfirm() {
+    if (frenarSiEsPrueba()) return
     if (!destinatario || !cuentaOrigen) return
     if (!cuentaOrigen.cbu) { setError('Tu cuenta no tiene CBU asignado. Contactá al soporte.'); return }
 

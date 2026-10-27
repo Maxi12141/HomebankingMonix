@@ -16,6 +16,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useCuenta } from '../hooks/useCuenta'
 import { useCuentaStore } from '../store/cuentaStore'
 import { useAuthStore } from '../store/authStore'
+import { frenarSiEsPrueba } from '../lib/modoPrueba'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
 import { IconoExito } from '../components/ui/IconoExito'
@@ -116,6 +117,7 @@ export function MercadoMonixPage() {
   }
 
   async function confirmarCompra() {
+    if (frenarSiEsPrueba()) return
     if (!cuenta || !producto) return
     if (cantidad < 1) {
       setError('Elegí al menos 1 unidad')

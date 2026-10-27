@@ -13,6 +13,7 @@ import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
+import { frenarSiEsPrueba } from '../lib/modoPrueba'
 
 type Step = 'form' | 'success'
 
@@ -57,6 +58,7 @@ export function DepositPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (frenarSiEsPrueba()) return
     if (!cuentaDestino) {
       setError('No encontramos tu cuenta. Probá recargar.')
       return

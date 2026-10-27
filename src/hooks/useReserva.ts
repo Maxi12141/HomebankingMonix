@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { esModoPrueba, reservaPrueba } from '../lib/modoPrueba'
 import type { Reserva } from '../types'
 
 function roundMoney(n: number) {
@@ -23,6 +24,12 @@ export function useReserva(cuentaId?: string | null) {
   const [interesHoy, setInteresHoy] = useState(0)
 
   const ensureAndAccrue = useCallback(async (id: string) => {
+    if (esModoPrueba()) {
+      setReserva(reservaPrueba())
+      setInteresHoy(18.4)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
       // Alta (si no existe) y rendimiento del día, en el servidor (S-1,

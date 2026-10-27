@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { esModoPrueba } from '../lib/modoPrueba'
 
 export interface TransferenciaReciente {
   nombre: string
@@ -14,7 +15,7 @@ export function useTransferenciasRecientes(cuentaId: string | undefined, limit =
   const [recientes, setRecientes] = useState<TransferenciaReciente[]>([])
 
   useEffect(() => {
-    if (!cuentaId) {
+    if (!cuentaId || esModoPrueba()) {
       setRecientes([])
       return
     }

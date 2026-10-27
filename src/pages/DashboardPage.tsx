@@ -32,6 +32,7 @@ import {
   hayTourPendiente,
   limpiarClavesViejas,
 } from '../lib/onboarding'
+import { esModoPrueba, USUARIO_PRUEBA_ID } from '../lib/modoPrueba'
 import { Monto } from '../components/ui/Monto'
 
 function formatMonto(monto: number, tipo: string, moneda: 'ARS' | 'USD') {
@@ -293,9 +294,13 @@ export function DashboardPage() {
   const cuentasLoaded = useCuentaStore((st) => st.cuentasLoaded)
   const bankNames = useBankNames(movimientos)
 
-  const [showWelcome, setShowWelcome] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(
+    () => esModoPrueba() && hayBienvenidaPendiente(USUARIO_PRUEBA_ID),
+  )
   const [selectedMovimiento, setSelectedMovimiento] = useState<Movimiento | null>(null)
-  const [showTour, setShowTour] = useState(false)
+  const [showTour, setShowTour] = useState(
+    () => esModoPrueba() && hayTourPendiente(USUARIO_PRUEBA_ID),
+  )
   const [monedaActiva, setMonedaActiva] = useState<'ARS' | 'USD'>('ARS')
   const [direction, setDirection] = useState(1)
 
@@ -322,6 +327,11 @@ export function DashboardPage() {
 
   function handleTourComplete() {
     if (user) completarTour(user.id)
+    try {
+      sessionStorage.setItem('monix_prueba_tour_visto', '1')
+    } catch {
+      /* modo privado */
+    }
     setShowTour(false)
   }
 
@@ -335,10 +345,15 @@ export function DashboardPage() {
       >
         <motion.h1
           variants={itemVariants}
-          className="font-display text-2xl font-semibold text-navy dark:text-white mb-6"
+          className={`font-display text-2xl font-semibold text-navy dark:text-white ${esModoPrueba() ? 'mb-2' : 'mb-6'}`}
         >
           Hola, {persona?.nombre ?? ''}
         </motion.h1>
+        {esModoPrueba() && (
+          <motion.p variants={itemVariants} className="font-body text-sm text-slate-secondary mb-6">
+            Estás en el banco de prueba. El saldo, el bono y los movimientos son de muestra.
+          </motion.p>
+        )}
 
         {/* Saldo principal */}
         <motion.div variants={itemVariants} id="tour-saldo" className="relative mb-6">

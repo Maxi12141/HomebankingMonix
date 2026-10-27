@@ -11,6 +11,7 @@ import { Input } from './ui/Input'
 import { QrBox } from './QrBox'
 import { QrScannerFullscreen } from './QrScannerFullscreen'
 import { formatMonto } from '../utils/cuenta'
+import { frenarSiEsPrueba } from '../lib/modoPrueba'
 import { encodeCobroQr, encodeCuentaQr, parseQrPayload } from '../lib/tokens'
 import { decodeJwt } from 'jose'
 import {
@@ -866,6 +867,7 @@ export function EscanearYPagar({
   }
 
   async function pagarCobro() {
+    if (frenarSiEsPrueba()) return
     if (!cobro) return
     setLoading(true)
     setError('')
@@ -889,6 +891,7 @@ export function EscanearYPagar({
   }
 
   async function pagarCuenta() {
+    if (frenarSiEsPrueba()) return
     if (!destino) return
     const n = parseMonto(montoLibre)
     if (isNaN(n) || n <= 0) {

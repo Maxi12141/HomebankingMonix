@@ -10,6 +10,7 @@ import { MetasAyuda } from '../components/MetasAyuda'
 import { compartirTexto } from '../utils/compartir'
 import { useCuenta } from '../hooks/useCuenta'
 import { formatMonto } from '../utils/cuenta'
+import { esModoPrueba, frenarSiEsPrueba } from '../lib/modoPrueba'
 import {
   aportarMetaComun,
   crearMetaComun,
@@ -68,6 +69,11 @@ export function MetasPage() {
   const [copiado, setCopiado] = useState(false)
 
   async function cargarLista() {
+    if (esModoPrueba()) {
+      setLista([])
+      setCargando(false)
+      return
+    }
     setCargando(true)
     setError('')
     try {
@@ -115,6 +121,7 @@ export function MetasPage() {
 
   async function onCrear(e: React.FormEvent) {
     e.preventDefault()
+    if (frenarSiEsPrueba()) return
     setEnviando(true)
     setError('')
     try {
@@ -139,6 +146,7 @@ export function MetasPage() {
 
   async function onUnirse(e: React.FormEvent) {
     e.preventDefault()
+    if (frenarSiEsPrueba()) return
     setEnviando(true)
     setError('')
     try {
@@ -156,6 +164,7 @@ export function MetasPage() {
 
   async function onAportar(e: React.FormEvent) {
     e.preventDefault()
+    if (frenarSiEsPrueba()) return
     if (!detalle || !cuentaArs) return
     const n = parseMonto(monto)
     setEnviando(true)
@@ -176,6 +185,7 @@ export function MetasPage() {
 
   async function onInvitar(e: React.FormEvent) {
     e.preventDefault()
+    if (frenarSiEsPrueba()) return
     if (!detalle) return
     setEnviando(true)
     setError('')
@@ -192,6 +202,7 @@ export function MetasPage() {
   }
 
   async function onProponer(tipo: 'pagar' | 'devolver') {
+    if (frenarSiEsPrueba()) return
     if (!detalle) return
     setEnviando(true)
     setError('')
@@ -217,6 +228,7 @@ export function MetasPage() {
   }
 
   async function onVotar(aFavor: boolean) {
+    if (frenarSiEsPrueba()) return
     if (!detalle?.votacion) return
     setEnviando(true)
     setError('')

@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/authStore'
 import { useCuenta } from '../hooks/useCuenta'
 import { usePrestamos } from '../hooks/usePrestamos'
 import { consultarSituacion } from '../services/bancoCentral'
+import { esModoPrueba, frenarSiEsPrueba } from '../lib/modoPrueba'
 import {
   addMonths, calcularCuota, calcularOferta, calcularTablaAmortizacion,
   nivelPorSituacion, type FilaAmortizacion,
@@ -53,6 +54,11 @@ export function PrestamosPage() {
   // nuevo al refrescar la sesión, y antes eso volvía todo a "estimado" y
   // repetía la consulta (la pantalla titilaba entre los dos valores).
   useEffect(() => {
+    if (esModoPrueba()) {
+      setSituacion(1)
+      setSituacionError(false)
+      return
+    }
     if (!dni) return
     let vigente = true
     setSituacion(situacionPorDni.get(dni) ?? null)
@@ -111,6 +117,7 @@ export function PrestamosPage() {
         : null
 
   async function solicitar() {
+    if (frenarSiEsPrueba()) return
     if (!persona || !cuenta) return
     setError('')
 

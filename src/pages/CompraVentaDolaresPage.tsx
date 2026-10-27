@@ -16,6 +16,7 @@ import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
+import { frenarSiEsPrueba } from '../lib/modoPrueba'
 
 type Modo = 'comprar' | 'vender'
 type Step = 'form' | 'success'
@@ -59,6 +60,7 @@ export function CompraVentaDolaresPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (frenarSiEsPrueba()) return
     if (!cuenta || !cuentaUSD || !precio) return
     if (isNaN(montoUsd) || montoUsd <= 0) {
       setError('Ingresá un monto en dólares válido')

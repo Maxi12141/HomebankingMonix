@@ -26,6 +26,7 @@ import {
 import { pedirTodosLosPermisos } from '../lib/permisos'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
+import { frenarSiEsPrueba } from '../lib/modoPrueba'
 
 export function ProfilePage() {
   const { persona, user, setPersona } = useAuthStore()
@@ -90,6 +91,7 @@ export function ProfilePage() {
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault()
+    if (frenarSiEsPrueba()) return
     if (!persona) return
     setSavingProfile(true)
 
@@ -123,6 +125,7 @@ export function ProfilePage() {
 
   async function handleSaveAlias(e: React.FormEvent) {
     e.preventDefault()
+    if (frenarSiEsPrueba()) return
     if (!cuenta?.cbu) return
     setSavingAlias(true)
     setAliasError('')
@@ -155,6 +158,7 @@ export function ProfilePage() {
 
   async function handleSaveCredito(e: React.FormEvent) {
     e.preventDefault()
+    if (frenarSiEsPrueba()) return
     if (!persona) return
     setSavingCredito(true)
 
@@ -175,6 +179,7 @@ export function ProfilePage() {
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault()
+    if (frenarSiEsPrueba()) return
     setPassError('')
 
     if (newPass.length < 6) {
@@ -208,6 +213,7 @@ export function ProfilePage() {
   }
 
   async function toggleBiometria() {
+    if (frenarSiEsPrueba()) return
     if (!user || !persona) return
     if (bioActiva) {
       setSavingBio(true)
@@ -235,6 +241,7 @@ export function ProfilePage() {
   }
 
   async function confirmarYActivar() {
+    if (frenarSiEsPrueba()) return
     if (!user || !persona) return
     setSavingBio(true)
     setConfirmError('')
@@ -265,6 +272,7 @@ export function ProfilePage() {
   }
 
   async function permitirDispositivos() {
+    if (frenarSiEsPrueba()) return
     setSavingPermisos(true)
     try {
       await pedirTodosLosPermisos()

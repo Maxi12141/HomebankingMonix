@@ -13,6 +13,7 @@ import { Modal } from '../components/ui/Modal'
 import { compartirTexto, textoDatosCuenta } from '../utils/compartir'
 import type { Cuenta, Persona } from '../types'
 import { Monto } from '../components/ui/Monto'
+import { frenarSiEsPrueba } from '../lib/modoPrueba'
 import { mensajeError } from '../lib/errores'
 
 type Estado = 'idle' | 'confirmar' | 'abriendo'
@@ -90,6 +91,7 @@ export function CuentasPage() {
   const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')
 
   async function solicitarUSD() {
+    if (frenarSiEsPrueba()) return
     if (!persona) return
     setEstado('abriendo')
     setError('')
