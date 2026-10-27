@@ -188,8 +188,8 @@ export function LandingPage() {
       <MarketTicker />
 
       {/* Hero */}
-      <section className="overflow-hidden px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-20">
-        <div className="max-w-6xl mx-auto grid items-center gap-6 lg:grid-cols-2 lg:gap-12 md:min-h-[60vh]">
+      <section className="overflow-hidden px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-20 lg:pt-8 lg:pb-8">
+        <div className="max-w-6xl mx-auto grid items-center gap-6 lg:grid-cols-2 lg:gap-12 md:min-h-[60vh] lg:min-h-[48vh]">
         <motion.div
           className="w-full max-w-xl mx-auto text-center lg:mx-0 lg:text-left"
           variants={containerVariants}
