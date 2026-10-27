@@ -34,7 +34,7 @@ const enVista = {
 
 const cifras = [
   { valor: '$0', texto: 'de mantenimiento' },
-  { valor: 'Hasta 8%', texto: 'de cashback en comercios adheridos' },
+  { valor: '8%', texto: 'de cashback en nuestra tienda' },
   { valor: '5 min', texto: 'para abrir tu cuenta' },
   { valor: '24/7', texto: 'tu banco en el celular' },
 ]
@@ -81,7 +81,7 @@ const preguntas = [
   { p: '¿Es seguro?', r: 'Sí. La app se abre con tu huella o tu clave, cada operación queda registrada y tus datos viajan cifrados.' },
   { p: '¿Puedo transferir a otros bancos?', r: 'Sí, a cualquier CBU, CVU o alias del país, las 24 horas, y la plata llega al instante.' },
   { p: '¿Cómo compro dólares?', r: 'Desde la app, al precio del dólar MEP. Los dólares quedan en tu cuenta en USD, sin límite de saldo.' },
-  { p: '¿Cómo funciona el cashback?', r: 'Te devolvemos hasta el 8% en comercios adheridos: 8% en mercadoMONIX, 5% en Estaciones Full, 4% en shoppings partners y 3% en Restós MONIX.' },
+  { p: '¿Cómo funciona el cashback?', r: 'Te devolvemos el 8% de cada compra en mercadoMONIX, nuestra tienda. Se acredita en tu cuenta.' },
   { p: '¿Hay que descargar una app?', r: 'Podés usar Monix desde el navegador o instalarla en tu celular: en Android tocá "Instalar app", y en iPhone, Compartir y "Agregar a Inicio".' },
 ]
 
@@ -128,11 +128,11 @@ const products = [
     etiqueta: 'Crédito',
     badge: 'Crédito',
     title: 'Tarjeta Monix',
-    subtitle: 'Hasta 8% de cashback en adheridos',
+    subtitle: '8% de cashback en nuestra tienda',
     features: [
       'Hasta $800.000 de límite inicial',
       '3 y 6 cuotas sin interés en comercios adheridos',
-      'Hasta 8% de cashback en comercios adheridos',
+      '8% de cashback en nuestra tienda',
       'Resumen digital, sin papel',
       'Sin costo el primer año',
     ],
@@ -208,7 +208,7 @@ export function LandingPage() {
             variants={itemVariants}
             className="font-body text-lg text-slate-secondary leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0"
           >
-            Pesos, dólares y hasta 8% de cashback en una sola app.
+            Pesos, dólares y 8% de cashback en nuestra tienda en una sola app.
             Abrís tu cuenta online en 5 minutos, sin costo.
           </motion.p>
 
