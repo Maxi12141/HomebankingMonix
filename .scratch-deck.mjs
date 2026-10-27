@@ -31,7 +31,7 @@ const BLOB = {
   registro: 'f51468b58a29da21c12b8de10194b136', transferir: 'c9d3e141d9e985c39cf4e69ec945237d',
   qrSitio: '89cb6d3a9077fbc8cd0f3225d5e6f614', saldo: 'd8fe3d34fa4c44ffdb111ef41c253e40',
   reservas: 'a9b2aa9e67a6686ab21e8d21d01df3d3', tarjeta: '7aaafd011d5a5beccbe766c45a96af0a',
-  logo: 'c3ba5810fc8ecc9b0fecc700b1d810e9',
+  logo: 'c3ba5810fc8ecc9b0fecc700b1d810e9', tarjeta3d: '265183dbff243a543a2e1fbea4df1006', qrPrueba: '6c81d98e34fd0aa2967706376beba9c6',
 }
 // Para la vista previa: de qué archivo local sale cada blob
 const LOCAL = {
@@ -41,8 +41,20 @@ const LOCAL = {
   bgMoni: 'deck-assets/bg-centro-moni.png', qr: 'deck-assets/crop-qr.png', prestamo: 'deck-assets/crop-prestamo.png',
   registro: 'deck-assets/crop-registro.png', transferir: 'deck-assets/crop-transferir.png', qrSitio: 'deck-assets/qr-sitio.png',
   saldo: 'capturas/card-saldo.png', reservas: 'capturas/card-reservas.png', tarjeta: 'capturas/card-tarjeta.png',
+  tarjeta3d: 'deck-assets/tarjeta-3d.png', qrPrueba: 'deck-assets/qr-prueba.png',
 }
 const img = (k) => `/_blob/${BLOB[k]}`
+
+// Animaciones traídas de la Landing. El formato sólo anima elementos fijos (position:absolute), así que
+// lo que va en el flujo se marca con stag(), se mide en la vista previa y se fija en el mismo lugar.
+const STAG = {}
+let stagN = 0
+function stag(html, opt = {}) {
+  const k = `st${stagN++}`
+  const h = html.replace(/^<([\w-]+) /, `<$1 data-stagger="${k}" `)
+  STAG[k] = { html: h, ...opt }
+  return h
+}
 
 const SECTION = `background:${NAVY}; color:${TXT}; font-family:'Inter', sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column`
 const backdrop = (k, alt) => `<img src="${img(k)}" alt="${alt}" style="position:absolute; left:0px; top:0px; width:1920px; height:1080px; object-fit:cover">`
@@ -50,20 +62,22 @@ const footer = (n) => `<p style="position:absolute; left:128px; bottom:64px; wid
 const kicker = (t) => `<p style="font-family:${DISPLAY}; font-size:30px; font-weight:700; line-height:1.3; letter-spacing:3px; text-transform:uppercase; color:${MINT}">${t}</p>`
 const title = (t) => `<h2 style="font-family:${DISPLAY}; font-size:80px; font-weight:800; line-height:1.1; letter-spacing:-1px; color:#FFFFFF">${t}</h2>`
 const lead = (t) => `<p style="font-size:36px; line-height:1.4; color:${SOFT}">${t}</p>`
-const benefit = (ic, t) => `<div style="display:flex; align-items:center; gap:28px"><div style="width:88px; height:88px; border-radius:24px; background:${CARD}; border:1px solid ${LINE}; display:flex; align-items:center; justify-content:center">${icon(ic, MINT, 44, '')}</div><p style="flex:1; font-size:34px; line-height:1.3; color:${ROW}">${t}</p></div>`
+const benefit = (ic, t) => stag(`<div style="display:flex; align-items:center; gap:28px"><div style="width:88px; height:88px; border-radius:24px; background:${CARD}; border:1px solid ${LINE}; display:flex; align-items:center; justify-content:center">${icon(ic, MINT, 44, '')}</div><p style="flex:1; font-size:34px; line-height:1.3; color:${ROW}">${t}</p></div>`)
 const benefits = (rows) => `<div style="display:flex; flex-direction:column; gap:28px">${rows.map(([i, t]) => benefit(i, t)).join('')}</div>`
 const column = (w, inner) => `<div style="width:${w}px; display:flex; flex-direction:column; gap:32px">${inner}</div>`
 const shot = (k, alt, l, t, w, h, order, frame = true) => `<img src="${img(k)}" alt="${alt}" data-build-in="pop ${order}" style="position:absolute; left:${l}px; top:${t}px; width:${w}px; height:${h}px; object-fit:contain; border-radius:36px;${frame ? ` border:2px solid ${LINE};` : ''} box-shadow:0 40px 90px rgba(0,0,0,0.55)">`
 
 const slides = {}
 
-slides.cover = `<section id="cover" data-transition="fade" style="${SECTION.replace('padding:128px 128px 160px', 'padding:128px 128px 160px; align-items:center; justify-content:center; gap:56px')}">
-${backdrop('bgCover', 'Cards de la app Monix difuminadas de fondo')}
-<img src="${img('logo')}" alt="Logo de Monix" style="width:720px; height:180px; object-fit:contain">
-<h1 style="width:1664px; font-family:${DISPLAY}; font-size:92px; font-weight:800; line-height:1.1; letter-spacing:-1px; color:#FFFFFF; text-align:center">Banca de verdad, <span style="color:${MINT}">desde tu celular.</span></h1>
-<p style="width:1500px; font-size:42px; line-height:1.4; color:${SOFT}; text-align:center">Cuenta, QR, préstamos y ahorro en una sola app.</p>
-<p style="position:absolute; left:128px; bottom:64px; width:1664px; font-size:24px; font-weight:600; color:${MUTED}; text-align:center">Práctica Profesionalizante I · Maximiliano Turaglio · Diego Urenda</p>
-<aside>Abrir con la promesa: todo lo que hace un banco, en el celular y sin sucursal. Las cards del fondo son pantallas reales de la app.</aside>
+// Portada: arranca en negro, el fondo aparece solo en degradé y cada clic suma un texto
+slides.cover = `<section id="cover" data-transition="fade" style="${SECTION.replace(`background:${NAVY}`, 'background:#000000').replace('padding:128px 128px 160px', 'padding:128px 128px 160px; align-items:center; justify-content:center; gap:56px')}">
+<div style="position:absolute; left:0px; top:0px; width:1920px; height:1080px; background:radial-gradient(ellipse at 50% 45%, #0D2B52 0%, #001A3D 45%, #000000 100%)" data-build-in="fade 1 auto"></div>
+${backdrop('bgCover', 'Cards de la app Monix difuminadas de fondo').replace('<img ', '<img data-build-in="fade 2 auto" ')}
+${stag(`<img src="${img('logo')}" alt="Logo de Monix" style="width:720px; height:180px; object-fit:contain">`, { build: 'fade 3' })}
+${stag(`<h1 style="width:1664px; font-family:${DISPLAY}; font-size:92px; font-weight:800; line-height:1.1; letter-spacing:-1px; color:#FFFFFF; text-align:center">Banca de verdad, <span style="color:${MINT}">desde tu celular.</span></h1>`, { build: 'rise 4' })}
+${stag(`<p style="width:1500px; font-size:42px; line-height:1.4; color:${SOFT}; text-align:center">Cuenta, QR, préstamos y ahorro en una sola app.</p>`, { build: 'rise 5' })}
+<p data-build-in="fade 6 auto" style="position:absolute; left:128px; bottom:64px; width:1664px; font-size:24px; font-weight:600; color:${MUTED}; text-align:center">Práctica Profesionalizante I · Maximiliano Turaglio · Diego Urenda</p>
+<aside>La diapositiva arranca en negro y el fondo aparece solo. Clic 1: el logo. Clic 2: la frase. Clic 3: el subtítulo, y los nombres entran solos. Abrir con la promesa: todo lo que hace un banco, en el celular y sin sucursal. Las cards del fondo son pantallas reales de la app.</aside>
 </section>`
 
 slides.s01 = `<section id="s01" data-transition="fade" style="${SECTION}">
@@ -143,7 +157,7 @@ ${footer('05')}
 <aside>Monix consulta la situación del cliente en la central de deudores que comparten los bancos del curso, y con eso arma la oferta: tasa, monto máximo y cantidad de cuotas. Se pone el monto, se elige el plazo y aparece la cuota. Con "Ver esquema de pago" se ve cuánto es interés y cuánto capital cada mes.</aside>
 </section>`
 
-const metaCard = (ic, h, t) => `<div style="display:flex; flex-direction:column; gap:20px; background:${CARD}; border:1px solid ${LINE}; border-top:6px solid ${MINT}; border-radius:24px; padding:36px 30px">${icon(ic, MINT, 60, '')}<h3 style="font-family:${DISPLAY}; font-size:38px; font-weight:700; line-height:1.2; color:#FFFFFF">${h}</h3><p style="font-size:32px; line-height:1.4; color:#B0C0D6">${t}</p></div>`
+const metaCard = (ic, h, t) => stag(`<div style="display:flex; flex-direction:column; gap:20px; background:${CARD}; border:1px solid ${LINE}; border-top:6px solid ${MINT}; border-radius:24px; padding:36px 30px">${icon(ic, MINT, 60, '')}<h3 style="font-family:${DISPLAY}; font-size:38px; font-weight:700; line-height:1.2; color:#FFFFFF">${h}</h3><p style="font-size:32px; line-height:1.4; color:#B0C0D6">${t}</p></div>`)
 slides.s06 = `<section id="s06" data-transition="fade" style="${SECTION}; gap:32px">
 ${backdrop('bgMetas', 'Fondo azul noche con la card de Reservas difuminada')}
 ${kicker('Metas comunes')}
@@ -168,7 +182,7 @@ ${column(900,kicker('Tarjeta y beneficios') + title('Tu débito, con promos y ca
   ['shopping-bag', 'Precios exclusivos en nuestra tienda'],
   ['tag', 'Promos en súper, cines y viajes'],
 ]))}
-${shot('tarjeta', 'Tarjeta de débito Monix a nombre de Lucía Demo', 1060, 128, 732, 505, 1, false)}
+<img src="${img('tarjeta3d')}" alt="Tarjeta de débito Monix a nombre de Lucía Demo, inclinada en 3D" data-build-in="pop 1" style="position:absolute; left:1060px; top:128px; width:732px; height:505px; object-fit:contain">
 <div style="position:absolute; left:1060px; top:664px; width:732px; display:flex; gap:20px" data-build-in="rise 2">
 ${tile('8%', 'tienda oficial', 1.2)}
 ${tile('5%', 'combustible')}
@@ -212,23 +226,19 @@ ${footer('08')}
 <aside>Avanzar con clic: primero aparece la pregunta, después los puntitos de "escribiendo" y por último la respuesta con el atajo. Moni usa los datos reales de la cuenta, por eso dice el saldo con el nombre. En vivo se le puede preguntar "¿cómo pido un préstamo?" o "¿qué TNA tiene Reservas?".</aside>
 </section>`
 
-slides.end = `<section id="end" data-transition="fade" style="${SECTION.replace('padding:128px 128px 160px', 'padding:128px 128px 160px; align-items:center; justify-content:center; gap:48px')}">
+// Cierre: el QR al banco de prueba ocupa todo el alto posible para escanearlo desde el asiento
+slides.end = `<section id="end" data-transition="fade" style="${SECTION.replace('padding:128px 128px 160px', 'padding:128px 128px 160px; justify-content:center; gap:40px')}">
 ${backdrop('bgCierre', 'Cards de la app Monix difuminadas de fondo')}
-<img src="${img('logo')}" alt="Logo de Monix" style="width:440px; height:110px; object-fit:contain">
-<h1 style="font-family:${DISPLAY}; font-size:96px; font-weight:800; line-height:1.1; letter-spacing:-1px; color:#FFFFFF; text-align:center">Probalo hoy</h1>
-<div style="display:flex; align-items:center; gap:56px">
-<img src="${img('qrSitio')}" alt="Código QR que abre monix-homebanking.vercel.app" style="width:380px; height:380px; object-fit:contain; border-radius:28px; box-shadow:0 30px 70px rgba(0,0,0,0.5)">
-<div style="width:820px; display:flex; flex-direction:column; gap:22px">
-<p style="font-size:36px; line-height:1.4; color:${SOFT}">Escaneá el código y abrí tu cuenta en</p>
-<p style="font-family:${DISPLAY}; font-size:48px; font-weight:700; line-height:1.2; color:${MINT}">monix-homebanking.vercel.app</p>
-<p style="font-size:36px; line-height:1.4; color:${SOFT}">Se instala como app en el celular, sin pasar por ninguna tienda.</p>
+<img src="${img('logo')}" alt="Logo de Monix" style="width:400px; height:100px; object-fit:contain">
+<h1 style="width:744px; font-family:${DISPLAY}; font-size:96px; font-weight:800; line-height:1.1; letter-spacing:-1px; color:#FFFFFF">Probalo ahora!</h1>
+<div style="width:744px; display:flex; flex-direction:column; gap:24px">
+<p style="font-size:40px; line-height:1.35; color:${SOFT}">Escaneá el código y recorré la app por dentro, <span style="color:${MINT}">sin registrarte.</span></p>
+<p style="font-size:34px; line-height:1.4; color:${SOFT}">Te guiamos paso a paso. Los saldos son de ejemplo: tocá todo sin miedo.</p>
 </div>
-</div>
-<p style="position:absolute; left:128px; bottom:64px; width:1664px; font-size:24px; font-weight:600; color:${MUTED}; text-align:center">¡Gracias! · Práctica Profesionalizante I · Maximiliano Turaglio · Diego Urenda</p>
-<aside>Dejar el QR en pantalla mientras se abren las preguntas: quien lo escanee entra directo y puede registrarse en el momento, con el bono de bienvenida.</aside>
+<img src="${img('qrPrueba')}" alt="Código QR para recorrer la app Monix sin registrarse" style="position:absolute; left:936px; top:80px; width:920px; height:920px; object-fit:contain; border-radius:32px; box-shadow:0 30px 80px rgba(0,0,0,0.5)">
+<p style="position:absolute; left:128px; bottom:64px; width:744px; font-size:24px; font-weight:600; color:${MUTED}">¡Gracias! · Maximiliano Turaglio · Diego Urenda</p>
+<aside>Dejar el QR en pantalla mientras se abren las preguntas. Quien lo escanee entra directo a la app, sin cuenta ni contraseña: primero ve el bono de bienvenida y con "Ver cómo funciona" arranca el recorrido guiado. Saldos y movimientos son de ejemplo. Al salir, la app invita a abrir la cuenta de verdad.</aside>
 </section>`
-
-for (const [id, html] of Object.entries(slides)) fs.writeFileSync(`${SLIDES}/${id}.html`, html + '\n')
 
 // Vista previa: mismas reglas del lienzo (sin márgenes, border-box, sin notas)
 const toLocal = (h) => h.replace(/\/_blob\/([0-9a-f]{32})/g, (_, id) => {
@@ -236,12 +246,39 @@ const toLocal = (h) => h.replace(/\/_blob\/([0-9a-f]{32})/g, (_, id) => {
   return k === 'logo' ? `file:///${S}/deck-assets/logo-blanco.png` : `file:///${S}/${LOCAL[k]}`
 })
 const order = ['cover', 's01', 's02', 's03', 's04', 's05', 's06', 's07', 's08', 'end']
-const page = `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+const page = () => `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
 <style>body{margin:0;background:#000} section{position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box} section *{margin:0;box-sizing:border-box} aside{display:none} section > :not([style*="position:absolute"]):not(aside){position:relative}</style>
 ${order.map(id => toLocal(slides[id])).join('\n')}`
-fs.writeFileSync(`${PREV}/preview.html`, page)
 const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1920, height: 1080 } })
-await p.goto(`file:///${PREV}/preview.html`); await p.waitForTimeout(2500)
+
+// Pasada 1: medir dónde cae cada elemento marcado con el diseño en flujo
+fs.writeFileSync(`${PREV}/preview.html`, page())
+await p.goto(`file:///${PREV}/preview.html`); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(1000)
+const rects = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-stagger]')].map(el => {
+  const r = el.getBoundingClientRect(), s = el.closest('section').getBoundingClientRect()
+  return [el.dataset.stagger, { x: Math.round(r.left - s.left), y: Math.round(r.top - s.top), w: Math.ceil(r.width), h: Math.ceil(r.height) }]
+})))
+
+// Pasada 2: cada marcado deja un hueco del mismo tamaño en el flujo y se fija encima, con su build.
+// Los automáticos (rise 1 auto, 2 auto…) entran escalonados como en la Landing; los builds por clic que ya había van después.
+function fijar(html) {
+  const ks = [...html.matchAll(/data-stagger="(st\d+)"/g)].map(m => m[1])
+  const autos = ks.filter(k => !STAG[k].build && !STAG[k].noBuild).length
+  if (autos) html = html.replace(/data-build-in="(\w+) (\d+)"/g, (_, t, n) => `data-build-in="${t} ${+n + autos}"`)
+  let i = 0, fijos = ''
+  for (const k of ks) {
+    const s = STAG[k], r = rects[k]
+    html = html.replace(s.html, `<div style="width:${r.w}px; height:${r.h}px"></div>`)
+    const build = s.noBuild ? '' : ` data-build-in="${s.build ?? `rise ${++i} auto`}"`
+    fijos += '\n' + s.html.replace(` data-stagger="${k}"`, build).replace(/style="([^"]*)"/, (_, st) =>
+      `style="position:absolute; left:${r.x}px; top:${r.y}px; width:${r.w}px; height:${r.h}px; ${st.replace(/(^|;\s*)(width|height):[^;]*/g, '$1').replace(/;\s*;/g, ';').replace(/^[;\s]+/, '')}"`)
+  }
+  return html.replace('\n<aside>', () => fijos + '\n<aside>')
+}
+for (const id of order) slides[id] = fijar(slides[id])
+for (const [id, html] of Object.entries(slides)) fs.writeFileSync(`${SLIDES}/${id}.html`, html + '\n')
+fs.writeFileSync(`${PREV}/preview.html`, page())
+await p.goto(`file:///${PREV}/preview.html`); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(3500)
 // Detecta texto que se sale de su caja o cajas que pisan el pie
 const problemas = await p.evaluate(() => {
   const out = []
