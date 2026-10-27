@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
 import { registrarEmailUid } from '../lib/biometria'
-import { entrarModoPrueba, esModoPrueba, salirModoPrueba } from '../lib/modoPrueba'
+import { entrarModoPrueba, esModoPrueba, salirModoPrueba, soltarPruebaEnEntradaReal } from '../lib/modoPrueba'
 import type { Persona } from '../types'
 
 const AUTH_TIMEOUT_MS = 8000
@@ -25,12 +25,13 @@ export function useAuth() {
   useEffect(() => {
     let cancelled = false
 
+    soltarPruebaEnEntradaReal()
+
     // /prueba no espera la sesión guardada: si este celular ya tenía una cuenta
     // con huella, esa pantalla tapaba el banco de prueba antes de entrar.
     const abrirPrueba = window.location.pathname === '/prueba'
     if (abrirPrueba || esModoPrueba()) {
       entrarModoPrueba(abrirPrueba ? { reiniciarTour: true } : undefined)
-      return () => { cancelled = true }
     }
 
     // En un reload en frío (p. ej. "pull to refresh" en el celular, o volver
@@ -79,7 +80,7 @@ export function useAuth() {
       }
     }
 
-    void restaurarSesion()
+    if (!esModoPrueba()) void restaurarSesion()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (esModoPrueba()) {
@@ -96,9 +97,15 @@ export function useAuth() {
       }
     })
 
+    function alSalirDeLaPrueba() {
+      if (!cancelled) void restaurarSesion()
+    }
+    window.addEventListener('monix-salir-prueba', alSalirDeLaPrueba)
+
     return () => {
       cancelled = true
       subscription.unsubscribe()
+      window.removeEventListener('monix-salir-prueba', alSalirDeLaPrueba)
     }
   }, [])
 

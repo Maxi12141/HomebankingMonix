@@ -82,7 +82,8 @@ export function useBiometriaLock(user: User | null) {
     if (!user) return
 
     function alSalir() {
-      if (lockedRef.current) return
+      // La prueba no cuenta como "acabo de usar el banco": si no, al volver a tu cuenta no pide huella.
+      if (lockedRef.current || esModoPrueba()) return
       guardarMarca()
     }
 
@@ -109,7 +110,7 @@ export function useBiometriaLock(user: User | null) {
   }, [user, shouldLock])
 
   useEffect(() => {
-    if (!user || locked) return
+    if (!user || locked || esModoPrueba()) return
     marcarActivo()
     const id = window.setInterval(marcarActivo, 5_000)
     return () => window.clearInterval(id)

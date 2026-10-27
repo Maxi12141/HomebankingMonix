@@ -225,15 +225,30 @@ export function pantallaCensuradaEnPrueba(pathname: string) {
   return esModoPrueba() && RUTAS_CENSURADAS.has(pathname)
 }
 
-export function salirModoPrueba() {
+function olvidarBanderaPrueba() {
   try {
     sessionStorage.removeItem(MODO_PRUEBA_KEY)
   } catch {
     /* modo privado */
   }
   descartarOnboarding()
-  useAuthStore.getState().clear()
   useCuentaStore.getState().clear()
+}
+
+/** Inicio, login y registro son el banco real: no siguen en la prueba de esta pestaña. */
+export function soltarPruebaEnEntradaReal() {
+  const path = window.location.pathname
+  const puerta = path === '/' || path === '/login' || path === '/register'
+  if (!puerta || !esModoPrueba()) return
+  olvidarBanderaPrueba()
+}
+
+export function salirModoPrueba() {
+  olvidarBanderaPrueba()
+  useAuthStore.getState().clear()
+  // La prueba había tapado la sesión real. Hay que volver a cargarla para que la huella pida desbloqueo.
+  useAuthStore.getState().setLoading(true)
+  window.dispatchEvent(new Event('monix-salir-prueba'))
 }
 
 /** En la prueba no se confirman operaciones reales. No invita a registrarse: eso vive en las pantallas censuradas. */
