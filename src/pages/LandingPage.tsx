@@ -48,17 +48,17 @@ const beneficios = [
   {
     icon: QrCode,
     title: 'Cobrás con QR',
-    description: 'Generás tu código, te escanean y la plata entra al instante. Sin posnet ni comisiones.',
+    description: 'Generás tu código, te escanean y el dinero entra al instante. Sin posnet ni comisiones.',
   },
   {
     icon: PiggyBank,
     title: 'Ahorrás con un objetivo',
-    description: 'Armá metas solo o con amigos y separá plata en reservas que rinden todos los días.',
+    description: 'Armá metas solo o con amigos y separá dinero en reservas que rinden todos los días.',
   },
   {
     icon: Fingerprint,
-    title: 'Tu plata bajo llave',
-    description: 'La app se abre con tu huella y cada movimiento queda registrado con su comprobante.',
+    title: 'Tu dinero bajo llave',
+    description: 'La app se abre con el desbloqueo de tu celular y cada movimiento queda registrado con su comprobante.',
   },
 ]
 
@@ -75,13 +75,18 @@ const testimonios = [
 ]
 
 const preguntas = [
-  { p: '¿Tiene algún costo?', r: 'No. Abrir la cuenta, mantenerla y usar la tarjeta de débito es gratis. La tarjeta de crédito no tiene costo el primer año.' },
-  { p: '¿Cuánto tarda la apertura?', r: 'Unos 5 minutos. Te registrás, validás tu identidad con el DNI y ya tenés tu CBU y tu alias para operar.' },
+  { p: '¿Tiene algún costo?', r: 'No. Abrir la cuenta, mantenerla y usar la tarjeta de débito es gratis.' },
+  { p: '¿Cuánto tarda la apertura?', r: 'Unos 5 minutos. Te registrás con tu DNI y tu mail, y ya tenés tu CBU y tu alias para operar.' },
   { p: '¿Qué necesito para abrir la cuenta?', r: 'Ser mayor de 18 años, tener DNI argentino vigente y un mail. Nada más.' },
-  { p: '¿Es seguro?', r: 'Sí. La app se abre con tu huella o tu clave, cada operación queda registrada y tus datos viajan cifrados.' },
-  { p: '¿Puedo transferir a otros bancos?', r: 'Sí, a cualquier CBU, CVU o alias del país, las 24 horas, y la plata llega al instante.' },
-  { p: '¿Cómo compro dólares?', r: 'Desde la app, al precio del dólar MEP. Los dólares quedan en tu cuenta en USD, sin límite de saldo.' },
+  { p: '¿Es seguro?', r: 'Sí. La app se abre con el desbloqueo de tu celular o con tu clave, cada operación queda registrada y tus datos viajan cifrados.' },
+  { p: '¿Puedo transferir a otros bancos?', r: 'Sí, por CBU o alias a los bancos de la red, las 24 horas, y el dinero llega al instante.' },
+  { p: '¿Cómo compro dólares?', r: 'Desde la app, al precio del dólar oficial. Los dólares quedan en tu cuenta en USD, sin límite de saldo.' },
   { p: '¿Cómo funciona el cashback?', r: 'Te devolvemos el 8% de cada compra en mercadoMONIX, nuestra tienda. Se acredita en tu cuenta.' },
+  { p: '¿Para quién es Monix?', r: 'Para quien quiere resolver todo desde el celular, sin ir a una sucursal: cobrar, transferir, ahorrar, comprar dólares y juntar dinero con amigos.' },
+  { p: '¿Qué tiene Monix que no tengan otros?', r: 'Tu dinero rinde 32% anual desde el primer día, sin hacer nada: en noviembre de 2026, el plazo fijo mejor pago del mercado estaba en 24%. Además, con las metas comunes juntás dinero en grupo, todos ven quién puso cuánto y sale sólo si la mayoría aprueba.' },
+  { p: '¿Cómo gana dinero Monix?', r: 'Con la diferencia entre lo que paga por los ahorros y lo que cobra por los préstamos, y con las ventas de mercadoMONIX. El bono de bienvenida y el cashback son la inversión para sumar clientes.' },
+  { p: '¿De dónde salen el dólar y las tasas?', r: 'Del mercado y en vivo. Comprás y vendés al dólar oficial del momento, y el precio lo controla el servidor en cada operación.' },
+  { p: '¿Monix es un banco real?', r: 'Es un proyecto de la Práctica Profesionalizante de Maximiliano Turaglio y Diego Urenda. Funciona de punta a punta en una red de bancos del curso, con un Banco Central simulado, y no opera con dinero real.' },
   { p: '¿Hay que descargar una app?', r: 'Podés usar Monix desde el navegador o instalarla en tu celular: en Android tocá "Instalar app", y en iPhone, Compartir y "Agregar a Inicio".' },
 ]
 
@@ -114,9 +119,9 @@ const products = [
     subtitle: 'Sin límite de saldo',
     features: [
       'Ahorrá y operá en dólares',
-      'Cotización dólar MEP competitiva',
+      'Cotización del dólar oficial, actualizada en vivo',
       'Sin costo de apertura ni mantenimiento',
-      'Transferencias internacionales SWIFT',
+      'Comprá y vendé desde la app, sin trámites',
       'Disponible 24 hs, los 365 días',
     ],
     cta: 'Abrí tu cuenta en USD',
@@ -201,7 +206,7 @@ export function LandingPage() {
             className="font-display text-[1.85rem] sm:text-[2.25rem] lg:text-[3.25rem] font-bold text-navy dark:text-white leading-[1.12] mb-5 sm:mb-6 text-balance"
           >
             La tarjeta que da vuelta tu forma de manejar{' '}
-            <span className="whitespace-nowrap underline decoration-mint decoration-[6px] underline-offset-[10px] dark:text-mint dark:no-underline">la plata.</span>
+            <span className="whitespace-nowrap underline decoration-mint decoration-[6px] underline-offset-[10px] dark:text-mint dark:no-underline">el dinero.</span>
           </motion.h1>
 
           <motion.p

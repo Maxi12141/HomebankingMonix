@@ -52,7 +52,7 @@ const TOUR_DESKTOP: TourStep[] = [
   {
     targetId: 'tour-saldo',
     title: 'Tu saldo',
-    description: 'Acá ves cuánta plata tenés. Se actualiza solo con cada transferencia, depósito o pago.',
+    description: 'Acá ves cuánto dinero tenés. Se actualiza solo con cada transferencia, depósito o pago.',
   },
   {
     targetId: 'tour-acciones',
@@ -62,7 +62,7 @@ const TOUR_DESKTOP: TourStep[] = [
   {
     targetId: 'tour-reservas',
     title: 'Reservas',
-    description: 'Separá plata de tu saldo y hacela rendir con interés diario.',
+    description: 'Separá dinero de tu saldo y hacela rendir con interés diario.',
   },
   {
     targetId: 'tour-movimientos',
@@ -86,7 +86,7 @@ const TOUR_MOBILE: TourStep[] = [
   {
     targetId: 'tour-saldo',
     title: 'Tu saldo',
-    description: 'Acá ves cuánta plata tenés. Se actualiza solo con cada transferencia, depósito o pago.',
+    description: 'Acá ves cuánto dinero tenés. Se actualiza solo con cada transferencia, depósito o pago.',
   },
   {
     targetId: 'tour-acciones-mobile',
@@ -99,7 +99,7 @@ const TOUR_MOBILE: TourStep[] = [
   {
     targetId: 'tour-reservas',
     title: 'Reservas',
-    description: 'Separá plata de tu saldo y hacela rendir con interés diario.',
+    description: 'Separá dinero de tu saldo y hacela rendir con interés diario.',
   },
   {
     targetId: 'tour-movimientos',
@@ -114,7 +114,7 @@ const TOUR_MOBILE: TourStep[] = [
   {
     targetId: 'tour-drawer-intro',
     title: 'El menú',
-    description: 'Desde acá entras a cuentas, dólares, tarjetas, préstamos y tu perfil. Un vistazo alcanza: el resto lo vas a ir usando cuando lo necesites.',
+    description: 'Desde acá entrás a cuentas, dólares, tarjetas, préstamos y tu perfil. Un vistazo alcanza: el resto lo vas a ir usando cuando lo necesites.',
     openDrawer: true,
   },
 ]

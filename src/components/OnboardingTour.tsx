@@ -201,7 +201,7 @@ export function OnboardingTour({ steps, onComplete }: Props) {
               />
             ))}
           </div>
-          <span className="font-body text-2xs text-white/40 tabular-nums">
+          <span className="font-body text-2xs text-white/70 tabular-nums">
             {step + 1}/{steps.length}
           </span>
         </div>
@@ -217,7 +217,7 @@ export function OnboardingTour({ steps, onComplete }: Props) {
             <h3 className="font-display text-base font-semibold text-white mb-1.5">
               {steps[step].title}
             </h3>
-            <p className="font-body text-sm text-slate-secondary mb-4 leading-relaxed">
+            <p className="font-body text-sm text-white/80 mb-4 leading-relaxed">
               {steps[step].description}
             </p>
           </motion.div>
@@ -227,7 +227,7 @@ export function OnboardingTour({ steps, onComplete }: Props) {
           <button
             type="button"
             onClick={onComplete}
-            className="font-body text-xs text-slate-secondary hover:text-white/70 transition-colors"
+            className="font-body text-xs text-white/70 hover:text-white transition-colors"
           >
             Omitir
           </button>
