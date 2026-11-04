@@ -29,3 +29,6 @@ tests/e2e/screens/
 
 # Build temporal para Lighthouse (npm run check:perf)
 .perf/
+
+# Scripts sueltos de una sola vez (capturas, armado de piezas)
+.scratch-*
