@@ -12,7 +12,7 @@ import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 const MIGRACIONES = [
   'reservas', 'cuentas_interes', 'cuentas_moneda', 'personas_credito', 'personas_situacion_crediticia',
   'prestamos', 'policies', 'cobros_qr', 'depositar', 'transferencia_atomica', 'fix_transferencia_bc_id',
-  's1_rpc_saldos',
+  's1_rpc_saldos', 'cotizacion_dolar',
 ]
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), 'utf8')
 
@@ -211,4 +211,51 @@ test('transferencias entrantes: sólo el servidor acredita, una vez por transacc
   // Monix → Monix ya la registra transferir_entre_cuentas: acá se ignora.
   assert.equal((await comoServicio(db, sql, [CUENTA_A, 'bc-124', 100, 7, 'Juan', 'Pérez', '1', 'CBU-B', 'juan.perez'])).rows[0].ok, false)
   assert.equal(await saldo(db, CUENTA_A), 105000)
+})
+
+const transferir = (db, uid, op, origen, cbu, montoOrigen, montoDestino) => como(
+  db, uid, 'select public.transferir_entre_cuentas($1, $2, $3, $4, $5, $6, $7)',
+  [`20000000-0000-4000-8000-00000000000${op}`, origen, cbu, montoOrigen, montoDestino, 'Varios', null],
+)
+const cotizar = (db) => db.exec(`insert into private.cotizacion_dolar (casa, compra, venta) values ('oficial', 1500, 1550)`)
+
+test('transferencia en la misma moneda: el destino recibe lo que sale del origen', async () => {
+  const db = await nuevaBase({ revocar: true })
+  await transferir(db, A, 1, CUENTA_A, 'CBU-B', 1, -40000)
+  assert.equal(await saldo(db, CUENTA_B), 50001) // no le descuenta a la cuenta ajena
+  await transferir(db, A, 2, CUENTA_A, 'CBU-B', 1, 1000000)
+  assert.equal(await saldo(db, CUENTA_B), 50002) // no crea dinero
+  assert.equal(await saldo(db, CUENTA_A), 99998)
+})
+
+test('transferencia entre monedas: el servidor controla el precio', async () => {
+  const db = await nuevaBase({ revocar: true })
+  await cotizar(db)
+  const usd = (await como(db, B, 'select public.abrir_cuenta_usd($1, $2, $3) as id', ['0005', 'CBU-USD', 'juan.usd'])).rows[0].id
+  await assert.rejects(transferir(db, A, 1, CUENTA_A, 'CBU-USD', 1000, 1000), /cotización del dólar cambió/)
+  await assert.rejects(transferir(db, A, 2, CUENTA_A, 'CBU-USD', 1000, -1), /Monto invalido/)
+  await transferir(db, A, 3, CUENTA_A, 'CBU-USD', 15500, 10)
+  assert.equal(await saldo(db, usd), 10)
+  assert.equal(await saldo(db, CUENTA_A), 84500)
+})
+
+test('compra y venta de dólares: el servidor controla el precio', async () => {
+  const db = await nuevaBase({ revocar: true })
+  const usd = (await como(db, A, 'select public.abrir_cuenta_usd($1, $2, $3) as id', ['0005', 'CBU-USD', 'sol.usd'])).rows[0].id
+  const convertir = (op, ars, dolares, modo) => como(
+    db, A, 'select public.convertir_moneda_propia($1, $2, $3, $4, $5, $6, $7)',
+    [`20000000-0000-4000-8000-00000000000${op}`, CUENTA_A, usd, ars, dolares, modo, 'Cambio'],
+  )
+  await assert.rejects(convertir(1, 15500, 10, 'comprar'), /No pudimos verificar la cotización/) // sin precio no opera
+  await cotizar(db)
+  await assert.rejects(convertir(2, 1, 1000, 'comprar'), /cotización del dólar cambió/)
+  await convertir(3, 15500, 10, 'comprar')
+  assert.equal(await saldo(db, usd), 10)
+  assert.equal(await saldo(db, CUENTA_A), 84500)
+  await assert.rejects(convertir(4, 1000000, 1, 'vender'), /cotización del dólar cambió/)
+  await convertir(5, 15000, 10, 'vender')
+  assert.equal(await saldo(db, usd), 0)
+  assert.equal(await saldo(db, CUENTA_A), 99500)
+  await db.exec(`update private.cotizacion_dolar set actualizada_en = now() - interval '8 days'`)
+  await assert.rejects(convertir(6, 15500, 10, 'comprar'), /No pudimos verificar la cotización/) // precio viejo tampoco
 })

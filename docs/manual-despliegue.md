@@ -201,6 +201,8 @@ Archivos en `supabase/*.sql`, aplicados a mano en el SQL Editor (no hay runner d
 | 13 | `fix_transferencia_bc_id.sql` | Redefine `private.transferir_entre_cuentas`: la entrada de una transferencia Monix → Monix va sin `bc_transaccion_id`. Sin esto, toda transferencia entre cuentas Monix falla con 409. Va después de `transferencia_atomica.sql` |
 | 14 | `s1_rpc_saldos.sql` | S-1, paso 1 (aditivo): una RPC `SECURITY DEFINER` por cada escritura de saldo y `depositar_en_cuenta` como `SECURITY DEFINER`. Ver §7.7 |
 | 15 | `s1_revocar_escrituras.sql` | S-1, paso 3: el cliente deja de poder escribir saldos. **Sólo después de desplegar el front de S-1** (§7.7) |
+| 16 | `cotizacion_dolar.sql` | El servidor valida los montos de transferencias y conversiones: en la misma moneda el destino recibe lo que sale del origen, y entre monedas se controla el precio contra `private.cotizacion_dolar` |
+| 17 | `cotizacion_dolar_cron.sql` | Activa `http` y `pg_cron`, y actualiza el dólar oficial cada 10 minutos. Sin esto, comprar y vender dólares falla porque no hay precio de referencia |
 
 **Base que viene de una versión anterior** (con Monix Cerca, el pago NFC con la tarjeta o la tabla `cobros_nfc`): correr una vez `docs/monix-limpieza-base.sql` antes de publicar el código. Borra lo retirado y renombra `cobros_nfc` a `cobros_qr` conservando datos, RLS y Realtime, en una sola transacción. En un proyecto nuevo no hace falta. En la base actual ya está aplicado (2026-10-05), igual que el n.º 13.
 
