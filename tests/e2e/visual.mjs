@@ -539,7 +539,8 @@ prueba('Accesibilidad (axe, WCAG 2.1 AA): violaciones serias o críticas', async
     for (const ruta of rutas) {
       await page.goto(ruta)
       await pasarLoader(page)
-      await page.waitForTimeout(800)
+      // Las filas entran escalonadas: antes de los 3 s, axe mide colores a medio aparecer.
+      await page.waitForTimeout(3000)
       const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
       for (const v of r.violations) {
         if (v.impact === 'serious' || v.impact === 'critical') encontradas.push(`${ruta} ${v.id} → ${v.nodes.map((n) => n.target.join(' ')).join(' | ').slice(0, 140)}`)

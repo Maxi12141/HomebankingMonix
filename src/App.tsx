@@ -16,21 +16,21 @@ import { LoadingScreen } from './components/LoadingScreen'
 import { MissingEnvScreen } from './components/MissingEnvScreen'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { LandingPage } from './pages/LandingPage'
-import { LoginPage } from './pages/LoginPage'
 import { MovimientosSkeleton } from './components/ui/Skeleton'
 import { useBiometriaLock } from './hooks/useBiometriaLock'
 import { useCuenta } from './hooks/useCuenta'
 import { useSyncTransferenciasEntrantes } from './hooks/useSyncTransferenciasEntrantes'
-import { HuellaLockScreen } from './components/HuellaLockScreen'
-import { PruebaEntrada } from './pages/PruebaEntrada'
 import { esModoPrueba } from './lib/modoPrueba'
 
-// Cada pantalla va en su propio chunk y se baja al visitarla. Landing y Login
-// quedan en la carga inicial porque son la puerta de entrada.
+// Cada pantalla va en su propio chunk y se baja al visitarla. La Landing queda
+// en la carga inicial porque es la puerta de entrada.
 const pagina = <K extends string>(cargar: () => Promise<Record<K, ComponentType>>, nombre: K) =>
   lazy(() => cargar().then((m) => ({ default: m[nombre] })))
 const cargarDashboard = () => import('./pages/DashboardPage')
 const DashboardPage = pagina(cargarDashboard, 'DashboardPage')
+const HuellaLockScreen = lazy(() => import('./components/HuellaLockScreen').then((m) => ({ default: m.HuellaLockScreen })))
+const LoginPage = pagina(() => import('./pages/LoginPage'), 'LoginPage')
+const PruebaEntrada = pagina(() => import('./pages/PruebaEntrada'), 'PruebaEntrada')
 const RegisterPage = pagina(() => import('./pages/RegisterPage'), 'RegisterPage')
 const TransferPage = pagina(() => import('./pages/TransferPage'), 'TransferPage')
 const MetasPage = pagina(() => import('./pages/MetasPage'), 'MetasPage')
@@ -103,7 +103,7 @@ function AppRoutes() {
   const enPrueba = esModoPrueba() || location.pathname === '/prueba'
   // El link de recuperación no debería toparse con el bloqueo por huella.
   if (!loading && user && locked && !enPrueba && location.pathname !== '/restablecer-contrasena') {
-    return <HuellaLockScreen onUnlock={unlock} />
+    return <Suspense fallback={null}><HuellaLockScreen onUnlock={unlock} /></Suspense>
   }
 
   return (
