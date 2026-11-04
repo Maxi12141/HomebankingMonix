@@ -235,9 +235,6 @@ export function LandingPage() {
                 <ArrowRight size={18} />
               </SpecularButton>
             </Link>
-            <p className="font-body text-sm text-slate-secondary">
-              <span className="font-semibold text-navy dark:text-white">+120.000 personas</span> ya usan Monix · 4,8 ★ en las tiendas
-            </p>
           </motion.div>
 
           {mostrarInstalar && (
@@ -387,7 +384,6 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <motion.div className="text-center mb-12" {...enVista}>
             <h2 className="font-display text-3xl font-bold text-navy dark:text-white mb-3">Lo que dicen nuestros clientes</h2>
-            <p className="font-body text-slate-secondary text-lg">4,8 ★ de promedio en las tiendas de apps.</p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
