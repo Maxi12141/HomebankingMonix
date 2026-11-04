@@ -1,5 +1,7 @@
 import { formatMonto } from '../utils/cuenta'
 
+import { respuestaGastos, type GastosDelMes } from '../utils/respuestaGastos'
+
 export interface AsistenteCtx {
   nombre?: string
   saldoARS?: number
@@ -9,7 +11,7 @@ export interface AsistenteCtx {
   cbu?: string | null
   saldoReserva?: number | null
   tasaReserva?: number | null
-  gastosMes?: { total: number; mayorCategoria: string | null; mayorTotal: number } | null
+  gastosMes?: GastosDelMes | null
 }
 
 export interface AsistenteReply {
@@ -27,7 +29,7 @@ export interface Topic {
   keywords: string[]
   extra: string[]
   weak?: string[]
-  answers: (ctx: AsistenteCtx) => string[]
+  answers: (ctx: AsistenteCtx, pregunta: string) => string[]
 }
 
 export const SUGERENCIAS = [
@@ -187,18 +189,10 @@ export const TOPICS: Topic[] = [
     id: 'gastos',
     href: '/gastos',
     hrefLabel: 'Ver mis gastos',
-    phrases: ['en que gaste', 'cuanto gaste', 'mis gastos', 'en que se me fue', 'gaste mas', 'estadistica de gastos'],
-    keywords: ['gaste', 'gastos', 'gasto', 'gastando', 'estadisticas', 'estadistica'],
+    phrases: ['en que gaste', 'cuanto gaste', 'mis gastos', 'en que se me fue', 'gaste mas', 'gaste menos', 'gaste en', 'gaste el mes', 'llevo gastado', 'estadistica de gastos'],
+    keywords: ['gaste', 'gastos', 'gasto', 'gastando', 'gastado', 'estadisticas', 'estadistica'],
     extra: ['concepto', 'categoria', 'mes'],
-    answers: (ctx) => {
-      const g = ctx.gastosMes
-      if (g?.mayorCategoria) {
-        return [
-          `Este mes gastaste ${formatMonto(g.total, 'ARS')}. Lo que más pesó fue ${g.mayorCategoria}: ${formatMonto(g.mayorTotal, 'ARS')}.`,
-        ]
-      }
-      return ['En Mis gastos ves en qué se fue tu dinero cada mes, ordenado por concepto. Este mes todavía no tenés gastos registrados.']
-    },
+    answers: (ctx, pregunta) => [respuestaGastos(pregunta, ctx.gastosMes, (m) => formatMonto(m, 'ARS'))],
   },
   {
     id: 'historial',

@@ -111,7 +111,7 @@ function elegirTexto(texts: string[], q: string, turn: number) {
 }
 
 function replyFrom(topic: Topic, ctx: AsistenteCtx, seed: string, turn: number): AsistenteReply {
-  const texts = topic.answers(ctx)
+  const texts = topic.answers(ctx, seed)
   return {
     text: elegirTexto(texts, seed, turn),
     href: topic.href,
@@ -179,7 +179,7 @@ export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: Asiste
       second.topic.id !== best.topic.id
     ) {
       const a = replyFrom(best.topic, ctx, q, turn)
-      const bTexts = second.topic.answers(ctx)
+      const bTexts = second.topic.answers(ctx, q)
       return {
         ...a,
         text: `${a.text}\n\n${pick(bTexts, q, turn + 1)}`,
@@ -197,7 +197,7 @@ export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: Asiste
     const hint = near.map((r) => r.topic.hrefLabel ?? r.topic.id).join(' o ')
     return {
       ...replyFrom(best.topic, ctx, q, turn),
-      text: `${pick(best.topic.answers(ctx), q, turn)} Si no era eso, capaz buscabas ${hint}.`,
+      text: `${pick(best.topic.answers(ctx, q), q, turn)} Si no era eso, capaz buscabas ${hint}.`,
     }
   }
 
