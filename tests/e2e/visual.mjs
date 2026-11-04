@@ -81,6 +81,12 @@ async function mockear(page, { demoraCuentasMs = 0, rpcFalla = false, cuentasExt
       if (fn === 'acreditar_interes_cuentas') return r.fulfill({ json: [] })
       if (fn === 'mover_reserva') return r.fulfill({ json: { saldo_cuenta: cuenta.saldo - 1000, saldo_reserva: 1000 } })
       if (fn === 'cobrar_cuotas_prestamos') return r.fulfill({ json: cuenta.saldo })
+      if (fn === 'mis_sesiones') {
+        return r.fulfill({ json: [
+          { id: 's1', creada: ahora, ultimo_uso: ahora, user_agent: 'Mozilla/5.0 (Windows NT 10.0) Chrome/130.0 Safari/537.36', actual: true },
+          { id: 's2', creada: ahora, ultimo_uso: ahora, user_agent: 'Mozilla/5.0 (Linux; Android 14) Chrome/130.0 Mobile Safari/537.36', actual: false },
+        ] })
+      }
       if (fn === 'preparar_reserva') {
         return r.fulfill({ json: { reserva: { id: 'r1', cuenta_id: 'c-ars', saldo: 0, tasa_anual: 32, ultima_interes_at: ahora, created_at: ahora }, interes: 0 } })
       }

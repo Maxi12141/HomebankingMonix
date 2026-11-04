@@ -12,6 +12,7 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
+import { SesionesActivas } from '../components/SesionesActivas'
 import {
   activarBiometria,
   borrarCredencialBio,
@@ -203,7 +204,9 @@ export function ProfilePage() {
     if (!error) {
       // La huella usa esta misma contraseña para el login rápido (ver credencialBioParaEmail).
       if (bioActiva) guardarCredencialBio(user?.email ?? persona!.email, newPass)
-      toast.success('Contraseña actualizada correctamente')
+      // Verificar la contraseña actual abrió una sesión nueva: esto cierra la anterior y cualquier otro dispositivo.
+      await supabase.auth.signOut({ scope: 'others' })
+      toast.success('Contraseña actualizada. Cerramos tu cuenta en los demás dispositivos.')
       setCurrentPass('')
       setNewPass('')
     } else {
@@ -527,6 +530,8 @@ export function ProfilePage() {
             </Button>
           </form>
         </Card>
+
+        <SesionesActivas />
 
         {/* Cambiar contraseña */}
         <Card className="p-8">

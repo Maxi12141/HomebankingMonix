@@ -160,7 +160,7 @@ export const TOPICS: Topic[] = [
     id: 'transferir',
     href: '/transferir',
     hrefLabel: 'Ir a Transferir',
-    phrases: ['enviar dinero', 'mandar dinero', 'mando dinero', 'mandar plata', 'mando plata', 'como transfiero', 'hacer una transferencia', 'enviar plata', 'giro al instante'],
+    phrases: ['enviar dinero', 'mandar dinero', 'mando dinero', 'mandar plata', 'como mando plata', 'como transfiero', 'hacer una transferencia', 'enviar plata', 'giro al instante'],
     keywords: ['transferir', 'transferencia', 'transfiero', 'enviar', 'mandar', 'destinatario'],
     extra: ['cbu', 'alias', 'motivo', 'inmediata', '24', 'amigo', 'familiar', 'servicio', 'factura'],
     weak: ['giro'],
@@ -519,12 +519,23 @@ export const TOPICS: Topic[] = [
     ],
   },
   {
+    id: 'sesiones',
+    href: '/perfil',
+    hrefLabel: 'Ver en Perfil',
+    phrases: ['sesiones activas', 'donde tengo abierta', 'donde esta abierta', 'cerrar sesion en otro', 'perdi el celular', 'me robaron el celular', 'otro dispositivo'],
+    keywords: ['sesiones', 'dispositivos', 'dispositivo'],
+    extra: ['abierta', 'celular', 'compu'],
+    answers: () => [
+      'En Perfil ves dónde está abierta tu cuenta y podés cerrar cualquier dispositivo. Si perdiste el celular, cerralo y cambiá tu contraseña: el acceso se corta en menos de una hora.',
+    ],
+  },
+  {
     id: 'login',
     phrases: ['iniciar sesion', 'entrar a la cuenta', 'recordarme', 'olvide la clave', 'olvide mi contrasena', 'recuperar contrasena'],
     keywords: ['login', 'ingresar', 'sesion', 'entrar'],
     extra: ['remember', 'acceso'],
     answers: () => [
-      'En Iniciar sesión usás el email y la contraseña. Si olvidaste la clave y ya estás adentro, cambiala en Perfil (pide la actual). Desde afuera no hay recupero por mail.',
+      'En Iniciar sesión usás el email y la contraseña. Si la olvidaste, tocá Olvidé mi contraseña en esa misma pantalla. Si ya estás adentro, la cambiás en Perfil.',
       'Podés marcar recordar datos en este dispositivo. Si ya hay sesión, vas directo a Inicio.',
     ],
   },
