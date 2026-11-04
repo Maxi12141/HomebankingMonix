@@ -51,7 +51,7 @@ Estas escrituras existen porque la app las necesita hoy desde el navegador: el i
 
 **Alcance de la verificación:** se revisaron los archivos SQL del repo, y ninguna migración posterior reemplaza estas políticas. **No se verificó contra la base de producción**, porque el MCP de Supabase no estaba autorizado en esta sesión. Antes de cualquier cambio hay que confirmarlo en el SQL Editor con `select * from pg_policies where tablename in ('cuentas','personas','prestamos','movimientos','reservas');`.
 
-**Solución implementada en S-1 (2026-10-19), pendiente de aplicar en producción siguiendo `manual-despliegue.md` §7.7.** El plan original era:
+**Solución implementada en S-1 (2026-10-19), aplicada en producción el 2026-11-04 siguiendo `manual-despliegue.md` §7.7.** El plan original era:
 
 1. **Privilegios por columna:** `revoke update on public.cuentas from authenticated;` y después `grant update (alias, tarjeta_congelada) on public.cuentas to authenticated;`. Igual en `personas`, dejando editables sólo los datos de contacto, `ingreso_mensual` y `sueldo_acreditado`.
 2. **Mover al servidor** cada escritura de saldo, como RPC `SECURITY DEFINER` que valida y registra el movimiento en la misma transacción, siguiendo el patrón de `transferencia_atomica.sql`. Las RPC a crear: interés diario, mover fondos a la reserva y desde ella, compra en MercadoMonix, alta y cobro de préstamos, y acreditación de transferencias entrantes (idempotente por `bc_transaccion_id`).
@@ -90,7 +90,7 @@ No hay ninguna herramienta que impida commitear claves (`service_role` de Supaba
 
 | Paso | Qué | Resuelve | Estado |
 |---|---|---|---|
-| S-1 | RPC de servidor para cada escritura de saldo, y privilegios por columna | V2 | Hecho en código y probado. **Falta aplicarlo en producción** (manual §7.7) |
+| S-1 | RPC de servidor para cada escritura de saldo, y privilegios por columna | V2 | Hecho y aplicado en producción el 2026-11-04, con las escrituras revocadas (manual §7.7) |
 | P0-1 | `npm audit fix` | V1 | Hecho: 1 alta y 5 moderadas pasaron a 0 altas y 2 moderadas |
 | P0-2 | Áreas táctiles de 44 px sin cambiar el aspecto | H1 | Hecho: 46 pasaron a 0 |
 | P0-3 | Nombres accesibles y link subrayado | H2 | Hecho: 14 pasaron a 0 |

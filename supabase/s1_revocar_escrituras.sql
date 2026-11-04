@@ -17,6 +17,9 @@
 revoke insert, update, delete on public.cuentas from anon, authenticated;
 grant update (alias, tarjeta_congelada) on public.cuentas to authenticated;
 drop policy if exists "usuarios pueden insertar su propia cuenta" on public.cuentas;
+-- Sólo existe en la base real: dejaba actualizar cualquier cuenta activa, también
+-- ajena. Las transferencias ya no la necesitan porque corren con SECURITY DEFINER.
+drop policy if exists "transferencias pueden actualizar saldo destino" on public.cuentas;
 -- "usuarios pueden actualizar sus propias cuentas" sigue: limita las filas,
 -- y el grant de arriba limita las columnas.
 

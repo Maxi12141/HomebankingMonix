@@ -259,3 +259,21 @@ test('compra y venta de dólares: el servidor controla el precio', async () => {
   await db.exec(`update private.cotizacion_dolar set actualizada_en = now() - interval '8 days'`)
   await assert.rejects(convertir(6, 15500, 10, 'comprar'), /No pudimos verificar la cotización/) // precio viejo tampoco
 })
+
+test('después de S-1: nadie toca una cuenta ajena, aunque siga la política vieja de la base real', async () => {
+  const db = await nuevaBase({ revocar: false })
+  await db.exec(`create policy "transferencias pueden actualizar saldo destino" on public.cuentas for update using (auth.uid() is not null and activa = true)`)
+  await como(db, A, 'update public.cuentas set saldo = 1 where id = $1', [CUENTA_B])
+  assert.equal(await saldo(db, CUENTA_B), 50000) // elegir una cuenta ajena no funciona: no se puede leer
+  await como(db, A, 'update public.cuentas set saldo = 1')
+  assert.equal(await saldo(db, CUENTA_B), 1) // sin elegir filas pisaba todas: el hueco, antes del cierre
+  await db.exec(`update public.cuentas set saldo = 50000 where id = '${CUENTA_B}'`)
+  await db.exec(leer('../../supabase/s1_revocar_escrituras.sql'))
+  await como(db, A, 'update public.cuentas set tarjeta_congelada = true')
+  assert.equal((await uno(db, `select tarjeta_congelada from public.cuentas where id = '${CUENTA_B}'`)).tarjeta_congelada, false)
+  await assert.rejects(como(db, A, 'update public.cuentas set saldo = 1'), /permission denied/)
+  await como(db, A, 'update public.cuentas set alias = $1 where id = $2', ['robado', CUENTA_B])
+  assert.equal((await uno(db, `select alias from public.cuentas where id = '${CUENTA_B}'`)).alias, 'juan.perez')
+  await como(db, A, 'update public.cuentas set alias = $1 where id = $2', ['sol.nueva', CUENTA_A])
+  assert.equal((await uno(db, `select alias from public.cuentas where id = '${CUENTA_A}'`)).alias, 'sol.nueva')
+})
