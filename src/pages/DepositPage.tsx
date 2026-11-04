@@ -24,7 +24,7 @@ const stepVariants = {
 }
 
 // El RPC depositar_en_cuenta es una sola transacción: si falla, no se movió nada.
-const ERROR_DEPOSITO = 'No pudimos acreditar el depósito. Tu plata no se movió: probá de nuevo en unos minutos.'
+const ERROR_DEPOSITO = 'No pudimos acreditar el depósito. Tu dinero no se movió: probá de nuevo en unos minutos.'
 
 export function DepositPage() {
   const { cuenta, cuentas, refreshCuenta } = useCuenta()

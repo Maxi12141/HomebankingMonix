@@ -179,7 +179,7 @@ export function LoginPage() {
         // Huella OK pero password guardada obsoleta (cambió en Perfil) — evita repetir este fallo en silencio.
         borrarCredencialBio(emailNorm)
         setMostrarPassword(true)
-        setError('Tu sesión de huella quedó desactualizada (cambiaste tu contraseña). Ingresá con tu contraseña actual.')
+        setError('Tu acceso con biometría quedó desactualizado (cambiaste tu contraseña). Ingresá con tu contraseña actual.')
       }
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
@@ -419,7 +419,7 @@ export function LoginPage() {
 
           {step === 'bio-offer' && (
             <>
-              <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-1">¿Activar tu huella?</h2>
+              <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-1">¿Activar la biometría?</h2>
               <p className="font-body text-sm text-slate-secondary mb-6">
                 La próxima vez vas a poder entrar sin escribir tu contraseña.
               </p>

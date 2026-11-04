@@ -11,7 +11,7 @@ import { Monto } from '../components/ui/Monto'
 
 import { parseMonto } from '../utils/monto'
 const COMERCIOS = [
-  { id: 'c1', name: 'mercadoMONIX', pct: 8, icon: ShoppingBag, cat: 'Marketplace' },
+  { id: 'c1', name: 'mercadoMONIX', pct: 8, icon: ShoppingBag, cat: 'Tienda' },
   { id: 'c2', name: 'Restós MONIX', pct: 3, icon: Utensils, cat: 'Gastronomía' },
   { id: 'c3', name: 'Estaciones Full', pct: 5, icon: Fuel, cat: 'Combustible' },
   { id: 'c4', name: 'Shoppings partners', pct: 4, icon: ShoppingBag, cat: 'Retail' },

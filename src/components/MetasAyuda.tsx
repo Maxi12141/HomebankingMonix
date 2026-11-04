@@ -15,11 +15,11 @@ const PASOS = [
   {
     icon: PiggyBank,
     titulo: 'Cada uno aporta',
-    texto: 'Metés plata desde tu cuenta en pesos. Todos ven quién puso cuánto.',
+    texto: 'Metés dinero desde tu cuenta en pesos. Todos ven quién puso cuánto.',
   },
   {
     icon: TrendingUp,
-    titulo: 'La plata rinde',
+    titulo: 'El dinero rinde',
     texto: 'Mientras está juntada, rinde la misma TNA que Reservas.',
   },
   {

@@ -100,7 +100,7 @@ export function CompraVentaDolaresPage() {
       toast.success(modo === 'comprar' ? '¡Compra realizada con éxito!' : '¡Venta realizada con éxito!')
     } catch (err) {
       // PostgrestError puede no ser instanceof Error: mensajeError lee el message igual.
-      const msg = mensajeError(err, 'No pudimos completar la operación. Tu plata no se movió: probá de nuevo en unos minutos.')
+      const msg = mensajeError(err, 'No pudimos completar la operación. Tu dinero no se movió: probá de nuevo en unos minutos.')
       setError(msg)
       toast.error(msg)
     } finally {

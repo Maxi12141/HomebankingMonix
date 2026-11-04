@@ -50,7 +50,7 @@ export function ReservasPage() {
 
     try {
       // Débito, crédito y movimiento en una sola transacción del servidor (S-1):
-      // antes eran tres llamadas y una falla a mitad dejaba la plata en el aire.
+      // antes eran tres llamadas y una falla a mitad dejaba el dinero en el aire.
       const { data, error: errRpc } = await supabase.rpc('mover_reserva', {
         p_cuenta_id: cuenta.id,
         p_monto: montoNum,
@@ -63,7 +63,7 @@ export function ReservasPage() {
       setMonto('')
       await Promise.all([refreshCuenta(), refreshReserva()])
     } catch (err) {
-      const msg = mensajeError(err, 'No pudimos completar la operación. Tu plata no se movió: probá de nuevo en unos minutos.')
+      const msg = mensajeError(err, 'No pudimos completar la operación. Tu dinero no se movió: probá de nuevo en unos minutos.')
       setError(msg)
       toast.error(msg)
     } finally {
@@ -78,7 +78,7 @@ export function ReservasPage() {
           Reservas
         </h1>
         <p className="font-body text-sm text-slate-secondary mb-6">
-          Separá plata de tu saldo y hacé rendir tu ahorro todos los días.
+          Separá dinero de tu saldo y hacé rendir tu ahorro todos los días.
         </p>
 
         <Card className="p-6 mb-6">

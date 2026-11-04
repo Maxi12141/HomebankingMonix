@@ -249,9 +249,8 @@ export function entrarModoPrueba(opts?: { reiniciarTour?: boolean }) {
   }
 }
 
-/** Pantallas que en la prueba se ven, pero no se usan: el resto (transferir, QR, tarjetas, reservas) queda abierto. */
+/** Pantallas que en la prueba se ven, pero no se usan: el resto (transferir, QR, tarjetas, reservas, dólares) queda abierto. */
 const RUTAS_CENSURADAS = new Set([
-  '/dolares',
   '/metas',
   '/prestamos',
   '/depositar',

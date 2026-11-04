@@ -121,7 +121,7 @@ export function TransferPage() {
   // PDF ya generado del comprobante: si el primer toque tardó demasiado y el
   // navegador rechazó el share, el segundo comparte al instante.
   const pdfRef = useRef<{ id: string; file: File } | null>(null)
-  // Si el Banco Central ya aceptó el envío, un reintento no debe volver a mandarle la plata.
+  // Si el Banco Central ya aceptó el envío, un reintento no debe volver a mandarle el dinero.
   const opRef = useRef<{ id: string; enviadoBC: boolean; bcTransaccionId: string | null; destinoCbu: string; monto: number } | null>(null)
 
   const cuentaUSD = cuentas.find((c) => c.moneda === 'USD')

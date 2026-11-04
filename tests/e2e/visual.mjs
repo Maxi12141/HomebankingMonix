@@ -395,7 +395,7 @@ prueba('Depositar: error con el tono del manual', async (b) => {
   await pasarLoader(page)
   await page.getByPlaceholder('0.00').fill('5000')
   await page.getByRole('button', { name: /depositar/i }).last().click()
-  await page.getByText(/^No pudimos acreditar el depósito. Tu plata no se movió/).first().waitFor({ timeout: 5000 })
+  await page.getByText(/^No pudimos acreditar el depósito. Tu dinero no se movió/).first().waitFor({ timeout: 5000 })
   await page.screenshot({ path: `${SCREENS}deposito-error.png` })
   await page.context().close()
 })

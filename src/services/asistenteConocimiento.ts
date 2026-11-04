@@ -94,9 +94,9 @@ export const TOPICS: Topic[] = [
     keywords: ['ayuda', 'help', 'opciones', 'menu', 'funciones'],
     extra: ['sabes', 'consultas'],
     answers: () => [
-      'Sé de todo Monix: saldo, CBU/alias, transferir, depositar, historial, QR, metas comunes, dólares, reservas, préstamos, tarjetas, contactos, promos, cashback, financiación, mercadoMONIX, perfil, huella y seguridad. Preguntame concreto.',
+      'Sé de todo Monix: saldo, CBU/alias, transferir, depositar, historial, QR, metas comunes, dólares, reservas, préstamos, tarjetas, contactos, promos, cashback, financiación, mercadoMONIX, perfil, biometría y seguridad. Preguntame concreto.',
       'Podés preguntarme cómo hacer algo, cuánto cuesta, límites, tasas o qué pantalla usar. Por ejemplo: “¿cómo pido un préstamo?” o “¿qué TNA tiene Reservas?”.',
-      'No hace falta que uses las sugerencias. Escribí en criollo: “quiero mandar plata”, “se me perdió la tarjeta”, “rinde el ahorro?”. Te respondo con el producto de Monix que corresponde.',
+      'No hace falta que uses las sugerencias. Escribí en criollo: “quiero mandar dinero”, “se me perdió la tarjeta”, “rinde el ahorro?”. Te respondo con el producto de Monix que corresponde.',
     ],
   },
   {
@@ -107,7 +107,7 @@ export const TOPICS: Topic[] = [
     weak: ['monix', 'banco'],
     answers: () => [
       'Monix es un banco digital: caja de ahorro en pesos (y otra en dólares si la abrís), transferencias 24 hs, QR, préstamos, reservas con interés, débito y marketplace propio.',
-      'Es tu homebanking: ves el saldo, movés plata, pagás, pedís crédito y hacés rendir un bolsillo de ahorro. Todo desde la app, sin sucursal.',
+      'Es tu homebanking: ves el saldo, movés dinero, pagás, pedís crédito y hacés rendir un bolsillo de ahorro. Todo desde la app, sin sucursal.',
       'Monix concentra cuenta, tarjeta de débito, pagos, dólar oficial, préstamos personales y beneficios (promos, cashback, financiación) en un solo lugar.',
     ],
   },
@@ -116,7 +116,7 @@ export const TOPICS: Topic[] = [
     href: '/dashboard',
     hrefLabel: 'Ver en Inicio',
     phrases: [
-      'cuanto tengo', 'mi saldo', 'ver saldo', 'cuanta plata', 'plata disponible', 'dinero disponible',
+      'cuanto tengo', 'mi saldo', 'ver saldo', 'cuanta plata', 'cuanto dinero', 'plata disponible', 'dinero disponible',
       'decime mi saldo', 'decime el saldo', 'decime cuanto tengo', 'cuanto hay', 'mi sueldo', 'cuanto sueldo',
     ],
     keywords: ['saldo', 'disponible', 'plata', 'dinero', 'pesos'],
@@ -134,7 +134,7 @@ export const TOPICS: Topic[] = [
       return [
         `${n ? `${n}, t` : 'T'}enés ${s.ars} disponibles en pesos.${s.usd}`,
         `Saldo en caja de ahorro: ${s.ars}.${s.usd} Se actualiza al toque cuando entra o sale una transferencia.`,
-        `Ahora mismo hay ${s.ars} en tu cuenta en pesos.${s.usd} Si apartaste plata en Reservas, eso no suma acá.`,
+        `Ahora mismo hay ${s.ars} en tu cuenta en pesos.${s.usd} Si apartaste dinero en Reservas, eso no suma acá.`,
       ]
     },
   },
@@ -151,7 +151,7 @@ export const TOPICS: Topic[] = [
       const cbu = ctx.cbu ? ` Tu CBU ${maskCbu(ctx.cbu)}.` : ''
       return [
         `${alias}${cbu} En Inicio tocá el ojo para copiarlos. Nunca hace falta dar el CBU completo por chat.`,
-        `${alias}${cbu} Para recibir plata, compartí el alias. El CBU de 22 dígitos también está en Cuentas.`,
+        `${alias}${cbu} Para recibir dinero, compartí el alias. El CBU de 22 dígitos también está en Cuentas.`,
         `${alias}${cbu} Si querés cambiar el alias, andá a Perfil: se valida para que no esté repetido.`,
       ]
     },
@@ -160,27 +160,27 @@ export const TOPICS: Topic[] = [
     id: 'transferir',
     href: '/transferir',
     hrefLabel: 'Ir a Transferir',
-    phrases: ['enviar dinero', 'mandar plata', 'como transfiero', 'hacer una transferencia', 'enviar plata', 'giro al instante'],
+    phrases: ['enviar dinero', 'mandar dinero', 'mando dinero', 'mandar plata', 'mando plata', 'como transfiero', 'hacer una transferencia', 'enviar plata', 'giro al instante'],
     keywords: ['transferir', 'transferencia', 'transfiero', 'enviar', 'mandar', 'destinatario'],
     extra: ['cbu', 'alias', 'motivo', 'inmediata', '24', 'amigo', 'familiar', 'servicio', 'factura'],
     weak: ['giro'],
     answers: () => [
       'En Transferir buscá por CBU (22 dígitos) o alias, cargá el monto, elegí un motivo y confirmá. Llega al instante, las 24 hs, sin comisión.',
       'Paso a paso: Transferir → CBU o alias → monto → motivo (obligatorio) → mensaje opcional → confirmar. Si ya está en Contactos, lo elegís y listo.',
-      'Las transferencias son inmediatas a cuentas Monix y a otros bancos vía CBU/alias. Si juntan para un viaje o un alquiler, usá Metas comunes: la plata queda congelada hasta que la mayoría apruebe el pago.',
+      'Las transferencias son inmediatas a cuentas Monix y a otros bancos vía CBU/alias. Si juntan para un viaje o un alquiler, usá Metas comunes: el dinero queda congelado hasta que la mayoría apruebe el pago.',
     ],
   },
   {
     id: 'depositar',
     href: '/depositar',
     hrefLabel: 'Ir a Depositar',
-    phrases: ['cargar plata', 'ingresar dinero', 'hacer un deposito', 'acreditar fondos'],
+    phrases: ['cargar plata', 'cargar dinero', 'ingresar dinero', 'hacer un deposito', 'acreditar fondos'],
     keywords: ['depositar', 'deposito', 'cargar', 'acreditar', 'ingresar'],
     extra: ['fondos', 'caja', 'cargar saldo'],
     answers: () => [
       'En Depositar elegís la cuenta (pesos o dólares) y el monto. Se acredita al toque y queda en el historial.',
       'Para sumar saldo: menú Depositar, cuenta destino, monto y confirmás. No es una transferencia de otro banco: es una acreditación en tu propia caja.',
-      'Si te tienen que mandar plata de afuera, no uses Depositar: compartí tu alias o CBU y que te transfieran.',
+      'Si te tienen que mandar dinero de afuera, no uses Depositar: compartí tu alias o CBU y que te transfieran.',
     ],
   },
   {
@@ -233,7 +233,7 @@ export const TOPICS: Topic[] = [
     keywords: ['meta', 'metas', 'pool', 'grupal', 'juntar', 'custodia'],
     extra: ['viaje', 'alquiler', 'regalo', 'mayoria', 'aporte'],
     answers: () => [
-      'Metas comunes es un fondo grupal: creás la meta, invitás con un código o un alias Monix y cada uno aporta. La plata rinde la misma TNA que Reservas y nadie la saca solo.',
+      'Metas comunes es un fondo grupal: creás la meta, invitás con un código o un alias Monix y cada uno aporta. El dinero rinde la misma TNA que Reservas y nadie lo saca solo.',
       'Para desembolsar, alguien propone pagar un servicio (alias o CBU Monix) o devolver lo juntado. Sale cuando vota a favor más de la mitad de los integrantes.',
       'Todos ven quién puso cuánto y cuánto rindió el pool. Si el alquiler no es Monix, devuelven entre ustedes y cada uno transfiere.',
     ],
@@ -255,7 +255,7 @@ export const TOPICS: Topic[] = [
     id: 'reservas',
     href: '/reservas',
     hrefLabel: 'Ir a Reservas',
-    phrases: ['separar plata', 'hacer rendir', 'plazo fijo', 'bolsillo de ahorro', 'interes diario', 'tna reserva'],
+    phrases: ['separar plata', 'separar dinero', 'rendir mi dinero', 'hacer rendir', 'plazo fijo', 'bolsillo de ahorro', 'interes diario', 'tna reserva'],
     keywords: ['reserva', 'reservas', 'ahorro', 'interes', 'rendimiento', 'tna'],
     extra: ['compuesto', 'retirar', 'ingresar', '32', 'rendir', 'rinde', 'invertir'],
     answers: (ctx) => {
@@ -267,7 +267,7 @@ export const TOPICS: Topic[] = [
       return [
         `Reservas es un bolsillo aparte de tu saldo. Rinde interés diario compuesto, TNA ${tasa}%. Podés ingresar o retirar cuando quieras.${enReserva}`,
         `No es un plazo fijo: el dinero no queda inmovilizado. Lo movés desde Reservas y el interés se acredita solo (día a día). TNA ${tasa}%.${enReserva}`,
-        `La plata en Reservas deja de estar “disponible” para gastar hasta que la retires. El rendimiento aparece como movimiento “Rendimiento de Reserva”.${enReserva}`,
+        `El dinero en Reservas deja de estar “disponible” para gastar hasta que lo retires. El rendimiento aparece como movimiento “Rendimiento de Reserva”.${enReserva}`,
       ]
     },
   },
@@ -337,7 +337,7 @@ export const TOPICS: Topic[] = [
     id: 'cashback',
     href: '/cashback',
     hrefLabel: 'Ver cashback',
-    phrases: ['me devuelven', 'porcentaje de devolucion', 'plata de vuelta'],
+    phrases: ['me devuelven', 'porcentaje de devolucion', 'plata de vuelta', 'dinero de vuelta'],
     keywords: ['cashback', 'devolucion', 'devolver', 'reintegro'],
     extra: ['porcentaje', 'adheridos', 'combustible', 'gastronomia'],
     answers: () => [
@@ -424,13 +424,13 @@ export const TOPICS: Topic[] = [
   {
     id: 'huella',
     href: '/perfil',
-    hrefLabel: 'Activar huella',
+    hrefLabel: 'Activar biometría',
     phrases: ['activar huella', 'desbloqueo biometrico', 'face id', 'huella digital'],
     keywords: ['huella', 'biometria', 'fingerprint', 'biometrica', 'face'],
     extra: ['lock', 'desbloqueo', 'dedo'],
     answers: () => [
-      'En Perfil activás el desbloqueo con huella (o biometría del celular). Si volvés antes de 30 segundos no te la pide; pasado eso, validás de nuevo. Si falla, usás la contraseña.',
-      'La huella no reemplaza el login: protege la sesión ya abierta en este dispositivo. Se prende y se apaga desde Perfil.',
+      'En Perfil activás el desbloqueo con la biometría del celular: huella, cara o PIN. Si volvés antes de 30 segundos no te la pide; pasado eso, validás de nuevo. Si falla, usás la contraseña.',
+      'La biometría te evita escribir la contraseña al entrar y protege la sesión abierta en este dispositivo. Se prende y se apaga desde Perfil.',
     ],
   },
   {
@@ -442,7 +442,7 @@ export const TOPICS: Topic[] = [
     extra: ['clave', 'cvv', 'sesion'],
     answers: () => [
       'No compartas CBU completo, CVV ni la clave. Monix nunca te los pide por chat. Si algo raro: cambiá la contraseña en Perfil y congelá la tarjeta.',
-      'La sesión está protegida; en el celular podés sumar huella. Cerrá sesión desde el menú si el teléfono no es tuyo.',
+      'La sesión está protegida; en el celular podés sumar biometría. Cerrá sesión desde el menú si el teléfono no es tuyo.',
     ],
   },
   {
@@ -473,14 +473,14 @@ export const TOPICS: Topic[] = [
     extra: ['sabado', 'domingo', 'noche'],
     answers: () => [
       'Transferencias, depósitos, QR, dólares y reservas operan las 24 hs, todos los días. No hay cutoff de “horario bancario”.',
-      'Podés mover plata de madrugada o el domingo. Las cuotas del préstamo se debitan según la fecha, no según si es hábil.',
+      'Podés mover dinero de madrugada o el domingo. Las cuotas del préstamo se debitan según la fecha, no según si es hábil.',
     ],
   },
   {
     id: 'bono',
     href: '/dashboard',
     hrefLabel: 'Ir a Inicio',
-    phrases: ['bono de bienvenida', 'regalo al registrarme', 'plata inicial'],
+    phrases: ['bono de bienvenida', 'regalo al registrarme', 'plata inicial', 'dinero inicial'],
     keywords: ['bono', 'bienvenida', 'regalo', 'obsequio'],
     extra: ['150000', 'nuevo'],
     answers: () => [
@@ -532,11 +532,11 @@ export const TOPICS: Topic[] = [
     id: 'cajero',
     href: '/tarjeta',
     hrefLabel: 'Ver tarjeta',
-    phrases: ['sacar plata', 'extraer efectivo', 'cajero automatico', 'retiro en efectivo'],
+    phrases: ['sacar plata', 'sacar dinero', 'extraer efectivo', 'cajero automatico', 'retiro en efectivo'],
     keywords: ['cajero', 'efectivo', 'extraccion', 'atm', 'billete'],
     extra: ['retiro', 'sucursal'],
     answers: () => [
-      'Desde la app no hay “extraer efectivo”. Para sacar plata de Reservas, usá Reservas → retirar (vuelve a tu saldo). El débito informa un tope de cajero de $80.000 diarios.',
+      'Desde la app no hay “extraer efectivo”. Para sacar dinero de Reservas, usá Reservas → retirar (vuelve a tu saldo). El débito informa un tope de cajero de $80.000 diarios.',
       'Monix no tiene sucursales. Movés el dinero por transferencia, QR o débito. Si necesitás efectivo, transferí a una cuenta con la que puedas extraer.',
     ],
   },
@@ -547,7 +547,7 @@ export const TOPICS: Topic[] = [
     extra: ['exterior', 'internacional', 'broker'],
     answers: () => [
       'Monix no tiene sucursal, cheques, cuenta corriente, tarjeta de crédito ni transferencias al exterior (SWIFT). Sí: caja de ahorro, débito, transferencias CBU/alias 24 hs, préstamos personales, reservas, metas comunes, QR y dólar oficial.',
-      'Si buscás crédito, el producto es Préstamos (plata en tu caja) o Financiación (cuotas). La tarjeta Monix es débito. El “plazo fijo” más parecido es Reservas: rendís y podés retirar cuando quieras.',
+      'Si buscás crédito, el producto es Préstamos (dinero en tu caja) o Financiación (cuotas). La tarjeta Monix es débito. El “plazo fijo” más parecido es Reservas: rendís y podés retirar cuando quieras.',
     ],
   },
   {

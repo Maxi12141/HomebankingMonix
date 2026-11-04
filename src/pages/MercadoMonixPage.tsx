@@ -146,7 +146,7 @@ export function MercadoMonixPage() {
       setSuccess(true)
       toast.success('¡Compra realizada con tu tarjeta MONIX!')
     } catch (err) {
-      const msg = mensajeError(err, 'No pudimos completar la compra. Tu plata no se movió: probá de nuevo en unos minutos.')
+      const msg = mensajeError(err, 'No pudimos completar la compra. Tu dinero no se movió: probá de nuevo en unos minutos.')
       setError(msg)
       toast.error(msg)
     } finally {

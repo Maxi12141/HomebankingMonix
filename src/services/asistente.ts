@@ -123,7 +123,7 @@ function replyFrom(topic: Topic, ctx: AsistenteCtx, seed: string, turn: number):
 const FALLBACKS_BANCO = [
   'Puedo ayudarte con cualquier cosa de Monix: saldo, transferencias, QR, dólares, reservas, préstamos, débito, promos, cashback o mercadoMONIX. Preguntame más puntual.',
   'No te seguí del todo. Probá con el producto: “préstamo”, “alias”, “congelar tarjeta”, “TNA de reservas”, “comprar dólares”…',
-  'Decime qué querés hacer en el banco (enviar plata, pedir crédito, pagar con QR, hacer rendir el saldo) y te armo el paso a paso.',
+  'Decime qué querés hacer en el banco (enviar dinero, pedir crédito, pagar con QR, hacer rendir el saldo) y te armo el paso a paso.',
 ]
 
 const FALLBACKS_AFUERA = [
@@ -133,7 +133,7 @@ const FALLBACKS_AFUERA = [
 ]
 
 const BANCO_HINT =
-  /saldo|plata|peso|dolar|cuenta|transfer|cbu|cvu|alias|tarjeta|qr|prestam|reserva|ahorro|depos|pago|pagar|promos|cashback|cuota|financi|mercado|meta|huella|clave|sesion|comision|horario|bono|cajero|debito|credito|monix|banco|cotiz|tna|interes/
+  /saldo|plata|dinero|peso|dolar|cuenta|transfer|cbu|cvu|alias|tarjeta|qr|prestam|reserva|ahorro|depos|pago|pagar|promos|cashback|cuota|financi|mercado|meta|huella|clave|sesion|comision|horario|bono|cajero|debito|credito|monix|banco|cotiz|tna|interes/
 
 function vacia(): AsistenteReply {
   return { text: pick(['Escribí tu consulta o tocá una sugerencia.', 'Tirame la duda, aunque sea en criollo.', '¿Saldo, transferir, préstamo, QR? Lo que necesites.'], 'vacia', Date.now() % 9) }
@@ -158,7 +158,7 @@ export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: Asiste
 
   ranked.sort((a, b) => b.score - a.score || a.index - b.index)
 
-  const preguntaPlata = /\b(saldo|plata|pesos|cuanto tengo|mi sueldo|el sueldo|decime cuanto|decime mi saldo)\b/.test(q)
+  const preguntaPlata = /\b(saldo|plata|dinero|pesos|cuanto tengo|mi sueldo|el sueldo|decime cuanto|decime mi saldo)\b/.test(q)
     && !/\b(cobro|acreditar|paquete|nomina|haberes)\b/.test(q)
   if (preguntaPlata) {
     const saldo = ranked.find((r) => r.topic.id === 'saldo')

@@ -177,7 +177,7 @@ export function MetasPage() {
       await cargarLista()
       toast.success('Aporte acreditado en la meta')
     } catch (err) {
-      setError(mensajeError(err, 'No pudimos hacer el aporte. Tu plata no se movió: probá de nuevo en unos minutos.'))
+      setError(mensajeError(err, 'No pudimos hacer el aporte. Tu dinero no se movió: probá de nuevo en unos minutos.'))
     } finally {
       setEnviando(false)
     }
@@ -446,7 +446,7 @@ export function MetasPage() {
             <Card className="p-5 mb-4">
               <p className="font-display font-semibold text-navy dark:text-white mb-1">Desembolso</p>
               <p className="font-body text-xs text-slate-secondary mb-3">
-                La plata no sale si no hay mayoría. El pago va a una cuenta Monix.
+                El dinero no sale si no hay mayoría. El pago va a una cuenta Monix.
               </p>
               <div className="flex flex-col gap-3">
                 <Input

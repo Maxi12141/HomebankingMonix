@@ -884,7 +884,7 @@ export function EscanearYPagar({
       })
       toast.success('Pago realizado')
     } catch (err) {
-      setError(mensajeError(err, 'No pudimos completar el pago. Tu plata no se movió: probá de nuevo en unos minutos.'))
+      setError(mensajeError(err, 'No pudimos completar el pago. Tu dinero no se movió: probá de nuevo en unos minutos.'))
     } finally {
       setLoading(false)
     }
@@ -912,7 +912,7 @@ export function EscanearYPagar({
       })
       toast.success('Pago realizado')
     } catch (err) {
-      setError(mensajeError(err, 'No pudimos completar el pago. Tu plata no se movió: probá de nuevo en unos minutos.'))
+      setError(mensajeError(err, 'No pudimos completar el pago. Tu dinero no se movió: probá de nuevo en unos minutos.'))
     } finally {
       setLoading(false)
     }

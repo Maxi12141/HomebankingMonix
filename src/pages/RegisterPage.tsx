@@ -268,7 +268,7 @@ export function RegisterPage() {
         <div className="bg-white dark:bg-navy-card rounded-2xl border border-slate-200 dark:border-white/10 p-8 shadow-sm dark:shadow-none">
           {showBioOffer ? (
             <>
-              <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-1">¿Activar tu huella?</h2>
+              <h2 className="font-display text-xl font-semibold text-navy dark:text-white mb-1">¿Activar la biometría?</h2>
               <p className="font-body text-sm text-slate-secondary mb-6">
                 La próxima vez vas a poder entrar sin escribir tu contraseña.
               </p>
