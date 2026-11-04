@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Search, X } from 'lucide-react'
 import { useMovimientos } from '../hooks/useMovimientos'
 import { useBankNames } from '../hooks/useBankNames'
@@ -78,7 +79,10 @@ export function HistorialPage() {
   return (
     <PageWrapper>
       <div className="max-w-2xl mx-auto">
-        <h1 className="font-display text-2xl font-semibold text-navy dark:text-white mb-6">Historial</h1>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <h1 className="font-display text-2xl font-semibold text-navy dark:text-white">Historial</h1>
+          <Link to="/gastos" className="toque-texto font-body text-sm font-medium text-navy dark:text-mint">Ver mis gastos</Link>
+        </div>
 
         {/* Filtros por tipo */}
         <div className="flex gap-2 mb-4">

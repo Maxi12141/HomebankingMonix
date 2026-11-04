@@ -35,6 +35,7 @@ const RegisterPage = pagina(() => import('./pages/RegisterPage'), 'RegisterPage'
 const TransferPage = pagina(() => import('./pages/TransferPage'), 'TransferPage')
 const MetasPage = pagina(() => import('./pages/MetasPage'), 'MetasPage')
 const HistorialPage = pagina(() => import('./pages/HistorialPage'), 'HistorialPage')
+const GastosPage = pagina(() => import('./pages/GastosPage'), 'GastosPage')
 const ProfilePage = pagina(() => import('./pages/ProfilePage'), 'ProfilePage')
 const DepositPage = pagina(() => import('./pages/DepositPage'), 'DepositPage')
 const CuentasPage = pagina(() => import('./pages/CuentasPage'), 'CuentasPage')
@@ -123,6 +124,7 @@ function AppRoutes() {
       <Route path="/transferir" element={<RequireAuth><TransferPage /></RequireAuth>} />
       <Route path="/metas" element={<RequireAuth><MetasPage /></RequireAuth>} />
       <Route path="/historial" element={<RequireAuth><HistorialPage /></RequireAuth>} />
+      <Route path="/gastos" element={<RequireAuth><GastosPage /></RequireAuth>} />
       <Route path="/depositar" element={<RequireAuth><DepositPage /></RequireAuth>} />
       <Route path="/tarjeta" element={<RequireAuth><TarjetaPage /></RequireAuth>} />
       <Route path="/reservas" element={<RequireAuth><ReservasPage /></RequireAuth>} />

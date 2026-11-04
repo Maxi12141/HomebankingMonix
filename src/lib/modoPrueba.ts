@@ -167,6 +167,48 @@ export function movimientosPrueba(): Movimiento[] {
   return lista.sort((a, b) => b.created_at.localeCompare(a.created_at))
 }
 
+/** Sólo para Mis gastos y Moni: un mes y el anterior con motivos variados, sin sumar filas al inicio ni al historial. */
+export function gastosPrueba(): Movimiento[] {
+  const hoy = new Date()
+  const fila = (mesesAtras: number, dia: number, motivo: string, nombre: string, monto: number): Movimiento => ({
+    id: `demo-gasto-${mesesAtras}-${motivo}`,
+    cuenta_id: CUENTA_PRUEBA_ARS_ID,
+    tipo: 'transferencia_salida',
+    moneda: 'ARS',
+    monto,
+    saldo_resultante: null,
+    descripcion: motivo,
+    cuenta_destino_id: null,
+    destinatario_nombre: nombre,
+    destinatario_apellido: null,
+    destinatario_dni: null,
+    destino_cbu: null,
+    destino_alias: null,
+    bc_transaccion_id: null,
+    banco_codigo_origen: null,
+    created_at: new Date(
+      hoy.getFullYear(),
+      hoy.getMonth() - mesesAtras,
+      mesesAtras === 0 ? Math.min(dia, hoy.getDate()) : dia,
+      12,
+    ).toISOString(),
+  })
+  return [
+    fila(0, 1, 'Alquiler', 'Inmobiliaria Centro', 95_000),
+    fila(0, 2, 'Compra', 'Almacén Don Pepe', 62_400),
+    fila(0, 3, 'Salud', 'Farmacia Norte', 22_000),
+    fila(0, 4, 'Transporte', 'Carga SUBE', 18_200),
+    fila(0, 5, 'Regalo', 'Sofía', 15_000),
+    fila(0, 6, 'Suscripción', 'Música', 9_800),
+    fila(1, 1, 'Alquiler', 'Inmobiliaria Centro', 95_000),
+    fila(1, 8, 'Compra', 'Almacén Don Pepe', 71_000),
+    fila(1, 12, 'Servicio', 'Internet', 24_500),
+    fila(1, 15, 'Transporte', 'Carga SUBE', 21_000),
+    fila(1, 20, 'Suscripción', 'Música', 9_800),
+    fila(1, 24, 'Salud', 'Farmacia Norte', 8_000),
+  ]
+}
+
 export function reservaPrueba(): Reserva {
   return {
     id: '00000000-0000-4000-8000-0000000000b1',

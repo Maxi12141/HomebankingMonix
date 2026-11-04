@@ -14,6 +14,7 @@ import { formatMonto } from '../utils/cuenta'
 import { esCelular } from '../lib/biometria'
 import { frenarSiEsPrueba } from '../lib/modoPrueba'
 import { comprobantePdfFile, compartirArchivo, downloadComprobante, precargarComprobante, puedeCompartirArchivos } from '../utils/comprobante'
+import { MOTIVOS_GRUPOS } from '../utils/gastos'
 import { AgendaContactosPanel } from '../components/AgendaContactosPanel'
 import { PageWrapper } from '../components/layout/PageWrapper'
 import { Card } from '../components/ui/Card'
@@ -67,43 +68,6 @@ function Iniciales({ nombre, apellido }: { nombre: string; apellido: string }) {
     </div>
   )
 }
-
-const MOTIVOS_GRUPOS: { grupo: string; items: string[] }[] = [
-  { grupo: 'General', items: ['Varios', 'Gastos compartidos', 'Regalo', 'Donación'] },
-  {
-    grupo: 'Vivienda',
-    items: ['Alquiler', 'Expensas', 'Cuota', 'Depósito en garantía', 'Mantenimiento'],
-  },
-  {
-    grupo: 'Trabajo e ingresos',
-    items: ['Sueldo', 'Haberes', 'Jornal', 'Honorarios', 'Viáticos', 'Aguinaldo'],
-  },
-  {
-    grupo: 'Comercio y servicios',
-    items: [
-      'Factura',
-      'Servicio',
-      'Mercadería',
-      'Compra',
-      'Venta',
-      'Seguro',
-      'Suscripción',
-      'Impuestos',
-    ],
-  },
-  {
-    grupo: 'Educación y salud',
-    items: ['Aranceles', 'Educación', 'Salud'],
-  },
-  {
-    grupo: 'Finanzas',
-    items: ['Préstamo', 'Deuda', 'Reintegro', 'Ahorro', 'Inversión'],
-  },
-  {
-    grupo: 'Otros',
-    items: ['Transporte', 'Viajes', 'Comisiones'],
-  },
-]
 
 const stepVariants = {
   initial: { opacity: 0, x: 40 },

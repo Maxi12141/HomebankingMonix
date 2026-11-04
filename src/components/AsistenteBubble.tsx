@@ -5,6 +5,7 @@ import { ArrowUp, Bot, Mic, X } from 'lucide-react'
 import { EASE_MONIX } from '../lib/motion'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
+import { cargarGastosDelMes, type GastosDelMes } from '../services/gastos'
 import { useTecladoInset } from '../hooks/useTecladoInset'
 import {
   callar,
@@ -82,7 +83,9 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   const vozRef = useRef<VozMoni | null>(null)
   const ultimoVoz = useRef({ norm: '', at: 0 })
   const messagesRef = useRef(messages)
+  const [gastosMes, setGastosMes] = useState<GastosDelMes | null>(null)
   const ctxRef = useRef({
+    gastosMes,
     nombre: persona?.nombre,
     saldoARS: (cuentas.find((c) => c.moneda === 'ARS') ?? cuenta)?.saldo,
     saldoUSD: cuentas.find((c) => c.moneda === 'USD')?.saldo ?? null,
@@ -94,6 +97,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
 
   if (messages.length >= messagesRef.current.length) messagesRef.current = messages
   ctxRef.current = {
+    gastosMes,
     nombre: persona?.nombre,
     saldoARS: (cuentas.find((c) => c.moneda === 'ARS') ?? cuenta)?.saldo,
     saldoUSD: cuentas.find((c) => c.moneda === 'USD')?.saldo ?? null,
@@ -103,6 +107,15 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   }
 
   const tecladoAbierto = teclado > 80
+
+  useEffect(() => {
+    if (!open) return
+    let vigente = true
+    cargarGastosDelMes(cuentas)
+      .then((g) => { if (vigente) setGastosMes(g) })
+      .catch((err) => console.error('No pudimos cargar los gastos para Moni:', err))
+    return () => { vigente = false }
+  }, [open, cuentas])
 
   useEffect(() => {
     if (hidden) setOpen(false)

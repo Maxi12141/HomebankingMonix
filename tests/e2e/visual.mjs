@@ -528,7 +528,7 @@ prueba('Desktop: sin scroll horizontal a 1024 y 1440 px', async (b) => {
 const BASE_AXE_SERIAS = 0
 const BASE_TOQUES_CHICOS = 0
 const publicas = ['/', '/login', '/register']
-const privadas = ['/dashboard', '/transferir', '/depositar', '/historial', '/tarjeta', '/perfil']
+const privadas = ['/dashboard', '/transferir', '/depositar', '/historial', '/gastos', '/tarjeta', '/perfil']
 
 prueba('Accesibilidad (axe, WCAG 2.1 AA): violaciones serias o críticas', async (b) => {
   const { AxeBuilder } = await import('@axe-core/playwright')

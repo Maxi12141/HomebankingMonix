@@ -9,6 +9,7 @@ export interface AsistenteCtx {
   cbu?: string | null
   saldoReserva?: number | null
   tasaReserva?: number | null
+  gastosMes?: { total: number; mayorCategoria: string | null; mayorTotal: number } | null
 }
 
 export interface AsistenteReply {
@@ -181,6 +182,23 @@ export const TOPICS: Topic[] = [
       'Para sumar saldo: menú Depositar, cuenta destino, monto y confirmás. No es una transferencia de otro banco: es una acreditación en tu propia caja.',
       'Si te tienen que mandar plata de afuera, no uses Depositar: compartí tu alias o CBU y que te transfieran.',
     ],
+  },
+  {
+    id: 'gastos',
+    href: '/gastos',
+    hrefLabel: 'Ver mis gastos',
+    phrases: ['en que gaste', 'cuanto gaste', 'mis gastos', 'en que se me fue', 'gaste mas', 'estadistica de gastos'],
+    keywords: ['gaste', 'gastos', 'gasto', 'gastando', 'estadisticas', 'estadistica'],
+    extra: ['concepto', 'categoria', 'mes'],
+    answers: (ctx) => {
+      const g = ctx.gastosMes
+      if (g?.mayorCategoria) {
+        return [
+          `Este mes gastaste ${formatMonto(g.total, 'ARS')}. Lo que más pesó fue ${g.mayorCategoria}: ${formatMonto(g.mayorTotal, 'ARS')}.`,
+        ]
+      }
+      return ['En Mis gastos ves en qué se fue tu dinero cada mes, ordenado por concepto. Este mes todavía no tenés gastos registrados.']
+    },
   },
   {
     id: 'historial',

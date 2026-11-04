@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router-dom'
-import { LayoutDashboard, ArrowRightLeft, History, User, LogOut, X, PiggyBank, BookUser, CreditCard, Landmark, Repeat, HandCoins, DollarSign, ArrowDown, Target } from 'lucide-react'
+import { ChartBar, LayoutDashboard, ArrowRightLeft, History, User, LogOut, X, PiggyBank, BookUser, CreditCard, Landmark, Repeat, HandCoins, DollarSign, ArrowDown, Target } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { esModoPrueba } from '../../lib/modoPrueba'
 import { useThemeStore } from '../../stores/themeStore'
@@ -29,6 +29,7 @@ const links = [
   { to: '/prestamos', icon: HandCoins, label: 'Préstamos' },
   { to: '/tarjeta', icon: CreditCard, label: 'Mis Tarjetas' },
   { to: '/historial', icon: History, label: 'Historial' },
+  { to: '/gastos', icon: ChartBar, label: 'Mis gastos' },
   { to: '/contactos', icon: BookUser, label: 'Contactos' },
   { to: '/perfil', icon: User, label: 'Perfil' },
 ]
