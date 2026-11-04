@@ -88,6 +88,12 @@ export default defineConfig({
             options: { cacheName: 'monix-assets' },
           },
           {
+            // Segunda pantalla del pitch: sigue andando si se corta internet en el aula.
+            urlPattern: ({ url }) => url.pathname.startsWith('/pitch/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'monix-pitch', expiration: { maxEntries: 12 } },
+          },
+          {
             // Fuentes propias, también con hash en el nombre: sin conexión
             // la app sigue con su tipografía.
             urlPattern: ({ request }) => request.destination === 'font',

@@ -30,6 +30,7 @@ const cargarDashboard = () => import('./pages/DashboardPage')
 const DashboardPage = pagina(cargarDashboard, 'DashboardPage')
 const HuellaLockScreen = lazy(() => import('./components/HuellaLockScreen').then((m) => ({ default: m.HuellaLockScreen })))
 const LoginPage = pagina(() => import('./pages/LoginPage'), 'LoginPage')
+const PitchPage = pagina(() => import('./pages/PitchPage'), 'PitchPage')
 const PruebaEntrada = pagina(() => import('./pages/PruebaEntrada'), 'PruebaEntrada')
 const RegisterPage = pagina(() => import('./pages/RegisterPage'), 'RegisterPage')
 const TransferPage = pagina(() => import('./pages/TransferPage'), 'TransferPage')
@@ -116,6 +117,7 @@ function AppRoutes() {
       <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
       <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
       <Route path="/prueba" element={<PruebaEntrada />} />
+      <Route path="/pitch" element={<PitchPage />} />
       <Route path="/recuperar-contrasena" element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
       <Route path="/restablecer-contrasena" element={<ResetPasswordPage />} />
       <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
