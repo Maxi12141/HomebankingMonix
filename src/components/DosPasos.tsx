@@ -38,7 +38,7 @@ function descargarCodigos(codigos: string[]) {
   URL.revokeObjectURL(url)
 }
 
-export function DosPasos() {
+export function DosPasos({ onSesionesCerradas }: { onSesionesCerradas: () => void }) {
   const [estado, setEstado] = useState<Estado>('cargando')
   const [activacion, setActivacion] = useState<Activacion | null>(null)
   const [codigo, setCodigo] = useState('')
@@ -92,6 +92,7 @@ export function DosPasos() {
       setCodigo('')
       setEstado('activa')
       setCodigos(generados)
+      onSesionesCerradas()
       if (generados) {
         toast.success('Verificación en dos pasos activada. Cerramos tu cuenta en los demás dispositivos.')
       } else {

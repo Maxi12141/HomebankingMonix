@@ -55,6 +55,7 @@ export function ProfilePage() {
     reader.readAsDataURL(file)
   }
 
+  const [versionSesiones, setVersionSesiones] = useState(0)
   const [editMode, setEditMode] = useState(false)
   const [email, setEmail] = useState(persona?.email ?? '')
   const [telefono, setTelefono] = useState(persona?.telefono ?? '')
@@ -204,6 +205,7 @@ export function ProfilePage() {
       if (bioActiva) guardarCredencialBio(user?.email ?? persona!.email, newPass)
       // Si alguien más la tenía, deja de entrar con ella.
       await supabase.auth.signOut({ scope: 'others' })
+      setVersionSesiones((v) => v + 1)
       toast.success('Contraseña actualizada. Cerramos tu cuenta en los demás dispositivos.')
       setCurrentPass('')
       setNewPass('')
@@ -529,9 +531,9 @@ export function ProfilePage() {
           </form>
         </Card>
 
-        <SesionesActivas />
+        <SesionesActivas key={versionSesiones} />
 
-        <DosPasos />
+        <DosPasos onSesionesCerradas={() => setVersionSesiones((v) => v + 1)} />
 
         {/* Cambiar contraseña */}
         <Card className="p-8">
