@@ -13,7 +13,8 @@ const TRADUCCIONES: [RegExp, string][] = [
   // Supabase Auth
   [/already registered|already been registered|user already exists/i, 'Ese email ya está registrado. Ingresá con tu contraseña.'],
   [/invalid login credentials/i, 'Email o contraseña incorrectos.'],
-  [/email not confirmed/i, 'Todavía no confirmaste tu email. Revisá tu casilla.'],
+  [/email not confirmed/i, 'Todavía no confirmaste tu email. Registrate de nuevo con ese mail y te mandamos otro código.'],
+  [/token has expired or is invalid|otp_expired/i, 'Ese código no es correcto o ya venció. Revisalo o pedí uno nuevo.'],
   [/password should be at least|password is too short/i, 'La contraseña tiene que tener al menos 6 caracteres.'],
   [/weak.?password|password is known to be weak/i, 'Esa contraseña es muy fácil de adivinar. Probá con una más larga.'],
   [/should be different from the old password|same password/i, 'La contraseña nueva tiene que ser distinta de la anterior.'],

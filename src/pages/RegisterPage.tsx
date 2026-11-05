@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Fingerprint } from 'lucide-react'
@@ -26,14 +26,17 @@ import { PasswordInput } from '../components/ui/PasswordInput'
 import { PasswordStrengthMeter } from '../components/ui/PasswordStrengthMeter'
 import { DatePicker } from '../components/ui/DatePicker'
 import { TermsModal } from '../components/TermsModal'
+import { CodigoRegistro } from '../components/CodigoRegistro'
 import Stepper, { Step } from '../components/Stepper'
 import type { RegisterFormData } from '../types'
 import { mensajeError } from '../lib/errores'
 import { saveRememberedEmail } from '../utils/rememberMe'
 import { marcarActividad } from '../utils/sesiones'
+import { emailYaRegistrado } from '../utils/codigoRegistro'
 
 interface BioOfferInfo {
   userId: string
+  email: string
   nombre: string
   password: string
 }
@@ -65,6 +68,9 @@ export function RegisterPage() {
   const [emailDuplicado, setEmailDuplicado] = useState(false)
   const [dniDuplicado, setDniDuplicado] = useState(false)
   const [progressMessage, setProgressMessage] = useState('Creando...')
+  const [pantalla, setPantalla] = useState<'formulario' | 'codigo' | 'reintentar'>('formulario')
+  const altaPendiente = useRef<{ userId: string; email: string } | null>(null)
+  const datosBanco = useRef<{ dni: string; cbu: string; alias: string | null } | null>(null)
   const [form, setForm] = useState<RegisterFormData>({
     nombre: '',
     apellido: '',
@@ -125,8 +131,8 @@ export function RegisterPage() {
     setBioLoading(true)
     try {
       await activarBiometria(bioOfferInfo.userId, bioOfferInfo.nombre)
-      guardarCredencialBio(form.email.trim(), bioOfferInfo.password)
-      guardarNombreBio(form.email.trim(), form.nombre.trim())
+      guardarCredencialBio(bioOfferInfo.email, bioOfferInfo.password)
+      guardarNombreBio(bioOfferInfo.email, form.nombre.trim())
       toast.success('Biometría activada. La próxima vez entrás más rápido.')
     } catch (err) {
       if (!esCancelacionBiometrica(err)) {
@@ -144,53 +150,37 @@ export function RegisterPage() {
     navigate('/dashboard')
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  // Abre la cuenta cuando ya hay sesión: enseguida si la confirmación por mail está apagada, o tras el código.
+  async function completarAlta(userId: string, email: string) {
     setError('')
-    if (!aceptaTerminos) {
-      setError('Tenés que aceptar los Términos y Condiciones para crear tu cuenta')
-      return
-    }
     setLoading(true)
-    setProgressMessage('Creando...')
-    // auth.signUp ya deja la sesión activa y dispara el redirect de PublicOnly
-    // antes de que termine el resto del registro (Banco Central + inserts) —
-    // esta bandera lo frena hasta el navigate() explícito de más abajo.
+    // La sesión ya está activa y PublicOnly redirigiría antes de terminar: esta
+    // bandera lo frena hasta el navigate() explícito de más abajo.
     setProvisioning(true)
-    let userId: string | null = null
     let quedaOfertaBioPendiente = false
+    let termino = false
     // Sin trim, un espacio de autocompletado de teclado en el email/DNI puede
     // desincronizar contra un login o chequeo posterior que sí normaliza.
     const nombre = form.nombre.trim()
     const apellido = form.apellido.trim()
     const dni = form.dni.trim()
-    const email = form.email.trim()
     const telefono = form.telefono.trim()
     const direccion = form.direccion.trim()
 
     try {
-      setProgressMessage('Creando tu usuario...')
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password: form.password,
-        options: {
-          data: {
-            full_name: `${nombre} ${apellido}`,
-            phone: telefono,
-          },
-        },
-      })
-
-      if (authError) throw authError
-      if (!authData.user) throw new Error('No pudimos crear el usuario')
-
-      userId = authData.user.id
-
       setProgressMessage('Generando tu CBU...')
-      const { cbu } = await registrarPersona(nombre, apellido, dni)
-
-      const alias = generateAlias()
-      await asignarAlias(cbu, alias)
+      // Al reintentar no se repite: el Banco Central rechaza un DNI que ya tiene.
+      if (datosBanco.current?.dni !== dni) {
+        const { cbu } = await registrarPersona(nombre, apellido, dni)
+        datosBanco.current = { dni, cbu, alias: null }
+      }
+      const banco = datosBanco.current
+      if (!banco.alias) {
+        const nuevoAlias = generateAlias()
+        await asignarAlias(banco.cbu, nuevoAlias)
+        banco.alias = nuevoAlias
+      }
+      const { cbu, alias } = banco
 
       // Persona, caja de ahorro con el bono de bienvenida y su movimiento, en una
       // sola transacción del servidor (S-1, docs/auditoria-2026-10.md). La
@@ -225,30 +215,109 @@ export function RegisterPage() {
       marcarUsuarioNuevo(userId)
       marcarIngresoConClave()
 
-      saveRememberedEmail(form.email.trim())
+      saveRememberedEmail(email)
       marcarActividad()
+      termino = true
 
       // Ofrecemos biometría acá, con la contraseña fresca en memoria, en vez de que el usuario la busque sola en Perfil.
       if (esCelular() && await soportaHuella()) {
         // provisioning sigue en true: bajarlo ya dejaría que PublicOnly redirija a /dashboard sin mostrar esta pantalla.
         quedaOfertaBioPendiente = true
-        setBioOfferInfo({ userId, nombre: `${nombre} ${apellido}`, password: form.password })
+        setBioOfferInfo({ userId, email, nombre: `${nombre} ${apellido}`, password: form.password })
         setShowBioOffer(true)
       } else {
         navigate('/dashboard')
       }
     } catch (err) {
-      // Cierra la sesión a medio crear para que PublicOnly no redirija a /dashboard antes de mostrar el error.
-      if (userId) {
-        await supabase.auth.signOut().catch(() => undefined)
-      }
+      // No se cierra la sesión: el mail ya está confirmado y registrarse de nuevo daría "ya registrado".
+      altaPendiente.current = { userId, email }
       setError(err instanceof BancoCentralError && err.status === 409
-        ? 'Ese DNI ya está registrado en el Banco Central.'
-        : mensajeError(err, 'No pudimos crear tu cuenta. Probá de nuevo en unos minutos.'))
+        ? 'Ese DNI ya está registrado. Revisá tus datos.'
+        : mensajeError(err, 'No pudimos abrir tu cuenta. Probá de nuevo en unos minutos.'))
+      setPantalla('reintentar')
     } finally {
       setLoading(false)
-      if (!quedaOfertaBioPendiente) setProvisioning(false)
+      // Sin terminar, sigue en true para que PublicOnly deje ver la pantalla de reintento.
+      if (termino && !quedaOfertaBioPendiente) setProvisioning(false)
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    if (!aceptaTerminos) {
+      setError('Tenés que aceptar los Términos y Condiciones para crear tu cuenta')
+      return
+    }
+    if (altaPendiente.current) {
+      setPantalla('formulario')
+      await completarAlta(altaPendiente.current.userId, altaPendiente.current.email)
+      return
+    }
+    setLoading(true)
+    setProgressMessage('Creando tu usuario...')
+    setProvisioning(true)
+    const email = form.email.trim()
+    try {
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password: form.password,
+        options: {
+          data: {
+            full_name: `${form.nombre.trim()} ${form.apellido.trim()}`,
+            phone: form.telefono.trim(),
+          },
+        },
+      })
+      if (authError) throw authError
+      if (!data.user) throw new Error('No pudimos crear el usuario')
+
+      if (data.session) {
+        await completarAlta(data.user.id, email)
+        return
+      }
+      setProvisioning(false)
+      if (emailYaRegistrado(data.user)) {
+        setError('Ese email ya está registrado. Ingresá con tu contraseña.')
+        return
+      }
+      setPantalla('codigo')
+    } catch (err) {
+      setProvisioning(false)
+      setError(mensajeError(err, 'No pudimos crear tu cuenta. Probá de nuevo en unos minutos.'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function verificarCodigo(codigo: string) {
+    const email = form.email.trim()
+    setProgressMessage('Verificando...')
+    // verifyOtp deja la sesión activa: PublicOnly no tiene que redirigir antes de abrir la cuenta.
+    setProvisioning(true)
+    const { data, error: errorCodigo } = await supabase.auth.verifyOtp({ email, token: codigo, type: 'signup' })
+    if (errorCodigo || !data.user) {
+      setProvisioning(false)
+      throw errorCodigo ?? new Error('No pudimos comprobar el código')
+    }
+    await completarAlta(data.user.id, email)
+  }
+
+  async function reenviarCodigo() {
+    const { error: errorReenvio } = await supabase.auth.resend({ type: 'signup', email: form.email.trim() })
+    if (errorReenvio) throw errorReenvio
+  }
+
+  function corregirMail() {
+    setError('')
+    setPantalla('formulario')
+    setStep(0)
+  }
+
+  function corregirDatos() {
+    setError('')
+    setPantalla('formulario')
+    setStep(1)
   }
 
   return (
@@ -301,6 +370,28 @@ export function RegisterPage() {
                 Ahora no
               </button>
             </>
+          ) : pantalla === 'codigo' ? (
+            <CodigoRegistro
+              email={form.email.trim()}
+              progreso={progressMessage}
+              onVerificar={verificarCodigo}
+              onReenviar={reenviarCodigo}
+              onCorregir={corregirMail}
+            />
+          ) : pantalla === 'reintentar' ? (
+            <div className="flex flex-col gap-4">
+              <h2 className="font-display text-xl font-semibold text-navy dark:text-white">No pudimos abrir tu cuenta</h2>
+              <p role="alert" className="font-body text-sm text-slate-secondary">{error}</p>
+              <p className="font-body text-sm text-slate-secondary">Tu mail ya quedó confirmado. No cierres esta pantalla: tus datos siguen acá.</p>
+              <form onSubmit={handleSubmit}>
+                <Button type="submit" loading={loading} loadingLabel="Abriendo..." className="w-full">
+                  Probar de nuevo
+                </Button>
+              </form>
+              <Button type="button" variant="secondary" onClick={corregirDatos} disabled={loading} className="w-full">
+                Corregir mis datos
+              </Button>
+            </div>
           ) : (
           <>
           {/* Controlado y sin footer: avanzar pasa siempre por el submit de cada form, que valida. */}
@@ -421,7 +512,7 @@ export function RegisterPage() {
                 </div>
 
                 <p className="font-body text-xs text-slate-secondary leading-relaxed">
-                  Al crear tu cuenta te acreditamos un bono de bienvenida y queda lista para usar al instante.
+                  Te vamos a mandar un código a tu mail. Al confirmarlo abrimos tu cuenta y te acreditamos un bono de bienvenida.
                 </p>
 
                 <label className="flex items-start gap-2.5 cursor-pointer select-none">

@@ -13,7 +13,7 @@
     "check:task": "npm run check:fast && npm run test:sql && npm run build && (size-limit || echo AVISO: el bundle inicial empeoro, ver CONSTRAINTS.md) && (npm run test:e2e || echo AVISO: marca, accesibilidad o toques empeoro, ver CONSTRAINTS.md)",
     "check:perf": "node scripts/lighthouse.mjs",
     "check:full": "npm run check:task && (npm run check:perf || echo AVISO: la performance mobile empeoro, ver CONSTRAINTS.md) && (npm audit --omit=dev --audit-level=high || echo AVISO: la seguridad de dependencias empeoro, ver CONSTRAINTS.md)",
-    "test:unit": "node --test tests/unit/monto.test.mjs tests/unit/gastos.test.mjs tests/unit/sesiones.test.mjs tests/unit/respuestaGastos.test.mjs tests/unit/asistenteConsultas.test.mjs tests/unit/bancoSimulado.test.mjs tests/unit/dosPasos.test.mjs",
+    "test:unit": "node --test tests/unit/monto.test.mjs tests/unit/gastos.test.mjs tests/unit/sesiones.test.mjs tests/unit/respuestaGastos.test.mjs tests/unit/asistenteConsultas.test.mjs tests/unit/bancoSimulado.test.mjs tests/unit/dosPasos.test.mjs tests/unit/codigoRegistro.test.mjs",
     "test:sql": "node --liftoff-only --wasm-lazy-compilation tests/sql/s1.test.mjs && node --liftoff-only --wasm-lazy-compilation tests/sql/sesiones.test.mjs && node --liftoff-only --wasm-lazy-compilation tests/sql/dos_pasos.test.mjs"
   },
   "dependencies": {

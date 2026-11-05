@@ -536,8 +536,8 @@ export const TOPICS: Topic[] = [
     keywords: ['registro', 'registrarme', 'alta', 'dni'],
     extra: ['nombre', 'apellido', 'email', 'nacimiento'],
     answers: () => [
-      'En Registrarme cargás nombre, apellido, DNI, email, teléfono, dirección, fecha de nacimiento y una clave de al menos 6 caracteres. Se abre la caja en pesos y llega el bono de $150.000.',
-      'Hace falta un email real para el acceso. El DNI se usa también para consultar tu situación crediticia si pedís un préstamo.',
+      'En Registrarme cargás nombre, apellido, DNI, email, teléfono, dirección, fecha de nacimiento y una clave de al menos 6 caracteres. Te mandamos un código de 6 números al mail, que vence a los 5 minutos. Al confirmarlo se abre la caja en pesos y llega el bono de $150.000.',
+      'Hace falta un email real para recibir el código. Si no llega, mirá en spam o pedí otro. El DNI se usa también para consultar tu situación crediticia si pedís un préstamo.',
     ],
   },
   {

@@ -491,6 +491,146 @@ prueba('Login y Registro: autocompletado y pegado habilitados', async (b) => {
   await page.context().close()
 })
 
+const USUARIO_NUEVO = { ...user, id: 'nuevo-1', email: 'nuevo@monix.test', identities: [{ id: 'i1' }] }
+
+// Auth y Banco Central simulados para registrarse. Con confirmación, el alta espera al código.
+async function mockearRegistro(page, { conConfirmacion = true, yaRegistrado = false, altaFallaPrimero = false } = {}) {
+  const estado = { personasBC: 0, altas: [], reenvios: 0 }
+  await page.route(`${BC}/**`, (r) => {
+    if (r.request().method() === 'POST' && r.request().url().endsWith('/persons')) {
+      estado.personasBC += 1
+      return r.fulfill({ json: { cbu: '0000000000000000000001', nombre: 'Sol', apellido: 'Paz' } })
+    }
+    return r.fulfill({ json: { cbu: '0000000000000000000001' } })
+  })
+  await page.route(`${SUPABASE}/auth/v1/**`, (r) => {
+    const url = r.request().url()
+    if (url.includes('/signup')) {
+      if (!conConfirmacion) return r.fulfill({ json: { ...session, user: USUARIO_NUEVO } })
+      return r.fulfill({ json: yaRegistrado ? { ...USUARIO_NUEVO, identities: [] } : USUARIO_NUEVO })
+    }
+    if (url.includes('/resend')) {
+      estado.reenvios += 1
+      return r.fulfill({ json: {} })
+    }
+    if (url.includes('/verify')) {
+      if (r.request().postDataJSON()?.token !== '654321') {
+        return r.fulfill({ status: 403, json: { code: 'otp_expired', msg: 'Token has expired or is invalid' } })
+      }
+      return r.fulfill({ json: { ...session, user: USUARIO_NUEVO } })
+    }
+    return r.fulfill({ json: url.includes('/user') ? USUARIO_NUEVO : session })
+  })
+  await page.route(`${SUPABASE}/rest/v1/rpc/alta_cliente`, (r) => {
+    estado.altas.push(r.request().postDataJSON())
+    if (altaFallaPrimero && estado.altas.length === 1) return r.fulfill({ status: 500, json: { message: 'fallo de prueba' } })
+    return r.fulfill({ json: { situacion: 1, monto_deuda: 0 } })
+  })
+  return estado
+}
+
+async function completarFormularioRegistro(page) {
+  await page.goto('/register')
+  await pasarLoader(page)
+  await page.locator('input[name="email"]').fill('nuevo@monix.test')
+  await page.locator('input[name="password"]').fill('Clave-segura-1')
+  await page.getByRole('button', { name: 'Continuar' }).first().click()
+  await page.locator('input[name="nombre"]').fill('Sol')
+  await page.locator('input[name="apellido"]').fill('Paz')
+  await page.locator('input[name="dni"]').fill('30111222')
+  await page.getByRole('button', { name: 'Continuar' }).last().click()
+  await page.getByRole('checkbox').check()
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+}
+
+// En celular, Monix ofrece la biometría antes de entrar al inicio.
+async function entrarTrasOfertaBiometria(page) {
+  await page.getByRole('button', { name: 'Ahora no' }).click({ timeout: 15000 })
+  await page.waitForURL(/dashboard/, { timeout: 15000 })
+}
+
+prueba('Registro: abre la cuenta recién al confirmar el código', async (b) => {
+  const page = await nuevaPagina(b, { logueado: false, reducedMotion: 'reduce' })
+  const estado = await mockearRegistro(page)
+  await completarFormularioRegistro(page)
+  await page.getByRole('heading', { name: 'Revisá tu mail' }).waitFor({ timeout: 10000 })
+  assert.equal(estado.personasBC, 0, 'no toca el Banco Central antes del código')
+  assert.equal(estado.altas.length, 0, 'no abre la cuenta antes del código')
+  assert.deepEqual(await violacionesAxe(page), [])
+  await page.screenshot({ path: `${SCREENS}registro-codigo.png` })
+
+  await page.getByLabel('Código de 6 números').fill('000000')
+  await page.getByText('Ese código no es correcto o ya venció').waitFor({ timeout: 5000 })
+  assert.equal(estado.altas.length, 0, 'un código malo no abre la cuenta')
+  assert.equal(await page.getByLabel('Código de 6 números').inputValue(), '')
+
+  await page.getByLabel('Código de 6 números').fill('654321')
+  await entrarTrasOfertaBiometria(page)
+  assert.equal(estado.personasBC, 1)
+  assert.equal(estado.altas.length, 1)
+  assert.equal(estado.altas[0].p_email, 'nuevo@monix.test')
+  assert.equal(estado.altas[0].p_dni, '30111222')
+  await page.context().close()
+})
+
+prueba('Registro: si falla el alta tras el código, se reintenta sin repetir el DNI', async (b) => {
+  const page = await nuevaPagina(b, { logueado: false, reducedMotion: 'reduce' })
+  const estado = await mockearRegistro(page, { altaFallaPrimero: true })
+  await completarFormularioRegistro(page)
+  await page.getByLabel('Código de 6 números').waitFor({ timeout: 10000 })
+  await page.getByLabel('Código de 6 números').fill('654321')
+  await page.getByRole('heading', { name: 'No pudimos abrir tu cuenta' }).waitFor({ timeout: 10000 })
+  assert.ok(!page.url().includes('dashboard'), 'no entra sin cuenta abierta')
+  assert.deepEqual(await violacionesAxe(page), [])
+
+  await page.getByRole('button', { name: 'Probar de nuevo' }).click()
+  await entrarTrasOfertaBiometria(page)
+  assert.equal(estado.personasBC, 1, 'el Banco Central rechaza un DNI repetido')
+  assert.equal(estado.altas.length, 2)
+  await page.context().close()
+})
+
+prueba('Registro: el mail que ya tiene cuenta no pide código', async (b) => {
+  const page = await nuevaPagina(b, { logueado: false, reducedMotion: 'reduce' })
+  const estado = await mockearRegistro(page, { yaRegistrado: true })
+  await completarFormularioRegistro(page)
+  await page.getByText('Ese email ya está registrado').first().waitFor({ timeout: 10000 })
+  assert.equal(await page.getByRole('heading', { name: 'Revisá tu mail' }).count(), 0)
+  assert.equal(estado.altas.length, 0)
+  await page.context().close()
+})
+
+prueba('Registro: el código vence a los 5 minutos y se puede pedir otro', async (b) => {
+  const page = await nuevaPagina(b, { logueado: false, reducedMotion: 'reduce', ancho: 320 })
+  await page.clock.install()
+  const estado = await mockearRegistro(page)
+  await completarFormularioRegistro(page)
+  await page.getByText(/Vence en [45]:/).waitFor({ timeout: 10000 })
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'scroll horizontal a 320 px')
+  const reenviar = page.getByRole('button', { name: /Mandar otro código/ })
+  assert.equal(await reenviar.isDisabled(), true, 'hay que esperar para pedir otro')
+
+  await page.clock.fastForward(5 * 60_000 + 1000)
+  await page.getByText('El código venció. Pedí uno nuevo.').waitFor({ timeout: 5000 })
+  assert.equal(await page.getByLabel('Código de 6 números').isDisabled(), true)
+
+  await reenviar.click()
+  await page.getByText(/Vence en [45]:/).waitFor({ timeout: 5000 })
+  assert.equal(estado.reenvios, 1)
+  assert.equal(await page.getByLabel('Código de 6 números').isDisabled(), false)
+  await page.context().close()
+})
+
+prueba('Registro: con la confirmación apagada abre la cuenta sin código', async (b) => {
+  const page = await nuevaPagina(b, { logueado: false, reducedMotion: 'reduce' })
+  const estado = await mockearRegistro(page, { conConfirmacion: false })
+  await completarFormularioRegistro(page)
+  await entrarTrasOfertaBiometria(page)
+  assert.equal(await page.getByRole('heading', { name: 'Revisá tu mail' }).count(), 0)
+  assert.equal(estado.altas.length, 1)
+  await page.context().close()
+})
+
 prueba('Mobile: cinta pausada fuera de pantalla y sin blur en barras fijas', async (b) => {
   const page = await nuevaPagina(b, { logueado: false })
   await page.goto('/')
