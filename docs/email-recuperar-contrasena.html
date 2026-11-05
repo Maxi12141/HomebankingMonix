@@ -2,74 +2,62 @@
   Plantilla del mail "Reset Password" de Supabase Auth, con la identidad de Monix.
   Variable usada: {{ .ConfirmationURL }} (la genera Supabase automáticamente).
 
-  CÓMO APLICARLA (esto no se puede hacer por API/MCP, sólo desde el Dashboard):
-  1. Entrá a tu proyecto en supabase.com → Authentication → Email Templates.
-  2. Elegí la plantilla "Reset Password".
-  3. Pegá el contenido de abajo (desde <!DOCTYPE... hasta el </html> final) en el editor.
-  4. Guardá.
-  5. Andá a Authentication → URL Configuration → Redirect URLs, y agregá:
-     https://TU-DOMINIO-DE-PRODUCCION/restablecer-contrasena
-     (y también http://localhost:5173/restablecer-contrasena si querés poder probarlo en local)
-     Sin este paso, el link del mail va a redirigir a la Site URL en vez de a la pantalla
-     de "elegir contraseña nueva", y el flujo no cierra.
+  CÓMO APLICARLA (solo desde el Dashboard de Supabase):
+  1. Authentication → Email Templates → Reset Password.
+  2. Pegá el contenido de abajo, desde <!DOCTYPE hasta </html>, y guardá.
+
+  El logo es public/email/logo-monix.png, ya publicado: si se borra o se mueve, el mail lo pierde.
 -->
 <!DOCTYPE html>
 <html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>Restablecé tu contraseña</title>
+  </head>
   <body style="margin:0; padding:0; background-color:#F0F2F5; font-family:Arial, Helvetica, sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F0F2F5; padding:32px 16px;">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#F0F2F5;">
+      Elegí una contraseña nueva para tu cuenta de Monix.
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#F0F2F5" style="background-color:#F0F2F5; padding:32px 16px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background-color:#ffffff; border-radius:16px; overflow:hidden;">
-
-            <!-- Header -->
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" bgcolor="#FFFFFF" style="max-width:480px; width:100%; background-color:#FFFFFF; border-radius:16px; overflow:hidden;">
             <tr>
-              <td style="background-color:#0D2B52; padding:28px 32px; text-align:center;">
-                <span style="font-size:22px; font-weight:bold; letter-spacing:0.06em; color:#26FFC1;">MONIX</span>
+              <td align="center" bgcolor="#0D2B52" style="background-color:#0D2B52; padding:28px 32px; border-bottom:4px solid #26FFC1;">
+                <img src="https://monix-homebanking.vercel.app/email/logo-monix.png" width="160" height="40" alt="Monix" style="display:block; width:160px; height:40px; border:0; color:#FFFFFF; font-size:22px; font-weight:bold;">
               </td>
             </tr>
-
-            <!-- Cuerpo -->
             <tr>
-              <td style="padding:32px;">
-                <h1 style="margin:0 0 12px; font-size:20px; color:#0D2B52;">Restablecé tu contraseña</h1>
-                <p style="margin:0 0 20px; font-size:14px; line-height:1.6; color:#3F5370;">
-                  Recibimos un pedido para restablecer la contraseña de tu cuenta de Monix. Si fuiste vos,
-                  tocá el botón de abajo para elegir una nueva.
+              <td style="padding:36px 32px 32px;">
+                <h1 style="margin:0 0 12px; font-size:24px; line-height:1.25; font-weight:bold; color:#0D2B52;">Restablecé tu contraseña</h1>
+                <p style="margin:0 0 28px; font-size:16px; line-height:1.6; color:#3F5370;">
+                  Recibimos un pedido para cambiar la contraseña de tu cuenta. Si fuiste vos, tocá el botón para elegir una nueva.
                 </p>
-
-                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
                   <tr>
-                    <td style="border-radius:12px; background-color:#26FFC1;">
-                      <a href="{{ .ConfirmationURL }}"
-                         style="display:inline-block; padding:14px 28px; font-size:15px; font-weight:bold; color:#0D2B52; text-decoration:none;">
-                        Elegir nueva contraseña
-                      </a>
+                    <td align="center" bgcolor="#0D2B52" style="background-color:#0D2B52; border-radius:12px;">
+                      <a href="{{ .ConfirmationURL }}" style="display:block; padding:16px 24px; font-size:16px; font-weight:bold; line-height:1.25; color:#FFFFFF; text-decoration:none; border-radius:12px;"><span style="color:#FFFFFF;">Elegir nueva contraseña</span></a>
                     </td>
                   </tr>
                 </table>
-
-                <p style="margin:0 0 8px; font-size:13px; line-height:1.6; color:#3F5370;">
-                  Si el botón no funciona, copiá y pegá este link en tu navegador:
+                <p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#3F5370;">
+                  Si no pediste este cambio, ignorá este mail. Tu contraseña sigue siendo la misma.
                 </p>
-                <p style="margin:0 0 24px; font-size:12px; line-height:1.5; color:#8A97AC; word-break:break-all;">
-                  {{ .ConfirmationURL }}
-                </p>
-
-                <p style="margin:0; font-size:12px; line-height:1.6; color:#8A97AC;">
-                  Si no pediste este cambio, ignorá este mail — tu contraseña sigue siendo la misma y no se hizo ningún cambio en tu cuenta.
+                <p style="margin:0; padding-top:20px; border-top:1px solid #E3E7ED; font-size:12px; line-height:1.6; color:#5B6B82; word-break:break-all;">
+                  ¿No funciona el botón? Copiá este link en tu navegador:<br>{{ .ConfirmationURL }}
                 </p>
               </td>
             </tr>
-
-            <!-- Footer -->
             <tr>
-              <td style="padding:20px 32px; background-color:#F7F8FA; text-align:center;">
-                <p style="margin:0; font-size:11px; color:#8A97AC;">
-                  Monix · Este es un mail automático, no respondas a esta dirección.
+              <td align="center" bgcolor="#F7F8FA" style="background-color:#F7F8FA; padding:18px 32px;">
+                <p style="margin:0; font-size:12px; line-height:1.5; color:#5B6B82;">
+                  Mail automático de Monix. No respondas a esta dirección.
                 </p>
               </td>
             </tr>
-
           </table>
         </td>
       </tr>
