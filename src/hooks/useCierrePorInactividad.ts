@@ -27,7 +27,7 @@ export function useCierrePorInactividad() {
       if (document.hidden) return
       if (!inactividadVencida(leerUltimaActividad(), Date.now(), esCelular() && huellaActiva(uid!))) return
       toast('Cerramos tu sesión porque pasó un rato sin uso.', { id: 'cierre-inactividad' })
-      void supabase.auth.signOut()
+      void supabase.auth.signOut({ scope: 'local' })
     }
 
     if (leerUltimaActividad() === null) marcarActividad()

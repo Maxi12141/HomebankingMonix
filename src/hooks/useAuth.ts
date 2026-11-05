@@ -171,7 +171,8 @@ export function useAuth() {
       salirModoPrueba()
       return
     }
-    await supabase.auth.signOut()
+    // Sale de este dispositivo. Para cerrar otros está el panel de Perfil.
+    await supabase.auth.signOut({ scope: 'local' })
   }
 
   return { user, persona, loading, provisioning, pendienteCodigo, comprobandoDispositivo, login, logout }

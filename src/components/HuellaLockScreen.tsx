@@ -63,7 +63,7 @@ export function HuellaLockScreen({ onUnlock }: Props) {
   }
 
   async function cerrarSesion() {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
   }
 
   const subtitulo = 'Huella, cara o PIN del teléfono. Abajo, la contraseña de tu cuenta Monix.'

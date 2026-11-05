@@ -147,7 +147,7 @@ export function VerificarCodigoScreen() {
         </button>
         <button
           type="button"
-          onClick={() => { void supabase.auth.signOut() }}
+          onClick={() => { void supabase.auth.signOut({ scope: 'local' }) }}
           className="min-h-11 px-3 font-body text-sm text-white/70 hover:text-white transition-colors"
         >
           Salir
