@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
-import { Menu, Sun, Moon } from 'lucide-react'
+import { Menu } from 'lucide-react'
+import { ThemeSwitch } from '../ThemeSwitch'
 import { Link, useLocation } from 'react-router-dom'
 import { MobileDrawer } from './MobileDrawer'
 import { Navbar } from './Navbar'
@@ -19,7 +20,7 @@ interface PageWrapperProps {
 
 export function PageWrapper({ children }: PageWrapperProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const { theme, toggleTheme } = useThemeStore()
+  const { theme } = useThemeStore()
   const qrOpen = useQrScanStore((s) => s.open)
   const closeQr = useQrScanStore((s) => s.close)
   const { pathname } = useLocation()
@@ -99,13 +100,7 @@ export function PageWrapper({ children }: PageWrapperProps) {
 
             <div className="flex items-center gap-1">
               <NotificationBell />
-              <button
-                onClick={toggleTheme}
-                className="toque [--toque:34px] rounded-xl text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-colors"
-                aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-              >
-                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              </button>
+              <ThemeSwitch />
             </div>
           </div>
         </header>

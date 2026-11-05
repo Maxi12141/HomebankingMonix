@@ -67,17 +67,17 @@ export function mensajeAmigableBC(err: unknown): string {
         return 'Revisá los datos ingresados e intentá de nuevo.'
       case 401:
       case 403:
-        return 'No pudimos validar la operación con el banco. Intentá de nuevo en unos minutos.'
+        return 'No pudimos validar la operación. Intentá de nuevo en unos minutos.'
       case 404:
-        return 'No encontramos lo que buscabas en el banco.'
+        return 'No encontramos lo que buscabas. Revisá los datos y probá de nuevo.'
       case 409:
-        return 'Ese dato ya está registrado en el Banco Central.'
+        return 'Ese dato ya está registrado. Revisalo y probá de nuevo.'
       case 429:
         return 'Estamos recibiendo muchas solicitudes en este momento. Esperá un momento y volvé a intentar.'
       default:
         return err.status >= 500
-          ? 'El Banco Central no está respondiendo en este momento. Intentá de nuevo en unos minutos.'
-          : 'No pudimos completar la operación con el banco. Intentá de nuevo.'
+          ? 'No pudimos completar la operación en este momento. Intentá de nuevo en unos minutos.'
+          : 'No pudimos completar la operación. Intentá de nuevo.'
     }
   }
   if (err instanceof Error && err.message.includes('tardó demasiado')) return err.message

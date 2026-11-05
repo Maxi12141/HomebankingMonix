@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRightLeft, QrCode, PiggyBank, Fingerprint, ArrowRight, Sun, Moon, CheckCircle2, Download, Star, ChevronDown } from 'lucide-react'
+import { ArrowRightLeft, QrCode, PiggyBank, Fingerprint, ArrowRight, CheckCircle2, Download, Star, ChevronDown } from 'lucide-react'
+import { ThemeSwitch } from '../components/ThemeSwitch'
 import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import { MarketTicker } from '../components/MarketTicker'
@@ -147,7 +148,7 @@ const products = [
 
 /* ─── Página ─────────────────────────────────────────────────────── */
 export function LandingPage() {
-  const { theme, toggleTheme } = useThemeStore()
+  const { theme } = useThemeStore()
   const { mostrarBoton: mostrarInstalar, instalar } = usePwaInstall()
 
   async function handleInstalar() {
@@ -167,13 +168,7 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
           <MonixLogoNavbar className="h-5 sm:h-8 w-auto shrink-0" variant={theme === 'dark' ? 'white' : 'default'} />
           <nav className="flex items-center gap-1 sm:gap-3">
-            <button
-              onClick={toggleTheme}
-              className="p-1.5 sm:p-2 rounded-xl text-slate-secondary hover:text-navy dark:hover:text-white hover:bg-navy/5 dark:hover:bg-white/5 transition-colors shrink-0"
-              aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-            >
-              {theme === 'dark' ? <Sun size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Moon size={16} className="sm:w-[18px] sm:h-[18px]" />}
-            </button>
+            <ThemeSwitch />
             <Link
               to="/login"
               className="inline-flex min-h-11 items-center rounded-xl px-2 font-body text-sm font-medium whitespace-nowrap text-navy hover:bg-navy/5 dark:text-white dark:hover:bg-white/5 sm:px-3"

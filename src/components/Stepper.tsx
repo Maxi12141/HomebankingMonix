@@ -137,11 +137,6 @@ const readableOn = (color: string) => {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? '#18181b' : '#ffffff';
 };
 
-const ease = () =>
-  typeof CSS !== 'undefined' && CSS.supports?.('transition-timing-function', 'linear(0, 1)')
-    ? SPRING
-    : 'cubic-bezier(0.34, 1.4, 0.64, 1)';
-
 const INK = 'text-[color:var(--stepper-ink)]';
 const MUTED = 'text-[color:var(--stepper-muted)]';
 const FOCUS = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--stepper-ink)]';
@@ -345,36 +340,37 @@ export default function Stepper({
     for (const element of [viewport, pane, leaving]) element?.getAnimations().forEach(animation => animation.cancel());
     const from = heightRef.current;
     const to = viewport.offsetHeight;
-    const spring = ease();
     if (Math.abs(from - to) > 0.5) {
       viewport.animate([{ height: `${from}px` }, { height: `${to}px` }], {
-        duration: reduced ? 200 : 560,
-        easing: reduced ? SETTLE : spring
+        duration: reduced ? 200 : 420,
+        easing: SETTLE
       });
     }
     const axis = vertical ? 'Y' : 'X';
-    const shift = mode === 'slide' ? 36 : 0;
+    const shift = mode === 'slide' ? 28 : 0;
     if (pane) {
       if (shift) {
         pane.animate([{ transform: `translate${axis}(${view.direction * shift}px)` }, { transform: 'none' }], {
-          duration: 560,
-          easing: spring
+          duration: 420,
+          easing: SETTLE
         });
       }
-      pane.animate([{ opacity: 0 }, { opacity: 0, offset: 0.25 }, { opacity: 1 }], {
-        duration: 420,
-        easing: 'ease-out'
+      pane.animate([{ opacity: 0 }, { opacity: 1 }], {
+        duration: 320,
+        delay: 60,
+        easing: 'ease-out',
+        fill: 'backwards'
       });
     }
     if (leaving) {
       leaving.animate([{ opacity: 1 }, { opacity: 0 }], {
-        duration: 140,
-        easing: 'cubic-bezier(0.2, 0, 0.4, 1)',
+        duration: 180,
+        easing: 'ease-out',
         fill: 'forwards'
       });
       const exit = leaving.animate(
         [{ transform: 'none' }, { transform: `translate${axis}(${-view.direction * shift}px)` }],
-        { duration: 200, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' }
+        { duration: 260, easing: SETTLE, fill: 'forwards' }
       );
       exit.onfinish = finish;
     } else finish();
@@ -387,9 +383,8 @@ export default function Stepper({
     const place = (animate: boolean) => {
       const segment = markerRefs.current[Math.min(current, total) - 1];
       if (!segment) return;
-      const spring = ease();
       glider.style.transition = animate
-        ? `transform 560ms ${spring}, width 560ms ${spring}, height 560ms ${spring}, opacity 200ms ease`
+        ? `transform 460ms ${SETTLE}, width 460ms ${SETTLE}, height 460ms ${SETTLE}, opacity 200ms ease`
         : 'opacity 200ms ease';
       glider.style.transform = `translate3d(${segment.offsetLeft}px, ${segment.offsetTop}px, 0)`;
       glider.style.width = `${segment.offsetWidth}px`;
@@ -543,7 +538,7 @@ export default function Stepper({
       {...rest}
       ref={rootRef}
       className={`${ROOT_CLASS} ${rail ? 'flex-row items-stretch' : 'flex-col'} ${frame ? FRAMED_CLASS : BARE_CLASS} ${stepCircleContainerClassName} ${className}`
-        .replace(/\s+/g, '')
+        .replace(/\s+/g, ' ')
         .trim()}
       data-completed={completed ? '' : undefined}
       style={
@@ -559,7 +554,7 @@ export default function Stepper({
     >
       <div
         className={`${kind === 'numbers' ? '' : 'px-[var(--stepper-inset)] pt-[var(--stepper-inset)]'} ${rail ? 'flex w-[212px] max-w-[42%] flex-none' : ''} ${stepContainerClassName}`
-          .replace(/\s+/g, '')
+          .replace(/\s+/g, ' ')
           .trim()}
       >
         {header()}

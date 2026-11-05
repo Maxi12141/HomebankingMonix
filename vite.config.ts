@@ -107,6 +107,16 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Los chunks diferidos que Rollup bautiza "index" (p. ej. el motor de animación de
+        // framer-motion) chocaban con el patrón `index-*.js` de size-limit, que mide sólo el
+        // chunk de entrada. Con otro nombre, el control vuelve a medir el JS inicial real.
+        chunkFileNames: chunk => (chunk.name === 'index' ? 'assets/compartido-[hash].js' : 'assets/[name]-[hash].js'),
+      },
+    },
+  },
   server: {
     host: true,
     port: 5173,

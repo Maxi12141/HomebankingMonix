@@ -23,6 +23,7 @@ import { Card } from '../components/ui/Card'
 import { IconoExito } from '../components/ui/IconoExito'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import SlideToConfirm from '../components/kokonutui/slide-to-confirm'
 import type { Movimiento } from '../types'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
@@ -117,6 +118,7 @@ export function TransferPage() {
   const [mensaje, setMensaje] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [enviada, setEnviada] = useState(false)
   const [comprobante, setComprobante] = useState<Movimiento | null>(null)
   const [vinoDeQr, setVinoDeQr] = useState(false)
   const [compartiendo, setCompartiendo] = useState(false)
@@ -278,9 +280,10 @@ export function TransferPage() {
     setStep('resumen')
   }
 
-  async function handleConfirm() {
-    if (!destinatario || !cuentaOrigen) return
-    if (!cuentaOrigen.cbu) { setError('Tu cuenta no tiene CBU asignado. Contactá al soporte.'); return }
+  // Devuelve si la transferencia salió, para que el deslizador sepa si queda en "listo" o vuelve al inicio.
+  async function handleConfirm(): Promise<boolean> {
+    if (!destinatario || !cuentaOrigen) return false
+    if (!cuentaOrigen.cbu) { setError('Tu cuenta no tiene CBU asignado. Contactá al soporte.'); return false }
 
     // Destino o monto distinto del último intento = operación nueva, no arrastra el "ya enviado".
     if (
@@ -371,8 +374,11 @@ export function TransferPage() {
       opRef.current = null
       updateSaldoCuenta(cuentaOrigen.id, nuevoSaldoOrigen)
       await refreshCuenta()
-      setStep('exito')
+      setEnviada(true)
+      // El tilde del deslizador se ve un instante antes de pasar a la pantalla de éxito.
+      window.setTimeout(() => setStep('exito'), 900)
       toast.success('¡Transferencia realizada con éxito!')
+      return true
     } catch (err) {
       const msg = op.enviadoBC
         ? 'La transferencia se envió pero no pudimos actualizar tu saldo. Volvé a intentar — no se va a reenviar el dinero de nuevo.'
@@ -382,12 +388,14 @@ export function TransferPage() {
       setError(msg)
       toast.error(msg)
       setStep('resumen')
+      return false
     } finally {
       setLoading(false)
     }
   }
 
   function handleReset() {
+    setEnviada(false)
     setStep('buscar')
     setDestino('')
     setDestinatario(null)
@@ -747,9 +755,19 @@ export function TransferPage() {
                     )}
                   </div>
                   {error && <p className="text-sm text-red-500 dark:text-red-400 font-body bg-red-50 dark:bg-red-400/10 rounded-xl px-4 py-3 mb-4">{error}</p>}
-                  <div className="flex gap-3">
-                    <Button variant="secondary" className="flex-1" onClick={() => setStep('detalle')} disabled={loading}>Editar</Button>
-                    <Button className="flex-1" loading={loading} onClick={handleConfirm}>Confirmar</Button>
+                  <div className="flex flex-col gap-3">
+                    <SlideToConfirm
+                      className="max-w-none"
+                      label={`Deslizá para transferir ${formatMonto(montoNum, cuentaOrigen.moneda)}`}
+                      confirmingLabel="Transfiriendo"
+                      doneLabel="Enviada"
+                      resetAfter={null}
+                      onConfirm={async () => {
+                        // Rechaza si no salió: el deslizador vuelve al inicio y el motivo ya está en pantalla.
+                        if (!(await handleConfirm())) throw new Error('transferencia-no-enviada')
+                      }}
+                    />
+                    <Button variant="secondary" className="w-full" onClick={() => setStep('detalle')} disabled={loading || enviada}>Editar</Button>
                   </div>
                 </Card>
               </motion.div>

@@ -400,7 +400,7 @@ export function RegisterPage() {
             theme={theme}
             frame={false}
             width="100%"
-            radius={20}
+            radius={34}
             showFooter={false}
             disableStepIndicators
           >
