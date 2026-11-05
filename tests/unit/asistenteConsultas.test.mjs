@@ -1,7 +1,7 @@
 // npm run test:unit
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { consultar, corregirTipeos, normalizar } from '../../src/services/asistenteConsultas.ts'
+import { consultar, corregirTipeos, intencionConPlata, jergaAPlata, normalizar } from '../../src/services/asistenteConsultas.ts'
 
 const AHORA = new Date(2026, 10, 5, 15, 0, 0) // 5 nov 2026
 const dia = (d, h = 12) => new Date(2026, 10, 5 - d, h).toISOString()
@@ -110,4 +110,21 @@ test('corrige errores de tipeo cercanos y no toca lo dudoso', () => {
   assert.equal(corregirTipeos('tengo en dolars'), 'tengo en dolar')
   assert.equal(corregirTipeos('quiero comprar un auto'), 'quiero comprar un auto')
   assert.match(plano(preguntar('cuanto tengo en resevas').text), /\$ 25\.000,00 en Reservas/)
+})
+
+test('el verbo decide el tema aunque la frase diga "plata"', () => {
+  const tema = (t) => intencionConPlata(jergaAPlata(normalizar(t)))
+  assert.equal(tema('quiero mandarle plata a mi vieja'), 'transferir')
+  assert.equal(tema('como le paso guita a un amigo'), 'transferir')
+  assert.equal(tema('donde meto plata'), 'depositar')
+  assert.equal(tema('como le cargo plata a mi cuenta'), 'depositar')
+  assert.equal(tema('en que se me va la plata'), 'gastos')
+})
+
+test('el verbo no pisa otros productos ni lo recibido', () => {
+  const tema = (t) => intencionConPlata(jergaAPlata(normalizar(t)))
+  assert.equal(tema('quiero meter plata en reservas'), null)
+  assert.equal(tema('me mandaron plata'), null)
+  assert.equal(tema('cuanta plata tengo'), null)
+  assert.equal(jergaAPlata('cuantos mangos tengo'), 'cuantos plata tengo')
 })

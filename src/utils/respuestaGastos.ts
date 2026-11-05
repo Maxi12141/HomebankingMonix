@@ -20,6 +20,7 @@ const PALABRAS_POR_CATEGORIA: [string, RegExp][] = [
 ]
 
 export function respuestaGastos(q: string, g: GastosDelMes | null | undefined, fmt: (monto: number) => string): string {
+  if (g === undefined) return 'Estoy trayendo tus gastos del mes. Probá de nuevo en unos segundos o abrí Mis gastos.'
   if (!g) return SIN_DATOS
 
   const hablaDelMesPasado = /mes pasado|mes anterior/.test(q)

@@ -1,5 +1,5 @@
 import { TOPICS, type AsistenteCtx, type AsistenteReply, type Topic } from './asistenteConocimiento'
-import { consultar, normalizar } from './asistenteConsultas'
+import { consultar, intencionConPlata, jergaAPlata, normalizar } from './asistenteConsultas'
 import { SUGERENCIAS, mensajeBienvenida } from './asistenteBienvenida'
 
 export { SUGERENCIAS, mensajeBienvenida }
@@ -229,7 +229,7 @@ function vacia(): AsistenteReply {
 }
 
 export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: AsistenteOpts = {}): AsistenteReply {
-  const q = normalize(pregunta)
+  const q = jergaAPlata(normalize(pregunta))
   if (!q) return vacia()
 
   const turn = opts.turn ?? 0
@@ -269,9 +269,18 @@ export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: Asiste
     score: scoreTopic(q, tokens, topic),
   }))
 
-  if (opts.lastTopicId && esSeguimiento(q)) {
+  // El tema anterior solo ayuda cuando la pregunta sola no alcanza ("y eso?", "como"). Si ya
+  // nombra algo propio ("donde deposito"), manda lo que dice, no lo que veníamos hablando.
+  const mejorPropio = Math.max(0, ...ranked.map((r) => r.score))
+  if (opts.lastTopicId && mejorPropio < 3 && esSeguimiento(q)) {
     const prev = ranked.find((r) => r.topic.id === opts.lastTopicId)
     if (prev && !SIN_CONTINUACION.has(prev.topic.id)) prev.score += 8
+  }
+
+  const intencion = intencionConPlata(q)
+  if (intencion) {
+    const t = ranked.find((r) => r.topic.id === intencion)
+    if (t) t.score += 14
   }
 
   ranked.sort((a, b) => b.score - a.score || a.index - b.index)

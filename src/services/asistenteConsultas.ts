@@ -5,6 +5,25 @@ import type { AsistenteCtx, AsistenteReply, MovimientoCtx, PrestamoCtx } from '.
 // contesta con el número en una línea; si no la reconoce, devuelve null y siguen los temas.
 // Moni es de solo lectura: nada de acá escribe ni mueve plata.
 
+// Jerga de plata: se lee como "plata" para que valgan las mismas reglas.
+const JERGA_PLATA = /\b(guita|mangos?|morlacos|billetes?|mosca|fangos?)\b/g
+export const jergaAPlata = (q: string) => q.replace(JERGA_PLATA, 'plata')
+
+// "plata" sola pesa hacia Saldo, pero el verbo dice qué quiere hacer con ella.
+const MONEDA = '(?:plata|dinero|pesos|efectivo)'
+const OTRO_PRODUCTO = /\b(reserva|reservas|dolar|dolares|usd|prestamo|prestamos|meta|metas|rendir|rinde|invertir|ahorrar|cripto)\b/
+const INTENCIONES: { tema: string; re: RegExp }[] = [
+  { tema: 'transferir', re: new RegExp(`\\b(?:mand\\w+|pas\\w+|envi\\w+|gir\\w+|transfer\\w+)\\b.*\\b${MONEDA}\\b|\\b${MONEDA}\\b.*\\b(?:mandar|pasar|enviar|girar|transferir)\\b`) },
+  { tema: 'depositar', re: new RegExp(`\\b(?:met\\w+|carg\\w+|pon\\w+|sum\\w+|ingres\\w+|acredit\\w+)\\b.*\\b${MONEDA}\\b|\\b${MONEDA}\\b.*\\b(?:meter|cargar|poner|sumar|ingresar|acreditar)\\b`) },
+  { tema: 'gastos', re: /\b(?:se me (?:va|van|fue|fueron|esfuma\w*)|en que (?:se )?(?:me )?(?:voy|va|fue|fueron)|me gasto)\b/ },
+]
+
+// Sobre la pregunta ya normalizada. Devuelve el id del tema que el verbo señala, o null.
+export function intencionConPlata(q: string): string | null {
+  if (OTRO_PRODUCTO.test(q) || /\b(?:me mandaron|me pasaron|me enviaron|me giraron)\b/.test(q)) return null
+  return INTENCIONES.find((i) => i.re.test(q))?.tema ?? null
+}
+
 export function normalizar(value: string) {
   return value
     .normalize('NFD')
