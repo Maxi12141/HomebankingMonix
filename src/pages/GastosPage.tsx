@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMovimientos } from '../hooks/useMovimientos'
 import { useCuentaStore } from '../store/cuentaStore'
-import { esModoPrueba, gastosPrueba } from '../lib/modoPrueba'
 import { formatMonto } from '../utils/cuenta'
 import { CATEGORIA_VARIOS, resumenGastos } from '../utils/gastos'
 import { PageWrapper } from '../components/layout/PageWrapper'
@@ -22,13 +21,12 @@ export function GastosPage() {
   const [desfase, setDesfase] = useState(0)
   const [abierta, setAbierta] = useState<string | null>(null)
 
-  const todos = useMemo(() => (esModoPrueba() ? [...gastosPrueba(), ...movimientos] : movimientos), [movimientos])
   const propias = useMemo(() => new Set(cuentas.map((c) => c.id)), [cuentas])
 
   const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - desfase, 1)
   const anterior = new Date(fecha.getFullYear(), fecha.getMonth() - 1, 1)
-  const resumen = resumenGastos(todos, propias, fecha.getFullYear(), fecha.getMonth())
-  const previo = resumenGastos(todos, propias, anterior.getFullYear(), anterior.getMonth())
+  const resumen = resumenGastos(movimientos, propias, fecha.getFullYear(), fecha.getMonth())
+  const previo = resumenGastos(movimientos, propias, anterior.getFullYear(), anterior.getMonth())
 
   const mayor = resumen.categorias[0]
   const varios = resumen.categorias.find((c) => c.categoria === CATEGORIA_VARIOS)

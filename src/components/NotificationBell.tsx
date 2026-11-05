@@ -7,6 +7,7 @@ import { useMovimientos } from '../hooks/useMovimientos'
 import { useNotificacionesStore } from '../stores/notificacionesStore'
 import type { Movimiento } from '../types'
 import { Monto } from './ui/Monto'
+import { esModoPrueba } from '../lib/modoPrueba'
 
 const currency = (n: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
@@ -44,6 +45,8 @@ export function NotificationBell() {
     for (const n of actuales) {
       if (!seenRef.current.has(n.id)) {
         seenRef.current.add(n.id)
+        // En la prueba cada operación ya avisa lo suyo: simular un mes apilaba un aviso por interés.
+        if (esModoPrueba()) continue
         if (n.tipo === 'transferencia_entrada') {
           const quien = n.destinatario_nombre
             ? ` de ${n.destinatario_nombre} ${n.destinatario_apellido ?? ''}`.trimEnd()

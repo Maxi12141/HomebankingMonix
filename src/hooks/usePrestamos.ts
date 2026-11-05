@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
 import { esModoPrueba } from '../lib/modoPrueba'
+import { estadoPrueba } from '../lib/estadoPrueba'
 import type { Cuenta, Prestamo } from '../types'
 
 /**
@@ -15,10 +16,11 @@ export function usePrestamos(cuenta: Cuenta | null) {
   const [loading, setLoading] = useState(true)
   const { updateSaldoCuenta } = useCuentaStore()
   const processingRef = useRef(false)
+  const operacionPrueba = useCuentaStore((s) => (esModoPrueba() ? s.refreshTick : 0))
 
   const fetchAndAccrue = useCallback(async (cta: Cuenta) => {
     if (esModoPrueba()) {
-      setPrestamos([])
+      setPrestamos(estadoPrueba().prestamos)
       setLoading(false)
       return
     }
@@ -58,7 +60,7 @@ export function usePrestamos(cuenta: Cuenta | null) {
     fetchAndAccrue(cuenta)
     // Corre sólo cuando cambia cuenta.id, no en cada cambio de saldo (transferencia, depósito).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cuenta?.id])
+  }, [cuenta?.id, operacionPrueba])
 
   async function refreshPrestamos() {
     if (cuenta) await fetchAndAccrue(cuenta)

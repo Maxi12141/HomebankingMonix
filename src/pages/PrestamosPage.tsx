@@ -9,7 +9,9 @@ import { useAuthStore } from '../store/authStore'
 import { useCuenta } from '../hooks/useCuenta'
 import { usePrestamos } from '../hooks/usePrestamos'
 import { consultarSituacion } from '../services/bancoCentral'
-import { esModoPrueba, frenarSiEsPrueba } from '../lib/modoPrueba'
+import { esModoPrueba } from '../lib/modoPrueba'
+import { pedirPrestamoPrueba } from '../lib/operacionesPrueba'
+import { SimularMes } from '../components/SimularMes'
 import {
   addMonths, calcularCuota, calcularOferta, calcularTablaAmortizacion,
   nivelPorSituacion, type FilaAmortizacion,
@@ -117,7 +119,6 @@ export function PrestamosPage() {
         : null
 
   async function solicitar() {
-    if (frenarSiEsPrueba()) return
     if (!persona || !cuenta) return
     setError('')
 
@@ -142,13 +143,17 @@ export function PrestamosPage() {
     try {
       // La oferta, la cuota y el crédito los decide el servidor (S-1): las
       // validaciones de arriba son para avisar rápido, no para autorizar.
-      const { error: errRpc } = await supabase.rpc('solicitar_prestamo', {
-        p_cuenta_id: cuenta.id,
-        p_monto: montoNum,
-        p_cuotas: cuotasSel,
-        p_situacion: situacion ?? 1,
-      })
-      if (errRpc) throw new Error(errRpc.message)
+      if (esModoPrueba()) {
+        pedirPrestamoPrueba({ monto: montoNum, cuotas: cuotasSel, cuota, tna: oferta.tna, sueldoAcreditado: persona.sueldo_acreditado ?? false })
+      } else {
+        const { error: errRpc } = await supabase.rpc('solicitar_prestamo', {
+          p_cuenta_id: cuenta.id,
+          p_monto: montoNum,
+          p_cuotas: cuotasSel,
+          p_situacion: situacion ?? 1,
+        })
+        if (errRpc) throw new Error(errRpc.message)
+      }
 
       setMonto('')
       await Promise.all([refreshCuenta(), refreshPrestamos()])
@@ -174,6 +179,8 @@ export function PrestamosPage() {
             Simulá y pedí un préstamo personal en pesos.
           </p>
         </div>
+
+        <SimularMes className="mb-4" />
 
         {situacionError && (
           <Card className="p-4 mb-4 flex items-center gap-3">

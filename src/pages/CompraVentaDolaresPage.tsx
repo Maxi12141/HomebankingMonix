@@ -16,7 +16,8 @@ import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
-import { frenarSiEsPrueba } from '../lib/modoPrueba'
+import { esModoPrueba } from '../lib/modoPrueba'
+import { convertirMonedaPrueba } from '../lib/operacionesPrueba'
 
 type Modo = 'comprar' | 'vender'
 type Step = 'form' | 'success'
@@ -60,7 +61,6 @@ export function CompraVentaDolaresPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (frenarSiEsPrueba()) return
     if (!cuenta || !cuentaUSD || !precio) return
     if (isNaN(montoUsd) || montoUsd <= 0) {
       setError('Ingresá un monto en dólares válido')
@@ -82,16 +82,20 @@ export function CompraVentaDolaresPage() {
       const descripcion = `${modo === 'comprar' ? 'Compra' : 'Venta'} de USD|Cotización oficial ${formatMonto(precio, 'ARS')} por dólar`
 
       // Swap atómico del lado del servidor — antes eran dos UPDATE sin lock, con riesgo de lost-update.
-      const { error: rpcError } = await supabase.rpc('convertir_moneda_propia', {
-        p_operacion_id: crypto.randomUUID(),
-        p_cuenta_ars: cuenta.id,
-        p_cuenta_usd: cuentaUSD.id,
-        p_monto_ars: montoArs,
-        p_monto_usd: montoUsd,
-        p_modo: modo,
-        p_descripcion: descripcion,
-      })
-      if (rpcError) throw rpcError
+      if (esModoPrueba()) {
+        convertirMonedaPrueba(modo, montoUsd, montoArs, descripcion)
+      } else {
+        const { error: rpcError } = await supabase.rpc('convertir_moneda_propia', {
+          p_operacion_id: crypto.randomUUID(),
+          p_cuenta_ars: cuenta.id,
+          p_cuenta_usd: cuentaUSD.id,
+          p_monto_ars: montoArs,
+          p_monto_usd: montoUsd,
+          p_modo: modo,
+          p_descripcion: descripcion,
+        })
+        if (rpcError) throw rpcError
+      }
 
       updateSaldoCuenta(cuenta.id, modo === 'comprar' ? cuenta.saldo - montoArs : cuenta.saldo + montoArs)
       updateSaldoCuenta(cuentaUSD.id, modo === 'comprar' ? cuentaUSD.saldo + montoUsd : cuentaUSD.saldo - montoUsd)

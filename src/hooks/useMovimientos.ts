@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useCuentaStore } from '../store/cuentaStore'
-import { esModoPrueba, movimientosPrueba } from '../lib/modoPrueba'
+import { esModoPrueba } from '../lib/modoPrueba'
+import { estadoPrueba } from '../lib/estadoPrueba'
 import type { Movimiento } from '../types'
 
 export function useMovimientos(limit?: number) {
@@ -15,7 +16,7 @@ export function useMovimientos(limit?: number) {
 
   const fetchMovimientos = useCallback(async () => {
     if (esModoPrueba()) {
-      const todos = movimientosPrueba()
+      const todos = estadoPrueba().movimientos
       setMovimientos(limit ? todos.slice(0, limit) : todos)
       setLoading(false)
       return

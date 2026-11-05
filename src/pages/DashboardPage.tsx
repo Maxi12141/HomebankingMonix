@@ -33,7 +33,7 @@ import {
   limpiarClavesViejas,
 } from '../lib/onboarding'
 import { esModoPrueba, USUARIO_PRUEBA_ID } from '../lib/modoPrueba'
-import { CensuraPrueba } from '../components/CensuraPrueba'
+import { SimularMes } from '../components/SimularMes'
 import { Monto } from '../components/ui/Monto'
 
 function formatMonto(monto: number, tipo: string, moneda: 'ARS' | 'USD') {
@@ -361,9 +361,12 @@ export function DashboardPage() {
           Hola, {persona?.nombre ?? ''}
         </motion.h1>
         {esModoPrueba() && (
-          <motion.p variants={itemVariants} className="font-body text-sm text-slate-secondary mb-6">
-            Estás en el banco de prueba. El saldo, el bono y los movimientos son de muestra.
-          </motion.p>
+          <motion.div variants={itemVariants} className="mb-6">
+            <p className="font-body text-sm text-slate-secondary mb-3">
+              Estás en el banco de prueba. El dinero es de muestra y todo lo que hagas se borra al salir.
+            </p>
+            <SimularMes />
+          </motion.div>
         )}
 
         {/* Saldo principal */}
@@ -391,21 +394,11 @@ export function DashboardPage() {
                   else if (info.offset.x > umbral || info.velocity.x > 500) toggleCuenta(-1)
                 }}
               >
-                {esModoPrueba() && monedaActiva === 'USD' ? (
-                  <CensuraPrueba>
-                    <SaldoCard
-                      cuenta={cuentaMostrada}
-                      interesHoy={interesHoyPorCuenta[cuentaMostrada.id] ?? 0}
-                      titulo="Saldo disponible en dólares"
-                    />
-                  </CensuraPrueba>
-                ) : (
-                  <SaldoCard
-                    cuenta={cuentaMostrada}
-                    interesHoy={interesHoyPorCuenta[cuentaMostrada.id] ?? 0}
-                    titulo={cuentaUSD ? (monedaActiva === 'USD' ? 'Saldo disponible en dólares' : 'Saldo disponible en pesos') : 'Saldo disponible'}
-                  />
-                )}
+                <SaldoCard
+                  cuenta={cuentaMostrada}
+                  interesHoy={interesHoyPorCuenta[cuentaMostrada.id] ?? 0}
+                  titulo={cuentaUSD ? (monedaActiva === 'USD' ? 'Saldo disponible en dólares' : 'Saldo disponible en pesos') : 'Saldo disponible'}
+                />
               </motion.div>
             )}
           </AnimatePresence>

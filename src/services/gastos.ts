@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient'
-import { esModoPrueba, gastosPrueba, movimientosPrueba } from '../lib/modoPrueba'
+import { esModoPrueba } from '../lib/modoPrueba'
+import { estadoPrueba } from '../lib/estadoPrueba'
 import { resumenGastos } from '../utils/gastos'
 import type { GastosDelMes } from '../utils/respuestaGastos'
 import type { Cuenta, Movimiento } from '../types'
@@ -14,7 +15,7 @@ export async function cargarGastosDelMes(cuentas: Cuenta[]): Promise<GastosDelMe
 
   let movimientos: Movimiento[]
   if (esModoPrueba()) {
-    movimientos = [...gastosPrueba(), ...movimientosPrueba()]
+    movimientos = estadoPrueba().movimientos
   } else {
     if (pesos.length === 0) return null
     const { data, error } = await supabase

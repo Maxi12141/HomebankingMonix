@@ -13,7 +13,9 @@ import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
-import { frenarSiEsPrueba } from '../lib/modoPrueba'
+import { esModoPrueba } from '../lib/modoPrueba'
+import { moverReservaPrueba } from '../lib/operacionesPrueba'
+import { SimularMes } from '../components/SimularMes'
 
 type Mode = 'ingresar' | 'retirar'
 
@@ -38,7 +40,6 @@ export function ReservasPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (frenarSiEsPrueba()) return
     if (!cuenta || !reserva) return
     if (isNaN(montoNum) || montoNum <= 0) {
       setError('Ingresá un monto válido')
@@ -51,13 +52,17 @@ export function ReservasPage() {
     try {
       // Débito, crédito y movimiento en una sola transacción del servidor (S-1):
       // antes eran tres llamadas y una falla a mitad dejaba el dinero en el aire.
-      const { data, error: errRpc } = await supabase.rpc('mover_reserva', {
-        p_cuenta_id: cuenta.id,
-        p_monto: montoNum,
-        p_modo: mode,
-      })
-      if (errRpc) throw new Error(errRpc.message)
-      updateSaldo(Number((data as { saldo_cuenta: number }).saldo_cuenta))
+      if (esModoPrueba()) {
+        moverReservaPrueba(mode, montoNum)
+      } else {
+        const { data, error: errRpc } = await supabase.rpc('mover_reserva', {
+          p_cuenta_id: cuenta.id,
+          p_monto: montoNum,
+          p_modo: mode,
+        })
+        if (errRpc) throw new Error(errRpc.message)
+        updateSaldo(Number((data as { saldo_cuenta: number }).saldo_cuenta))
+      }
       toast.success(mode === 'ingresar' ? 'Dinero ingresado a tu reserva' : 'Dinero vuelto a tu saldo disponible')
 
       setMonto('')
@@ -77,6 +82,7 @@ export function ReservasPage() {
         <h1 className="font-display text-2xl font-semibold text-navy dark:text-mint mb-2">
           Reservas
         </h1>
+        <SimularMes className="mb-4" />
         <p className="font-body text-sm text-slate-secondary mb-6">
           Separá dinero de tu saldo y hacé rendir tu ahorro todos los días.
         </p>

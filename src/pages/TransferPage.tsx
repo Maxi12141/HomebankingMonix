@@ -12,7 +12,9 @@ import { useTransferenciasRecientes } from '../hooks/useTransferenciasRecientes'
 import { useMercadoFinanciero } from '../hooks/useMercadoFinanciero'
 import { formatMonto } from '../utils/cuenta'
 import { esCelular } from '../lib/biometria'
-import { frenarSiEsPrueba } from '../lib/modoPrueba'
+import { esModoPrueba, frenarSiEsPrueba } from '../lib/modoPrueba'
+import { transferirPrueba } from '../lib/operacionesPrueba'
+import { destinoEjemplo, DESTINOS_EJEMPLO } from '../utils/bancoSimulado'
 import { comprobantePdfFile, compartirArchivo, downloadComprobante, precargarComprobante, puedeCompartirArchivos } from '../utils/comprobante'
 import { MOTIVOS_GRUPOS } from '../utils/gastos'
 import { AgendaContactosPanel } from '../components/AgendaContactosPanel'
@@ -167,6 +169,13 @@ export function TransferPage() {
     setDestinatario(null)
 
     try {
+      const ejemplo = esModoPrueba() ? destinoEjemplo(input) : null
+      if (ejemplo) {
+        const simulado: Destinatario = { ...ejemplo, moneda: 'ARS', banco: 'Monix', mismoBanco: true }
+        setDestinatario(simulado)
+        return simulado
+      }
+
       const esCBU = /^\d{22}$/.test(input)
 
       let localQuery = supabase
@@ -230,6 +239,7 @@ export function TransferPage() {
   }
 
   function toggleAgenda() {
+    if (frenarSiEsPrueba()) return
     if (!destinatario) return
     if (isGuardado(destinatario.cbu)) {
       eliminar(destinatario.cbu)
@@ -269,7 +279,6 @@ export function TransferPage() {
   }
 
   async function handleConfirm() {
-    if (frenarSiEsPrueba()) return
     if (!destinatario || !cuentaOrigen) return
     if (!cuentaOrigen.cbu) { setError('Tu cuenta no tiene CBU asignado. Contactá al soporte.'); return }
 
@@ -287,7 +296,7 @@ export function TransferPage() {
     setError('')
 
     try {
-      if (!op.enviadoBC) {
+      if (!esModoPrueba() && !op.enviadoBC) {
         // El importe que viaja al Banco Central es el que recibe la cuenta
         // destino, en SU moneda — así lo puede acreditar cualquier banco que
         // lea la transacción (nuestro propio sync incluido).
@@ -299,7 +308,19 @@ export function TransferPage() {
       const descValue = mensaje.trim() ? `${descripcion}|${mensaje.trim()}` : descripcion
 
       // El débito/crédito local es atómico en el servidor — el cliente no puede escribir la cuenta ajena (RLS).
-      if (destinatario.mismoBanco) {
+      if (esModoPrueba()) {
+        // Nada sale del navegador: ni al Banco Central ni a la base.
+        transferirPrueba({
+          moneda: cuentaOrigen.moneda,
+          monto: montoNum,
+          descripcion: descValue,
+          nombre: destinatario.nombre,
+          apellido: destinatario.apellido,
+          dni: destinatario.dni ?? null,
+          cbu: destinatario.cbu,
+          alias: destinatario.alias ?? null,
+        })
+      } else if (destinatario.mismoBanco) {
         const { error: rpcError } = await supabase.rpc('transferir_entre_cuentas', {
           p_operacion_id: op.id,
           p_cuenta_origen: cuentaOrigen.id,
@@ -434,6 +455,11 @@ export function TransferPage() {
                 <Card className="p-8">
                   <div>
                     <label className="block text-sm font-body text-slate-secondary mb-1">CBU o alias destino</label>
+                    {esModoPrueba() && (
+                      <p className="font-body text-sm text-slate-secondary mb-2">
+                        Para probar, usá <span className="font-medium text-navy dark:text-white">{DESTINOS_EJEMPLO[0].alias}</span>. En la prueba no se envía dinero de verdad.
+                      </p>
+                    )}
                     <div className="flex gap-2">
                       <input
                         className="flex-1 bg-slate-input dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-xl px-4 py-3 text-navy dark:text-white font-body text-sm placeholder-slate-secondary focus:outline-none focus:border-mint/50 transition-colors"

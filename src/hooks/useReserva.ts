@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { esModoPrueba, reservaPrueba } from '../lib/modoPrueba'
+import { useCuentaStore } from '../store/cuentaStore'
+import { esModoPrueba } from '../lib/modoPrueba'
+import { reservaPrueba } from '../lib/estadoPrueba'
 import type { Reserva } from '../types'
 
 function roundMoney(n: number) {
@@ -22,6 +24,8 @@ export function useReserva(cuentaId?: string | null) {
   const [reserva, setReserva] = useState<Reserva | null>(null)
   const [loading, setLoading] = useState(true)
   const [interesHoy, setInteresHoy] = useState(0)
+  // En la prueba el saldo cambia sin pasar por el servidor: hay que volver a leerlo.
+  const operacionPrueba = useCuentaStore((s) => (esModoPrueba() ? s.refreshTick : 0))
 
   const ensureAndAccrue = useCallback(async (id: string) => {
     if (esModoPrueba()) {
@@ -54,7 +58,7 @@ export function useReserva(cuentaId?: string | null) {
       return
     }
     ensureAndAccrue(cuentaId)
-  }, [cuentaId, ensureAndAccrue])
+  }, [cuentaId, ensureAndAccrue, operacionPrueba])
 
   async function refreshReserva() {
     if (cuentaId) await ensureAndAccrue(cuentaId)

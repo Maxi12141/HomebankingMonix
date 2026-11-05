@@ -1,16 +1,18 @@
 import type { User } from '@supabase/supabase-js'
-import type { Cuenta, Movimiento, Persona, Reserva } from '../types'
+import type { Cuenta, Persona } from '../types'
 import { marcarUsuarioNuevo, descartarOnboarding } from './onboarding'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
+import { CUENTA_PRUEBA_ARS_ID, CUENTA_PRUEBA_USD_ID, SALDO_INICIAL_ARS, SALDO_INICIAL_USD, TASA_PRUEBA_ARS, TASA_PRUEBA_USD, type EstadoPrueba } from '../utils/bancoSimulado'
+
+export { CUENTA_PRUEBA_ARS_ID, CUENTA_PRUEBA_USD_ID }
 
 const MODO_PRUEBA_KEY = 'monix_modo_prueba'
 const MOSTRAR_SALDO_KEY = 'monix_mostrar_saldo'
+export const ESTADO_PRUEBA_KEY = 'monix_prueba_estado'
 
 export const USUARIO_PRUEBA_ID = '00000000-0000-4000-8000-000000000001'
-export const CUENTA_PRUEBA_ARS_ID = '00000000-0000-4000-8000-0000000000a1'
-export const CUENTA_PRUEBA_USD_ID = '00000000-0000-4000-8000-0000000000a2'
 
 export function esModoPrueba() {
   try {
@@ -20,7 +22,7 @@ export function esModoPrueba() {
   }
 }
 
-function hace(dias: number, horas: number) {
+export function hace(dias: number, horas: number) {
   const d = new Date()
   d.setDate(d.getDate() - dias)
   d.setHours(horas, 12, 0, 0)
@@ -58,17 +60,20 @@ function personaPrueba(): Persona {
 
 function cuentasPrueba(): Cuenta[] {
   const alta = hace(0, 9)
+  const estado = leerEstadoPrueba()
+  const saldoArs = estado?.saldoArs ?? SALDO_INICIAL_ARS
+  const saldoUsd = estado?.saldoUsd ?? SALDO_INICIAL_USD
   const ars: Cuenta = {
     id: CUENTA_PRUEBA_ARS_ID,
     persona_id: USUARIO_PRUEBA_ID,
     numero_cuenta: '0001842201',
     tipo: 'caja_ahorro',
     moneda: 'ARS',
-    saldo: 162_300,
+    saldo: saldoArs,
     activa: true,
     cbu: '0000003100098765432101',
     alias: 'alex.romero.monix',
-    tasa_anual: 32,
+    tasa_anual: TASA_PRUEBA_ARS,
     ultima_interes_at: alta,
     created_at: alta,
   }
@@ -78,151 +83,34 @@ function cuentasPrueba(): Cuenta[] {
     numero_cuenta: '0001842202',
     tipo: 'caja_ahorro',
     moneda: 'USD',
-    saldo: 120.5,
+    saldo: saldoUsd,
     activa: true,
     cbu: '0000003100098765432102',
     alias: 'alex.romero.usd',
-    tasa_anual: 2,
+    tasa_anual: TASA_PRUEBA_USD,
     ultima_interes_at: alta,
     created_at: alta,
   }
   return [ars, usd]
 }
 
-export function movimientosPrueba(): Movimiento[] {
-  const lista: Movimiento[] = [
-    {
-      id: 'demo-mov-1',
-      cuenta_id: CUENTA_PRUEBA_ARS_ID,
-      tipo: 'transferencia_salida',
-      moneda: 'ARS',
-      monto: 6_200,
-      saldo_resultante: 162_300,
-      descripcion: 'Supermercado del barrio',
-      cuenta_destino_id: null,
-      destinatario_nombre: 'Super',
-      destinatario_apellido: 'Norte',
-      destinatario_dni: null,
-      destino_cbu: '0000003100011111111111',
-      destino_alias: 'super.norte.mp',
-      bc_transaccion_id: null,
-      banco_codigo_origen: null,
-      created_at: hace(0, 18),
-    },
-    {
-      id: 'demo-mov-2',
-      cuenta_id: CUENTA_PRUEBA_ARS_ID,
-      tipo: 'transferencia_entrada',
-      moneda: 'ARS',
-      monto: 18_500,
-      saldo_resultante: 168_500,
-      descripcion: 'De María Gómez',
-      cuenta_destino_id: null,
-      destinatario_nombre: 'María',
-      destinatario_apellido: 'Gómez',
-      destinatario_dni: null,
-      destino_cbu: null,
-      destino_alias: null,
-      bc_transaccion_id: null,
-      banco_codigo_origen: null,
-      created_at: hace(1, 15),
-    },
-    {
-      id: 'demo-mov-3',
-      cuenta_id: CUENTA_PRUEBA_ARS_ID,
-      tipo: 'deposito',
-      moneda: 'ARS',
-      monto: 150_000,
-      saldo_resultante: 150_000,
-      descripcion: 'Bono de bienvenida',
-      cuenta_destino_id: null,
-      destinatario_nombre: null,
-      destinatario_apellido: null,
-      destinatario_dni: null,
-      destino_cbu: null,
-      destino_alias: null,
-      bc_transaccion_id: null,
-      banco_codigo_origen: null,
-      created_at: hace(0, 9),
-    },
-    {
-      id: 'demo-mov-4',
-      cuenta_id: CUENTA_PRUEBA_USD_ID,
-      tipo: 'deposito',
-      moneda: 'USD',
-      monto: 120.5,
-      saldo_resultante: 120.5,
-      descripcion: 'Saldo de muestra',
-      cuenta_destino_id: null,
-      destinatario_nombre: null,
-      destinatario_apellido: null,
-      destinatario_dni: null,
-      destino_cbu: null,
-      destino_alias: null,
-      bc_transaccion_id: null,
-      banco_codigo_origen: null,
-      created_at: hace(2, 11),
-    },
-  ]
-  return lista.sort((a, b) => b.created_at.localeCompare(a.created_at))
-}
-
-/** Sólo para Mis gastos y Moni: un mes y el anterior con motivos variados, sin sumar filas al inicio ni al historial. */
-export function gastosPrueba(): Movimiento[] {
-  const hoy = new Date()
-  const fila = (mesesAtras: number, dia: number, motivo: string, nombre: string, monto: number): Movimiento => ({
-    id: `demo-gasto-${mesesAtras}-${motivo}`,
-    cuenta_id: CUENTA_PRUEBA_ARS_ID,
-    tipo: 'transferencia_salida',
-    moneda: 'ARS',
-    monto,
-    saldo_resultante: null,
-    descripcion: motivo,
-    cuenta_destino_id: null,
-    destinatario_nombre: nombre,
-    destinatario_apellido: null,
-    destinatario_dni: null,
-    destino_cbu: null,
-    destino_alias: null,
-    bc_transaccion_id: null,
-    banco_codigo_origen: null,
-    created_at: new Date(
-      hoy.getFullYear(),
-      hoy.getMonth() - mesesAtras,
-      mesesAtras === 0 ? Math.min(dia, hoy.getDate()) : dia,
-      12,
-    ).toISOString(),
-  })
-  return [
-    fila(0, 1, 'Alquiler', 'Inmobiliaria Centro', 95_000),
-    fila(0, 2, 'Compra', 'Almacén Don Pepe', 62_400),
-    fila(0, 3, 'Salud', 'Farmacia Norte', 22_000),
-    fila(0, 4, 'Transporte', 'Carga SUBE', 18_200),
-    fila(0, 5, 'Regalo', 'Sofía', 15_000),
-    fila(0, 6, 'Suscripción', 'Música', 9_800),
-    fila(1, 1, 'Alquiler', 'Inmobiliaria Centro', 95_000),
-    fila(1, 8, 'Compra', 'Almacén Don Pepe', 71_000),
-    fila(1, 12, 'Servicio', 'Internet', 24_500),
-    fila(1, 15, 'Transporte', 'Carga SUBE', 21_000),
-    fila(1, 20, 'Suscripción', 'Música', 9_800),
-    fila(1, 24, 'Salud', 'Farmacia Norte', 8_000),
-  ]
-}
-
-export function reservaPrueba(): Reserva {
-  return {
-    id: '00000000-0000-4000-8000-0000000000b1',
-    cuenta_id: CUENTA_PRUEBA_ARS_ID,
-    saldo: 25_000,
-    tasa_anual: 32,
-    ultima_interes_at: hace(0, 8),
-    created_at: hace(3, 8),
+// Sobrevive a una recarga, y se pierde al salir de la prueba o cerrar la pestaña:
+// nada de esto va a localStorage ni a la base. Sin sessionStorage tampoco hay modo prueba
+// (esModoPrueba). Los datos de ejemplo están en estadoPrueba.ts, fuera de la carga inicial.
+export function leerEstadoPrueba(): EstadoPrueba | null {
+  try {
+    const guardado = sessionStorage.getItem(ESTADO_PRUEBA_KEY)
+    return guardado ? (JSON.parse(guardado) as EstadoPrueba) : null
+  } catch {
+    return null
   }
 }
 
 /** Arma la sesión ficticia. `reiniciarTour` vuelve a mostrar el bono y el tutorial. */
 export function entrarModoPrueba(opts?: { reiniciarTour?: boolean }) {
   sessionStorage.setItem(MODO_PRUEBA_KEY, '1')
+  // Escanear el QR de nuevo arranca de cero.
+  if (opts?.reiniciarTour) sessionStorage.removeItem(ESTADO_PRUEBA_KEY)
   const auth = useAuthStore.getState()
   if (auth.user?.id !== USUARIO_PRUEBA_ID) {
     auth.setUser(usuarioPrueba())
@@ -232,7 +120,7 @@ export function entrarModoPrueba(opts?: { reiniciarTour?: boolean }) {
 
   const cuentas = cuentasPrueba()
   const store = useCuentaStore.getState()
-  if (!store.cuentasLoaded || store.cuenta?.id !== CUENTA_PRUEBA_ARS_ID) {
+  if (opts?.reiniciarTour || !store.cuentasLoaded || store.cuenta?.id !== CUENTA_PRUEBA_ARS_ID) {
     store.setCuentas(cuentas)
     store.setCuenta(cuentas[0])
     store.setCuentasLoaded(true)
@@ -249,12 +137,10 @@ export function entrarModoPrueba(opts?: { reiniciarTour?: boolean }) {
   }
 }
 
-/** Pantallas que en la prueba se ven, pero no se usan: el resto (transferir, QR, tarjetas, reservas, dólares) queda abierto. */
+/** Pantallas que en la prueba se ven, pero no se usan. Lo demás funciona sobre el banco simulado (operacionesPrueba). */
 const RUTAS_CENSURADAS = new Set([
   '/metas',
-  '/prestamos',
   '/depositar',
-  '/historial',
   '/contactos',
   '/perfil',
   '/promos',
@@ -268,6 +154,7 @@ export function pantallaCensuradaEnPrueba(pathname: string) {
 
 function olvidarBanderaPrueba() {
   try {
+    sessionStorage.removeItem(ESTADO_PRUEBA_KEY)
     sessionStorage.removeItem(MODO_PRUEBA_KEY)
   } catch {
     /* modo privado */

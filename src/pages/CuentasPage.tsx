@@ -13,8 +13,7 @@ import { Modal } from '../components/ui/Modal'
 import { compartirTexto, textoDatosCuenta } from '../utils/compartir'
 import type { Cuenta, Persona } from '../types'
 import { Monto } from '../components/ui/Monto'
-import { esModoPrueba, frenarSiEsPrueba } from '../lib/modoPrueba'
-import { CensuraPrueba } from '../components/CensuraPrueba'
+import { frenarSiEsPrueba } from '../lib/modoPrueba'
 import { mensajeError } from '../lib/errores'
 
 type Estado = 'idle' | 'confirmar' | 'abriendo'
@@ -141,13 +140,7 @@ export function CuentasPage() {
           {cuenta && <CuentaCard cuenta={cuenta} titulo="Caja de ahorro en pesos" persona={persona} />}
 
           {cuentaUSD ? (
-            esModoPrueba() ? (
-              <CensuraPrueba>
-                <CuentaCard cuenta={cuentaUSD} titulo="Caja de ahorro en dólares" persona={persona} />
-              </CensuraPrueba>
-            ) : (
-              <CuentaCard cuenta={cuentaUSD} titulo="Caja de ahorro en dólares" persona={persona} />
-            )
+            <CuentaCard cuenta={cuentaUSD} titulo="Caja de ahorro en dólares" persona={persona} />
           ) : (
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-3">

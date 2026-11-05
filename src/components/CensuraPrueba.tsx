@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { salirModoPrueba } from '../lib/modoPrueba'
 import { Button } from './ui/Button'
@@ -26,24 +25,6 @@ export function CartelRegistroPrueba() {
       <Button type="button" onClick={registrarse} className="w-full min-h-11">
         Registrate
       </Button>
-    </div>
-  )
-}
-
-/** Tapa un bloque de la prueba (por ejemplo la cuenta en dólares) sin ocultar el resto de la pantalla. */
-export function CensuraPrueba({ children }: { children: ReactNode }) {
-  return (
-    <div className="relative min-h-[22rem]">
-      <div
-        className="pointer-events-none select-none blur-md"
-        aria-hidden="true"
-        ref={(nodo) => nodo?.setAttribute('inert', '')}
-      >
-        {children}
-      </div>
-      <div className="absolute inset-0 z-10 flex items-center justify-center p-3">
-        <CartelRegistroPrueba />
-      </div>
     </div>
   )
 }
