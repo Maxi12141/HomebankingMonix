@@ -18,8 +18,6 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { LandingPage } from './pages/LandingPage'
 import { MovimientosSkeleton } from './components/ui/Skeleton'
 import { useBiometriaLock } from './hooks/useBiometriaLock'
-import { useCuenta } from './hooks/useCuenta'
-import { useSyncTransferenciasEntrantes } from './hooks/useSyncTransferenciasEntrantes'
 import { esModoPrueba } from './lib/modoPrueba'
 
 // Cada pantalla va en su propio chunk y se baja al visitarla. La Landing queda
@@ -30,6 +28,7 @@ const cargarDashboard = () => import('./pages/DashboardPage')
 const DashboardPage = pagina(cargarDashboard, 'DashboardPage')
 const HuellaLockScreen = lazy(() => import('./components/HuellaLockScreen').then((m) => ({ default: m.HuellaLockScreen })))
 const VerificarCodigoScreen = lazy(() => import('./components/VerificarCodigoScreen').then((m) => ({ default: m.VerificarCodigoScreen })))
+const CuentasGlobales = lazy(() => import('./components/CuentasGlobales').then((m) => ({ default: m.CuentasGlobales })))
 const LoginPage = pagina(() => import('./pages/LoginPage'), 'LoginPage')
 const PitchPage = pagina(() => import('./pages/PitchPage'), 'PitchPage')
 const PruebaEntrada = pagina(() => import('./pages/PruebaEntrada'), 'PruebaEntrada')
@@ -85,18 +84,6 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
   return user && !provisioning ? <Navigate to="/dashboard" replace /> : <>{children}</>
 }
 
-// Carga las cuentas (y su Realtime) una vez para toda la app logueada: sin
-// esto, las páginas que no llaman a useCuenta() por su cuenta (Historial)
-// quedan en "Cargando..." al entrar directo o recargar, porque useMovimientos
-// espera a que la store tenga cuentas.
-function CuentasGlobales() {
-  useCuenta()
-  // Una sola sincronización con el Banco Central para toda la app: antes cada
-  // pantalla montaba la suya y cada navegación repetía la consulta.
-  useSyncTransferenciasEntrantes()
-  return null
-}
-
 function AppRoutes() {
   const { user, loading, pendienteCodigo } = useAuth()
   const { locked, unlock } = useBiometriaLock(loading ? null : user)
@@ -115,7 +102,7 @@ function AppRoutes() {
 
   return (
     <>
-    {!loading && user && <CuentasGlobales />}
+    {!loading && user && <Suspense fallback={null}><CuentasGlobales /></Suspense>}
     <Suspense fallback={<PantallaCargando />}>
     <Routes>
       <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />

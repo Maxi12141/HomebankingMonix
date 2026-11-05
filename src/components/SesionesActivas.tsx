@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { mensajeError } from '../lib/errores'
 import { haceCuanto, nombreDispositivo } from '../utils/sesiones'
-import { Card } from './ui/Card'
+import { Desplegable } from './ui/Desplegable'
 import { Button } from './ui/Button'
 
 interface Sesion {
@@ -58,11 +58,11 @@ export function SesionesActivas() {
   const visibles = verTodas ? otras : otras.slice(0, OTRAS_VISIBLES)
 
   return (
-    <Card className="p-8">
-      <div className="flex items-center gap-3 mb-2">
-        <MonitorSmartphone size={18} className="text-slate-secondary" />
-        <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Dónde está abierta tu cuenta</h2>
-      </div>
+    <Desplegable
+      titulo="Dónde está abierta tu cuenta"
+      resumen={sesiones ? (sesiones.length === 1 ? '1 dispositivo' : `${sesiones.length} dispositivos`) : undefined}
+      icono={<MonitorSmartphone size={20} />}
+    >
       <p className="font-body text-sm text-slate-secondary mb-4">
         Si no reconocés un dispositivo, cerralo y cambiá tu contraseña: el acceso se corta en menos de una hora.
       </p>
@@ -135,6 +135,6 @@ export function SesionesActivas() {
           )}
         </>
       )}
-    </Card>
+    </Desplegable>
   )
 }

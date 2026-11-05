@@ -126,6 +126,17 @@ function gastosPrueba(): Movimiento[] {
     fila(1, 15, 'Transporte', 'Carga SUBE', 21_000),
     fila(1, 20, 'Suscripción', 'Música', 9_800),
     fila(1, 24, 'Salud', 'Farmacia Norte', 8_000),
+    fila(2, 1, 'Alquiler', 'Inmobiliaria Centro', 90_000),
+    fila(2, 9, 'Compra', 'Almacén Don Pepe', 54_300),
+    fila(2, 18, 'Viajes', 'Micros del Sur', 38_000),
+    fila(3, 1, 'Alquiler', 'Inmobiliaria Centro', 90_000),
+    fila(3, 11, 'Compra', 'Almacén Don Pepe', 48_700),
+    fila(3, 22, 'Regalo', 'Lucas', 12_000),
+    fila(4, 1, 'Alquiler', 'Inmobiliaria Centro', 85_000),
+    fila(4, 7, 'Compra', 'Almacén Don Pepe', 66_100),
+    fila(4, 16, 'Educación', 'Instituto de Inglés', 41_000),
+    fila(5, 1, 'Alquiler', 'Inmobiliaria Centro', 85_000),
+    fila(5, 13, 'Compra', 'Almacén Don Pepe', 43_200),
   ]
 }
 

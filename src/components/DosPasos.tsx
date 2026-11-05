@@ -11,7 +11,7 @@ import {
   prepararActivacion,
   type Activacion,
 } from '../services/dosPasos'
-import { Card } from './ui/Card'
+import { Desplegable } from './ui/Desplegable'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 
@@ -144,11 +144,11 @@ export function DosPasos({ onSesionesCerradas }: { onSesionesCerradas: () => voi
   }
 
   return (
-    <Card className="p-8">
-      <div className="flex items-center gap-3 mb-2">
-        <ShieldCheck size={18} className="text-slate-secondary" />
-        <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Verificación en dos pasos</h2>
-      </div>
+    <Desplegable
+      titulo="Verificación en dos pasos"
+      resumen={estado === 'activa' || estado === 'desactivando' ? 'Activa' : estado === 'cargando' || estado === 'error' ? undefined : 'Apagada'}
+      icono={<ShieldCheck size={20} />}
+    >
 
       {estado === 'cargando' && (
         <p role="status" className="font-body text-sm text-slate-secondary">Cargando...</p>
@@ -284,6 +284,6 @@ export function DosPasos({ onSesionesCerradas }: { onSesionesCerradas: () => voi
           <Button type="button" variant="ghost" onClick={cancelar} className="w-full min-h-11">Cancelar</Button>
         </form>
       )}
-    </Card>
+    </Desplegable>
   )
 }

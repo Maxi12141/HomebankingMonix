@@ -645,7 +645,8 @@ prueba('Dos pasos: se activa y se desactiva desde Perfil', async (b) => {
   await page.goto('/perfil')
   const titulo = page.getByRole('heading', { name: 'Verificación en dos pasos' })
   await titulo.waitFor({ timeout: 15000 })
-  const tarjeta = titulo.locator('xpath=ancestor::div[contains(@class, "p-8")]').first()
+  await titulo.getByRole('button').click()
+  const tarjeta = titulo.locator('xpath=ancestor::div[contains(@class, "rounded-2xl")]').first()
   const sinToquesChicos = async () => {
     const chicos = await tarjeta.locator('button, a').evaluateAll((els) => els
       .map((el) => ({ t: el.textContent, r: el.getBoundingClientRect() }))

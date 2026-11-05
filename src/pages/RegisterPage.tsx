@@ -29,6 +29,7 @@ import { TermsModal } from '../components/TermsModal'
 import Stepper, { Step } from '../components/Stepper'
 import type { RegisterFormData } from '../types'
 import { mensajeError } from '../lib/errores'
+import { saveRememberedEmail } from '../utils/rememberMe'
 
 interface BioOfferInfo {
   userId: string
@@ -222,6 +223,8 @@ export function RegisterPage() {
 
       marcarUsuarioNuevo(userId)
       marcarIngresoConClave()
+
+      saveRememberedEmail(form.email.trim())
 
       // Ofrecemos biometría acá, con la contraseña fresca en memoria, en vez de que el usuario la busque sola en Perfil.
       if (esCelular() && await soportaHuella()) {

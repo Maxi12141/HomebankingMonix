@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet, Fingerprint, ShieldCheck } from 'lucide-react'
+import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet, Fingerprint, ShieldCheck, UserRound } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase, verificarClave } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
@@ -12,6 +12,7 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
+import { Desplegable } from '../components/ui/Desplegable'
 import { SesionesActivas } from '../components/SesionesActivas'
 import { DosPasos } from '../components/DosPasos'
 import {
@@ -346,7 +347,8 @@ export function ProfilePage() {
         </div>
 
         {/* Badge verificado */}
-        <Card className="p-5 flex items-center gap-3 mb-6">
+        <div className="flex flex-col gap-4">
+        <Card className="p-5 flex items-center gap-3">
           <BadgeCheck size={24} className="text-navy dark:text-mint shrink-0" />
           <div>
             <p className="font-body font-medium text-navy dark:text-white text-sm">Cuenta verificada</p>
@@ -354,16 +356,8 @@ export function ProfilePage() {
           </div>
         </Card>
 
-        <Card className="p-5 mb-4">
-          <div className="flex items-start gap-3 mb-4">
-            <ShieldCheck size={22} className="text-navy dark:text-mint shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="font-body font-medium text-navy dark:text-white text-sm">Permisos del teléfono</p>
-              <p className="font-body text-xs text-slate-secondary mt-0.5">
-                Cámara y micrófono. Sin esto no abre el QR.
-              </p>
-            </div>
-          </div>
+        <Desplegable titulo="Permisos del teléfono" resumen="Cámara y micrófono" icono={<ShieldCheck size={20} />}>
+          <p className="font-body text-sm text-slate-secondary mb-4">Sin esto no abre el QR.</p>
           <Button
             type="button"
             variant="secondary"
@@ -373,16 +367,16 @@ export function ProfilePage() {
           >
             Permitir cámara y micrófono
           </Button>
-        </Card>
+        </Desplegable>
 
-        <Card className="p-5 mb-6">
+        <Card className="p-5">
           <div className="flex items-start gap-3">
             <Fingerprint size={22} className="text-navy dark:text-mint shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p id="bio-titulo" className="font-body font-medium text-navy dark:text-white text-sm">Ingreso con biometría</p>
               <p className="font-body text-xs text-slate-secondary mt-0.5">
                 {huellaDisponible
-                  ? 'Usa la huella, la cara o el PIN que ya tengas configurado en el teléfono — el sistema elige solo cuál pedirte. Si sale mal o preferís no usarla, siempre podés entrar con tu contraseña.'
+                  ? 'Entrá con la huella, la cara o el PIN de tu teléfono. Tu contraseña sigue sirviendo.'
                   : 'Abrí Perfil desde el celular para activar la biometría.'}
               </p>
             </div>
@@ -413,18 +407,17 @@ export function ProfilePage() {
         </Card>
 
         {/* Datos personales */}
-        <Card className="p-8 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Datos personales</h2>
-            {!editMode && (
+        <Desplegable titulo="Datos personales" resumen="Nombre, DNI, email y teléfono" icono={<UserRound size={20} />}>
+          {!editMode && (
+            <div className="flex justify-end mb-2">
               <button
                 onClick={() => setEditMode(true)}
                 className="toque-texto justify-end text-sm font-body text-navy dark:text-mint hover:text-navy/70 dark:hover:text-mint-hover transition-colors"
               >
                 Editar
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {editMode ? (
             <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
@@ -448,22 +441,18 @@ export function ProfilePage() {
                 { label: 'Teléfono', value: persona.telefono ?? '—' },
                 { label: 'Fecha de nacimiento', value: persona.fecha_nac ? new Date(persona.fecha_nac + 'T00:00:00').toLocaleDateString('es-AR') : '—' },
               ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between">
-                  <span className="font-body text-sm text-slate-secondary">{label}</span>
-                  <span className="font-body text-sm text-navy dark:text-white">{value}</span>
+                <div key={label} className="flex justify-between gap-4">
+                  <span className="font-body text-sm text-slate-secondary shrink-0">{label}</span>
+                  <span className="font-body text-sm text-navy dark:text-white text-right min-w-0 break-words">{value}</span>
                 </div>
               ))}
             </div>
           )}
-        </Card>
+        </Desplegable>
 
         {/* Alias de cuenta */}
-        <Card className="p-8 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <AtSign size={18} className="text-slate-secondary" />
-              <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Alias de cuenta</h2>
-            </div>
+        <Desplegable titulo="Alias de cuenta" resumen="Tu alias y tu CBU" icono={<AtSign size={20} />}>
+          <div className="flex justify-end mb-2">
             <button
               type="button"
               onClick={() => setShowData((v) => !v)}
@@ -493,16 +482,12 @@ export function ProfilePage() {
               Guardar alias
             </Button>
           </form>
-        </Card>
+        </Desplegable>
 
         {/* Datos financieros (ficticios, usados por Préstamos) */}
-        <Card className="p-8 mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Wallet size={18} className="text-slate-secondary" />
-            <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Datos financieros</h2>
-          </div>
-          <p className="font-body text-xs text-slate-secondary mb-6">
-            Ficticios — los usamos para calcular tu oferta en Préstamos.
+        <Desplegable titulo="Datos financieros" resumen="Para calcular tu oferta de préstamos" icono={<Wallet size={20} />}>
+          <p className="font-body text-sm text-slate-secondary mb-4">
+            Son ficticios: los usamos para calcular tu oferta en Préstamos.
           </p>
           <form onSubmit={handleSaveCredito} className="flex flex-col gap-4">
             <label className="flex items-center justify-between rounded-xl bg-slate-input dark:bg-white/5 px-4 py-3 cursor-pointer">
@@ -529,18 +514,14 @@ export function ProfilePage() {
               Guardar
             </Button>
           </form>
-        </Card>
+        </Desplegable>
 
         <SesionesActivas key={versionSesiones} />
 
         <DosPasos onSesionesCerradas={() => setVersionSesiones((v) => v + 1)} />
 
         {/* Cambiar contraseña */}
-        <Card className="p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Lock size={18} className="text-slate-secondary" />
-            <h2 className="font-display text-lg font-semibold text-navy dark:text-white">Cambiar contraseña</h2>
-          </div>
+        <Desplegable titulo="Cambiar contraseña" icono={<Lock size={20} />}>
           <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
             <Input
               label="Contraseña actual"
@@ -566,7 +547,8 @@ export function ProfilePage() {
               Actualizar contraseña
             </Button>
           </form>
-        </Card>
+        </Desplegable>
+        </div>
       </div>
 
       <Modal open={confirmandoBio} onClose={() => setConfirmandoBio(false)}>

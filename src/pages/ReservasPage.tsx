@@ -11,6 +11,7 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Monto } from '../components/ui/Monto'
+import { Skeleton } from '../components/ui/Skeleton'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
 import { esModoPrueba } from '../lib/modoPrueba'
@@ -76,6 +77,31 @@ export function ReservasPage() {
     }
   }
 
+  // Sin reserva todavía no hay nada real para mostrar. Al refrescar después de operar sigue la anterior.
+  if (loading && !reserva) {
+    return (
+      <PageWrapper>
+        <div className="max-w-md mx-auto" role="status" aria-busy="true" aria-label="Cargando tu reserva">
+          <h1 className="font-display text-2xl font-semibold text-navy dark:text-mint mb-2">Reservas</h1>
+          <Skeleton className="h-4 w-4/5 mb-6" />
+          <Card className="p-6 mb-6">
+            <Skeleton className="h-3 w-20 mb-3" />
+            <Skeleton className="h-9 w-3/5 mb-6" />
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton className="h-14" />
+              <Skeleton className="h-14" />
+            </div>
+          </Card>
+          <Card className="p-6">
+            <Skeleton className="h-11 mb-4" />
+            <Skeleton className="h-11 mb-4" />
+            <Skeleton className="h-12" />
+          </Card>
+        </div>
+      </PageWrapper>
+    )
+  }
+
   return (
     <PageWrapper>
       <div className="max-w-md mx-auto">
@@ -94,7 +120,7 @@ export function ReservasPage() {
                 En reserva
               </p>
               <Monto as="p" tamaño="grande" className="font-display text-3xl font-bold mt-1">
-                {loading ? '—' : formatARS(saldoReserva)}
+                {formatARS(saldoReserva)}
               </Monto>
             </div>
             <div className="rounded-xl bg-mint/15 text-navy dark:text-mint p-2.5">

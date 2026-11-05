@@ -23,7 +23,6 @@ import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import type { Prestamo } from '../types'
 import { Monto } from '../components/ui/Monto'
-import { MovimientosSkeleton } from '../components/ui/Skeleton'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
 
@@ -40,7 +39,7 @@ const situacionPorDni = new Map<string, number>()
 export function PrestamosPage() {
   const { persona } = useAuthStore()
   const { cuenta, refreshCuenta } = useCuenta()
-  const { prestamos, loading: loadingPrestamos, refreshPrestamos } = usePrestamos(cuenta ?? null)
+  const { prestamos, refreshPrestamos } = usePrestamos(cuenta ?? null)
 
   const dni = persona?.dni
   const [situacion, setSituacion] = useState<number | null>(() => (dni ? situacionPorDni.get(dni) ?? null : null))
@@ -335,9 +334,6 @@ export function PrestamosPage() {
           </div>
         )}
 
-        {loadingPrestamos && prestamos.length === 0 && (
-          <MovimientosSkeleton filas={2} label="Cargando tus préstamos" />
-        )}
       </div>
 
       <EsquemaPagoModal
