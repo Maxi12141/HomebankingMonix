@@ -11,6 +11,9 @@ interface AuthState {
   // Banco Central y Supabase — esta bandera evita que PublicOnly lo saque
   // de /register a mitad de ese proceso.
   provisioning: boolean
+  // Hay sesión, pero la cuenta tiene 2FA y todavía no se ingresó el código: la app no pide datos.
+  pendienteCodigo: boolean
+  setPendienteCodigo: (pendiente: boolean) => void
   setUser: (user: User | null) => void
   setPersona: (persona: Persona | null) => void
   setLoading: (loading: boolean) => void
@@ -27,12 +30,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   persona: null,
   loading: true,
   provisioning: false,
+  pendienteCodigo: false,
+  setPendienteCodigo: (pendienteCodigo) => set({ pendienteCodigo }),
   setUser: (user) => set({ user }),
   setPersona: (persona) => set({ persona }),
   setLoading: (loading) => set({ loading }),
   setProvisioning: (provisioning) => set({ provisioning }),
   clear: () => {
     sessionStorage.removeItem(SALDO_ANIMADO_KEY)
-    set({ user: null, persona: null, loading: false, provisioning: false })
+    set({ user: null, persona: null, loading: false, provisioning: false, pendienteCodigo: false })
   },
 }))

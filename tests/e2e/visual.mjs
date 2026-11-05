@@ -45,10 +45,10 @@ const tablas = {
   ],
 }
 
-function fakeJwt() {
+function fakeJwt(extra = {}) {
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url')
   const exp = Math.floor(Date.now() / 1000) + 3600
-  return `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: UID, exp, role: 'authenticated', email: persona.email })}.firma`
+  return `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: UID, exp, role: 'authenticated', email: persona.email, ...extra })}.firma`
 }
 const user = { id: UID, email: persona.email, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: ahora }
 const session = {
@@ -103,13 +103,13 @@ async function mockear(page, { demoraCuentasMs = 0, rpcFalla = false, cuentasExt
   })
 }
 
-async function nuevaPagina(browser, { logueado = true, oscuro = false, ancho = 390, alto = 844, reducedMotion = 'no-preference', ...mocks } = {}) {
+async function nuevaPagina(browser, { logueado = true, oscuro = false, ancho = 390, alto = 844, reducedMotion = 'no-preference', sesion = session, ...mocks } = {}) {
   const ctx = await browser.newContext({ viewport: { width: ancho, height: alto }, reducedMotion })
   await ctx.addInitScript(([s, logueado, oscuro]) => {
     localStorage.setItem('monix_mostrar_saldo', '1')
     localStorage.setItem('monix-theme', JSON.stringify({ state: { theme: oscuro ? 'dark' : 'light' }, version: 0 }))
     if (logueado) localStorage.setItem('sb-mock-auth-token', JSON.stringify(s))
-  }, [session, logueado, oscuro])
+  }, [sesion, logueado, oscuro])
   const page = await ctx.newPage()
   await mockear(page, mocks)
   return page
@@ -533,6 +533,157 @@ prueba('Desktop: sin scroll horizontal a 1024 y 1440 px', async (b) => {
 // Línea de base medida el 2026-10-18. Si un número mejora, bajalo acá; nunca subirlo.
 const BASE_AXE_SERIAS = 0
 const BASE_TOQUES_CHICOS = 0
+// ── Verificación en dos pasos ──────────────────────────────────────────────
+const FACTOR = { id: 'f1', factor_type: 'totp', status: 'verified', friendly_name: 'Monix', created_at: ahora, updated_at: ahora }
+const sesionDe = (aal, factores) => ({
+  ...session,
+  access_token: fakeJwt({ aal }),
+  user: factores ? { ...user, factors: [FACTOR] } : user,
+})
+// Como lo manda Auth: SVG crudo con su encabezado. El prefijo data: lo agrega supabase-js.
+const QR_DE_PRUEBA = '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100" height="100" viewBox="0 0 10 10"><rect width="5" height="5"/></svg>'
+const CODIGOS_DE_PRUEBA = ['AAAAA-11111', 'BBBBB-22222', 'CCCCC-33333', 'DDDDD-44444', 'EEEEE-55555', 'FFFFF-66666', 'GGGGG-77777', 'HHHHH-88888']
+
+// Auth simulado con estado: el usuario tiene factor según lo que se haya hecho en la prueba.
+async function mockearAuthDosPasos(page, inicio) {
+  const estado = { factor: inicio, cerroOtras: false }
+  await page.route(`${SUPABASE}/auth/v1/**`, async (r) => {
+    const url = r.request().url()
+    const metodo = r.request().method()
+    if (url.includes('/challenge')) return r.fulfill({ json: { id: 'ch1', type: 'totp', expires_at: Math.floor(Date.now() / 1000) + 300 } })
+    if (url.includes('/verify')) {
+      if (r.request().postDataJSON()?.code !== '123456') {
+        return r.fulfill({ status: 400, json: { code: 'mfa_verification_failed', msg: 'Invalid TOTP code entered' } })
+      }
+      estado.factor = true
+      return r.fulfill({ json: sesionDe('aal2', true) })
+    }
+    if (url.includes('/factors') && metodo === 'DELETE') {
+      estado.factor = false
+      return r.fulfill({ json: { id: 'f1' } })
+    }
+    if (url.includes('/factors')) {
+      return r.fulfill({ json: { id: 'f1', type: 'totp', friendly_name: 'Monix', totp: { qr_code: QR_DE_PRUEBA, secret: 'CLAVEDEPRUEBA', uri: 'otpauth://totp/Monix' } } })
+    }
+    if (url.includes('/logout')) {
+      estado.cerroOtras = url.includes('scope=others')
+      return r.fulfill({ status: 204, body: '' })
+    }
+    if (url.includes('grant_type=refresh_token')) return r.fulfill({ json: sesionDe('aal1', estado.factor) })
+    if (url.includes('/user')) return r.fulfill({ json: estado.factor ? { ...user, factors: [FACTOR] } : user })
+    return r.fulfill({ json: session })
+  })
+  return estado
+}
+const pedidosDeDatos = (page) => {
+  const lista = []
+  page.on('request', (q) => {
+    const u = q.url()
+    if (u.includes('/rest/v1/') && !u.includes('/rpc/usar_codigo_recuperacion')) lista.push(u)
+  })
+  return lista
+}
+async function violacionesAxe(page) {
+  const { AxeBuilder } = await import('@axe-core/playwright')
+  const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+  return r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id} → ${v.nodes[0]?.target.join(' ')}`)
+}
+
+prueba('Dos pasos: sin el código no se pide ningún dato, y con el código entra', async (b) => {
+  const page = await nuevaPagina(b, { sesion: sesionDe('aal1', true), reducedMotion: 'reduce' })
+  await mockearAuthDosPasos(page, true)
+  const datos = pedidosDeDatos(page)
+  await page.goto('/dashboard')
+  await page.getByRole('heading', { name: 'Ingresá tu código' }).waitFor({ timeout: 15000 })
+  await page.waitForTimeout(1500)
+  assert.deepEqual(datos, [], 'pidió datos antes del código')
+  assert.deepEqual(await violacionesAxe(page), [])
+  await page.screenshot({ path: `${SCREENS}dos-pasos-codigo.png` })
+
+  await page.getByLabel('Código de 6 números').fill('000000')
+  await page.getByText('Ese código no es correcto o ya venció').waitFor({ timeout: 5000 })
+  assert.equal(await page.getByLabel('Código de 6 números').inputValue(), '')
+  assert.deepEqual(datos, [], 'un código malo no da acceso')
+
+  await page.getByLabel('Código de 6 números').fill('123456')
+  await page.getByRole('heading', { name: 'Ingresá tu código' }).waitFor({ state: 'detached', timeout: 5000 })
+  await page.getByText('Hola, Sol').waitFor({ timeout: 10000 })
+  assert.ok(datos.length > 0, 'con el código carga la cuenta')
+  await page.context().close()
+})
+
+prueba('Dos pasos: sin celular, el link de recuperación pasa por el código de recuperación', async (b) => {
+  const page = await nuevaPagina(b, { sesion: sesionDe('aal1', true), reducedMotion: 'reduce' })
+  const estado = await mockearAuthDosPasos(page, true)
+  const datos = pedidosDeDatos(page)
+  await page.route(`${SUPABASE}/rest/v1/rpc/usar_codigo_recuperacion`, (r) => {
+    const sirve = r.request().postDataJSON()?.p_codigo === 'AAAAA-11111'
+    if (sirve) estado.factor = false
+    return r.fulfill({ json: sirve })
+  })
+  await page.goto('/restablecer-contrasena')
+  await page.getByRole('heading', { name: 'Ingresá tu código' }).waitFor({ timeout: 15000 })
+  assert.equal(await page.getByText('Elegí tu nueva contraseña').count(), 0)
+
+  await page.getByRole('button', { name: 'Perdí mi celular' }).click()
+  assert.deepEqual(await violacionesAxe(page), [])
+  await page.getByLabel('Código de recuperación').fill('MALO')
+  await page.getByRole('button', { name: 'Usar código' }).click()
+  await page.getByText('Ese código no sirve o ya se usó').waitFor({ timeout: 5000 })
+  assert.deepEqual(datos, [])
+
+  await page.getByLabel('Código de recuperación').fill('AAAAA-11111')
+  await page.getByRole('button', { name: 'Usar código' }).click()
+  await page.getByText('Elegí tu nueva contraseña').waitFor({ timeout: 10000 })
+  await page.context().close()
+})
+
+prueba('Dos pasos: se activa y se desactiva desde Perfil', async (b) => {
+  const page = await nuevaPagina(b, { reducedMotion: 'reduce' })
+  const estado = await mockearAuthDosPasos(page, false)
+  await page.route(`${SUPABASE}/rest/v1/rpc/generar_codigos_recuperacion`, (r) => r.fulfill({ json: CODIGOS_DE_PRUEBA }))
+  await page.goto('/perfil')
+  const titulo = page.getByRole('heading', { name: 'Verificación en dos pasos' })
+  await titulo.waitFor({ timeout: 15000 })
+  const tarjeta = titulo.locator('xpath=ancestor::div[contains(@class, "p-8")]').first()
+  const sinToquesChicos = async () => {
+    const chicos = await tarjeta.locator('button, a').evaluateAll((els) => els
+      .map((el) => ({ t: el.textContent, r: el.getBoundingClientRect() }))
+      .filter(({ r }) => r.width < 44 || r.height < 44)
+      .map(({ t }) => t))
+    assert.deepEqual(chicos, [])
+  }
+
+  await tarjeta.getByRole('button', { name: 'Activar' }).click()
+  await tarjeta.getByText('CLAVEDEPRUEBA').waitFor({ timeout: 5000 })
+  assert.equal(await tarjeta.getByRole('link', { name: 'Abrir la app' }).getAttribute('href'), 'otpauth://totp/Monix')
+  await page.waitForFunction(() => document.querySelector('img[alt^="Código QR"]')?.naturalWidth > 0, null, { timeout: 5000 })
+  await sinToquesChicos()
+  assert.deepEqual(await violacionesAxe(page), [])
+  await tarjeta.screenshot({ path: `${SCREENS}dos-pasos-activar.png` })
+
+  await tarjeta.getByLabel('Código de 6 números').fill('000000')
+  await tarjeta.getByRole('button', { name: 'Confirmar' }).click()
+  await tarjeta.getByText('Ese código no es correcto o ya venció').waitFor({ timeout: 5000 })
+
+  await tarjeta.getByLabel('Código de 6 números').fill('123456')
+  await tarjeta.getByRole('button', { name: 'Confirmar' }).click()
+  await tarjeta.getByText('AAAAA-11111').waitFor({ timeout: 5000 })
+  assert.equal(estado.cerroOtras, true, 'al activar cierra los demás dispositivos')
+  await sinToquesChicos()
+  assert.deepEqual(await violacionesAxe(page), [])
+  await tarjeta.screenshot({ path: `${SCREENS}dos-pasos-codigos.png` })
+
+  await tarjeta.getByRole('button', { name: 'Ya los guardé' }).click()
+  assert.equal(await tarjeta.getByText('AAAAA-11111').count(), 0, 'los códigos se muestran una sola vez')
+  await tarjeta.getByRole('button', { name: 'Desactivar' }).click()
+  await tarjeta.getByLabel('Código de 6 números').fill('123456')
+  await tarjeta.getByRole('button', { name: 'Desactivar' }).click()
+  await tarjeta.getByRole('button', { name: 'Activar' }).waitFor({ timeout: 5000 })
+  assert.equal(estado.factor, false)
+  await page.context().close()
+})
+
 const publicas = ['/', '/login', '/register']
 const privadas = ['/dashboard', '/transferir', '/depositar', '/historial', '/gastos', '/tarjeta', '/perfil']
 

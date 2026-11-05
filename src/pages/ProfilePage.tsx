@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { BadgeCheck, Lock, AtSign, Camera, Eye, EyeOff, Wallet, Fingerprint, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { supabase } from '../lib/supabaseClient'
+import { supabase, verificarClave } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuenta } from '../hooks/useCuenta'
 import { useCuentaStore } from '../store/cuentaStore'
@@ -13,6 +13,7 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { SesionesActivas } from '../components/SesionesActivas'
+import { DosPasos } from '../components/DosPasos'
 import {
   activarBiometria,
   borrarCredencialBio,
@@ -190,10 +191,7 @@ export function ProfilePage() {
 
     setSavingPass(true)
 
-    const { error: verifyError } = await supabase.auth.signInWithPassword({
-      email: persona!.email,
-      password: currentPass,
-    })
+    const verifyError = await verificarClave(persona!.email, currentPass)
     if (verifyError) {
       setPassError('La contraseña actual es incorrecta')
       setSavingPass(false)
@@ -204,7 +202,7 @@ export function ProfilePage() {
     if (!error) {
       // La huella usa esta misma contraseña para el login rápido (ver credencialBioParaEmail).
       if (bioActiva) guardarCredencialBio(user?.email ?? persona!.email, newPass)
-      // Verificar la contraseña actual abrió una sesión nueva: esto cierra la anterior y cualquier otro dispositivo.
+      // Si alguien más la tenía, deja de entrar con ella.
       await supabase.auth.signOut({ scope: 'others' })
       toast.success('Contraseña actualizada. Cerramos tu cuenta en los demás dispositivos.')
       setCurrentPass('')
@@ -250,7 +248,7 @@ export function ProfilePage() {
     setConfirmError('')
     try {
       const emailAuth = user.email ?? persona.email
-      const { error } = await supabase.auth.signInWithPassword({ email: emailAuth, password: confirmPass })
+      const error = await verificarClave(emailAuth, confirmPass)
       if (error) {
         setConfirmError('Contraseña incorrecta')
         return
@@ -532,6 +530,8 @@ export function ProfilePage() {
         </Card>
 
         <SesionesActivas />
+
+        <DosPasos />
 
         {/* Cambiar contraseña */}
         <Card className="p-8">

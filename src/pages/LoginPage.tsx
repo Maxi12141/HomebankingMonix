@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { Fingerprint, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../lib/supabaseClient'
+import { sesionPideCodigo } from '../utils/dosPasos'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { usePwaInstall } from '../hooks/usePwaInstall'
@@ -112,6 +114,13 @@ export function LoginPage() {
       saveRememberedEmail(emailFinal)
     } else {
       clearRememberedEmail()
+    }
+
+    // Falta el segundo paso: esa pantalla reemplaza a esta y, al pasarla, sigue al inicio.
+    const { data: { session } } = await supabase.auth.getSession()
+    if (sesionPideCodigo(session)) {
+      setProvisioning(false)
+      return
     }
 
     // Ofrecemos biometría acá, recién autenticado, en vez de que el usuario la busque sola en Perfil.

@@ -7,6 +7,9 @@ const TRADUCCIONES: [RegExp, string][] = [
   // Red y tiempos
   [/failed to fetch|networkerror|load failed|network request failed|fetch failed|err_internet/i, 'No pudimos conectarnos. Revisá tu conexión y probá de nuevo.'],
   [/timeout|timed out|signal is aborted|tardó demasiado/i, 'La operación tardó demasiado. Probá de nuevo.'],
+  // Verificación en dos pasos
+  [/invalid totp|mfa_verification_failed|challenge.*expired/i, 'Ese código no es correcto o ya venció. Probá con el que muestra tu app ahora.'],
+  [/falta la verificación en dos pasos|aal2|insufficient_aal/i, 'Primero ingresá el código de tu app autenticadora.'],
   // Supabase Auth
   [/already registered|already been registered|user already exists/i, 'Ese email ya está registrado. Ingresá con tu contraseña.'],
   [/invalid login credentials/i, 'Email o contraseña incorrectos.'],

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Fingerprint } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
+import { supabase, verificarClave } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { verificarHuella, esCancelacionBiometrica } from '../lib/biometria'
 import { Button } from './ui/Button'
@@ -48,10 +48,8 @@ export function HuellaLockScreen({ onUnlock }: Props) {
     setLoadingClave(true)
     setError('')
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      // La sesión ya está abierta: solo se confirma quién es, sin abrir otra.
+      const authError = await verificarClave(email, password)
       if (authError) {
         setError('Contraseña de Monix incorrecta. No es el PIN del teléfono.')
         return

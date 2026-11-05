@@ -1,6 +1,6 @@
 // Sesiones activas: cada cuenta ve y cierra sólo las suyas.
 // Uso: npm run test:sql
-import { test } from 'node:test'
+import { afterEach, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
@@ -15,8 +15,15 @@ const SOL_OTRA = '20000000-0000-4000-8000-00000000000b'
 const SOL_VENCIDA = '20000000-0000-4000-8000-00000000000c'
 const JUAN_ACA = '20000000-0000-4000-8000-00000000000d'
 
+// Cada prueba levanta su Postgres: sin cerrarlo, la memoria se acumula hasta agotarse.
+const basesAbiertas = []
+afterEach(async () => {
+  for (const db of basesAbiertas.splice(0)) await db.close()
+})
+
 async function nuevaBase() {
   const db = new PGlite({ extensions: { pgcrypto } })
+  basesAbiertas.push(db)
   await db.exec(leer('./base-supabase.sql'))
   // Lo que en producción ya trae Supabase Auth.
   await db.exec(`

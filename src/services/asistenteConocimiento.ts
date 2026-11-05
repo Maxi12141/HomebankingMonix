@@ -513,6 +513,17 @@ export const TOPICS: Topic[] = [
     ],
   },
   {
+    id: 'dos-pasos',
+    href: '/perfil',
+    hrefLabel: 'Ver en Perfil',
+    phrases: ['dos pasos', 'doble factor', 'google authenticator', 'app autenticadora', 'codigo de recuperacion', 'codigos de recuperacion', 'codigo de 6'],
+    keywords: ['2fa', 'autenticador', 'authenticator', 'autenticadora'],
+    extra: ['codigo', 'verificacion', 'seguridad'],
+    answers: () => [
+      'La verificación en dos pasos se activa en Perfil con una app autenticadora, como Google Authenticator: aunque alguien tenga tu contraseña, sin el código de tu celular no entra. Si perdés el celular, entrás con uno de los códigos de recuperación que guardaste al activarla. Sin celular y sin esos códigos, vas a tener que pedirnos ayuda.',
+    ],
+  },
+  {
     id: 'sesiones',
     href: '/perfil',
     hrefLabel: 'Ver en Perfil',

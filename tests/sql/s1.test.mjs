@@ -2,7 +2,7 @@
 // Aplica las migraciones REALES de supabase/ sobre PGlite (Postgres en WASM)
 // y prueba cada RPC como el usuario "authenticated" de Supabase.
 // Uso: npm run test:sql
-import { test } from 'node:test'
+import { afterEach, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
@@ -21,8 +21,15 @@ const B = '00000000-0000-4000-8000-00000000000b'
 const NUEVO = '00000000-0000-4000-8000-00000000000c'
 const OTRO_NUEVO = '00000000-0000-4000-8000-00000000000d'
 
+// Cada prueba levanta su Postgres: sin cerrarlo, la memoria se acumula hasta agotarse.
+const basesAbiertas = []
+afterEach(async () => {
+  for (const db of basesAbiertas.splice(0)) await db.close()
+})
+
 async function nuevaBase({ revocar }) {
   const db = new PGlite({ extensions: { pgcrypto } })
+  basesAbiertas.push(db)
   await db.exec(leer('./base-supabase.sql'))
   for (const m of MIGRACIONES) await db.exec(leer(`../../supabase/${m}.sql`))
   if (revocar) await db.exec(leer('../../supabase/s1_revocar_escrituras.sql'))

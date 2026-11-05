@@ -27,3 +27,18 @@ export const isSupabaseConfigured = Boolean(
 export const supabase: SupabaseClient = isSupabaseConfigured
   ? createClient(supabaseUrl!, supabaseAnonKey!)
   : (null as unknown as SupabaseClient)
+
+/**
+ * Comprueba una contraseña sin tocar la sesión abierta: iniciar sesión con el cliente
+ * principal la reemplaza por una nueva y le quita la verificación en dos pasos.
+ * Devuelve el error, o null si la contraseña es correcta.
+ */
+export async function verificarClave(email: string, password: string) {
+  const temporal = createClient(supabaseUrl!, supabaseAnonKey!, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'monix-verificar-clave' },
+  })
+  const { error } = await temporal.auth.signInWithPassword({ email, password })
+  if (error) return error
+  await temporal.auth.signOut({ scope: 'local' })
+  return null
+}

@@ -3,7 +3,9 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
 import { registrarEmailUid } from '../lib/biometria'
+import { sesionPideCodigo } from '../utils/dosPasos'
 import { entrarModoPrueba, esModoPrueba, salirModoPrueba, soltarPruebaEnEntradaReal } from '../lib/modoPrueba'
+import type { Session } from '@supabase/supabase-js'
 import type { Persona } from '../types'
 
 const AUTH_TIMEOUT_MS = 8000
@@ -19,7 +21,7 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
 }
 
 export function useAuth() {
-  const { user, persona, loading, provisioning, setUser, setPersona, setLoading, clear } = useAuthStore()
+  const { user, persona, loading, provisioning, pendienteCodigo, setUser, setPersona, setLoading, setPendienteCodigo, clear } = useAuthStore()
   const { clear: clearCuenta } = useCuentaStore()
 
   useEffect(() => {
@@ -55,11 +57,10 @@ export function useAuth() {
           entrarModoPrueba()
           return
         }
-        setUser(session?.user ?? null)
         if (session?.user) {
-          if (session.user.email) registrarEmailUid(session.user.email, session.user.id)
-          await fetchPersona(session.user.id)
+          await aplicarSesion(session)
         } else {
+          setUser(null)
           setLoading(false)
         }
       } catch (err) {
@@ -87,11 +88,10 @@ export function useAuth() {
         entrarModoPrueba()
         return
       }
-      setUser(session?.user ?? null)
       if (session?.user) {
-        if (session.user.email) registrarEmailUid(session.user.email, session.user.id)
-        void fetchPersona(session.user.id)
+        void aplicarSesion(session)
       } else {
+        setUser(null)
         clear()
         clearCuenta()
       }
@@ -108,6 +108,20 @@ export function useAuth() {
       window.removeEventListener('monix-salir-prueba', alSalirDeLaPrueba)
     }
   }, [])
+
+  // Corre dentro de onAuthStateChange: no puede llamar a métodos de Auth.
+  async function aplicarSesion(session: Session) {
+    setUser(session.user)
+    if (session.user.email) registrarEmailUid(session.user.email, session.user.id)
+    if (sesionPideCodigo(session)) {
+      setPersona(null)
+      setPendienteCodigo(true)
+      setLoading(false)
+      return
+    }
+    setPendienteCodigo(false)
+    await fetchPersona(session.user.id)
+  }
 
   async function fetchPersona(userId: string) {
     try {
@@ -145,5 +159,5 @@ export function useAuth() {
     await supabase.auth.signOut()
   }
 
-  return { user, persona, loading, provisioning, login, logout }
+  return { user, persona, loading, provisioning, pendienteCodigo, login, logout }
 }

@@ -29,6 +29,7 @@ const pagina = <K extends string>(cargar: () => Promise<Record<K, ComponentType>
 const cargarDashboard = () => import('./pages/DashboardPage')
 const DashboardPage = pagina(cargarDashboard, 'DashboardPage')
 const HuellaLockScreen = lazy(() => import('./components/HuellaLockScreen').then((m) => ({ default: m.HuellaLockScreen })))
+const VerificarCodigoScreen = lazy(() => import('./components/VerificarCodigoScreen').then((m) => ({ default: m.VerificarCodigoScreen })))
 const LoginPage = pagina(() => import('./pages/LoginPage'), 'LoginPage')
 const PitchPage = pagina(() => import('./pages/PitchPage'), 'PitchPage')
 const PruebaEntrada = pagina(() => import('./pages/PruebaEntrada'), 'PruebaEntrada')
@@ -97,12 +98,16 @@ function CuentasGlobales() {
 }
 
 function AppRoutes() {
-  const { user, loading } = useAuth()
+  const { user, loading, pendienteCodigo } = useAuth()
   const { locked, unlock } = useBiometriaLock(loading ? null : user)
   const location = useLocation()
 
   // La prueba no pide huella: entra directo, aunque este celular tenga otra cuenta.
   const enPrueba = esModoPrueba() || location.pathname === '/prueba'
+  // Va antes de cualquier ruta: también el link de recuperación de contraseña pasa por acá.
+  if (!loading && user && pendienteCodigo && !enPrueba && location.pathname !== '/pitch') {
+    return <Suspense fallback={null}><VerificarCodigoScreen /></Suspense>
+  }
   // El link de recuperación no debería toparse con el bloqueo por huella.
   if (!loading && user && locked && !enPrueba && location.pathname !== '/restablecer-contrasena') {
     return <Suspense fallback={null}><HuellaLockScreen onUnlock={unlock} /></Suspense>
