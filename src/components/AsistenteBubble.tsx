@@ -5,7 +5,6 @@ import { ArrowUp, Bot, Mic, X } from 'lucide-react'
 import { EASE_MONIX } from '../lib/motion'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
-import { cargarGastosDelMes, type GastosDelMes } from '../services/gastos'
 import { useTecladoInset } from '../hooks/useTecladoInset'
 import {
   callar,
@@ -15,12 +14,17 @@ import {
   soportaVozMoni,
   VozMoni,
 } from '../lib/vozMoni'
-import {
-  SUGERENCIAS,
-  mensajeBienvenida,
-  responder,
-  type AsistenteReply,
-} from '../services/asistente'
+import { SUGERENCIAS, mensajeBienvenida } from '../services/asistenteBienvenida'
+import type { AsistenteCtx, AsistenteReply } from '../services/asistenteConocimiento'
+
+// El motor de respuestas y la lectura de datos pesan bastante: se bajan recién cuando
+// alguien abre a Moni, no con el resto de la app.
+type Motor = typeof import('../services/asistente')
+let motorPromesa: Promise<Motor> | null = null
+function cargarMotor() {
+  motorPromesa ??= import('../services/asistente')
+  return motorPromesa
+}
 
 interface ChatMsg {
   id: string
@@ -83,9 +87,9 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   const vozRef = useRef<VozMoni | null>(null)
   const ultimoVoz = useRef({ norm: '', at: 0 })
   const messagesRef = useRef(messages)
-  const [gastosMes, setGastosMes] = useState<GastosDelMes | null>(null)
-  const ctxRef = useRef({
-    gastosMes,
+  const [datos, setDatos] = useState<Partial<AsistenteCtx>>({})
+  const ctxRef = useRef<AsistenteCtx>({
+    ...datos,
     nombre: persona?.nombre,
     saldoARS: (cuentas.find((c) => c.moneda === 'ARS') ?? cuenta)?.saldo,
     saldoUSD: cuentas.find((c) => c.moneda === 'USD')?.saldo ?? null,
@@ -97,7 +101,7 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
 
   if (messages.length >= messagesRef.current.length) messagesRef.current = messages
   ctxRef.current = {
-    gastosMes,
+    ...datos,
     nombre: persona?.nombre,
     saldoARS: (cuentas.find((c) => c.moneda === 'ARS') ?? cuenta)?.saldo,
     saldoUSD: cuentas.find((c) => c.moneda === 'USD')?.saldo ?? null,
@@ -111,11 +115,14 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
   useEffect(() => {
     if (!open) return
     let vigente = true
-    cargarGastosDelMes(cuentas)
-      .then((g) => { if (vigente) setGastosMes(g) })
-      .catch((err) => console.error('No pudimos cargar los gastos para Moni:', err))
+    void cargarMotor()
+    import('../services/asistenteDatos')
+      .then((m) => m.cargarDatosMoni(cuentas, persona))
+      .then((d) => { if (vigente) setDatos(d) })
+      .catch((err) => console.error('No pudimos cargar los datos para Moni:', err))
     return () => { vigente = false }
-  }, [open, cuentas])
+    // persona cambia de referencia sin cambiar de datos; alcanza con su id.
+  }, [open, cuentas, persona?.id])
 
   useEffect(() => {
     if (hidden) setOpen(false)
@@ -217,16 +224,26 @@ export function AsistenteBubble({ hidden = false }: { hidden?: boolean }) {
     if (porVoz && vozYaEnviada(hist, trimmed)) return
     const lastTopicId = [...hist].reverse().find((m) => m.role === 'bot')?.topicId
     const userMsg: ChatMsg = { id: uid(), role: 'user', text: trimmed }
-    const botMsg = fromReply(responder(trimmed, ctxRef.current, { lastTopicId, turn: hist.length }))
-    const next = [...hist, userMsg, botMsg]
-    messagesRef.current = next
+    const conPregunta = [...hist, userMsg]
+    messagesRef.current = conPregunta
     if (porVoz) ultimoVoz.current = { norm: trimmed, at: Date.now() }
-    setMessages(next)
+    setMessages(conPregunta)
     setDraft('')
-    if (porVoz) {
-      const ms = hablar(botMsg.text)
-      vozRef.current?.ignorarEco(botMsg.text, ms)
-    }
+    cargarMotor()
+      .then(({ responder }) => fromReply(responder(trimmed, ctxRef.current, { lastTopicId, turn: hist.length })))
+      .catch((err) => {
+        console.error('Moni no pudo cargar su motor:', err)
+        return fromReply({ text: 'No pude responder ahora. Revisá tu conexión y probá de nuevo.' })
+      })
+      .then((botMsg) => {
+        const next = [...messagesRef.current, botMsg]
+        messagesRef.current = next
+        setMessages(next)
+        if (porVoz) {
+          const ms = hablar(botMsg.text)
+          vozRef.current?.ignorarEco(botMsg.text, ms)
+        }
+      })
   }
 
   function vozYaEnviada(hist: ChatMsg[], text: string) {

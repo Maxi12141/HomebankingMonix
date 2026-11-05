@@ -2,6 +2,37 @@ import { formatMonto } from '../utils/cuenta'
 
 import { respuestaGastos, type GastosDelMes } from '../utils/respuestaGastos'
 
+export interface MovimientoCtx {
+  tipo: 'deposito' | 'extraccion' | 'transferencia_entrada' | 'transferencia_salida'
+  moneda: 'ARS' | 'USD'
+  monto: number
+  /** Motivo ya separado del mensaje opcional. */
+  motivo: string
+  contraparte: string | null
+  fecha: string
+}
+
+export interface PrestamoCtx {
+  monto: number
+  cuotasTotales: number
+  cuotasPagadas: number
+  cuotaMonto: number
+  proximaCuota: string
+  estado: 'activo' | 'pagado'
+}
+
+export interface MetaCtx {
+  titulo: string
+  saldo: number
+  objetivo: number | null
+  estado: 'abierta' | 'votacion' | 'desembolsada'
+  miAporte: number
+}
+
+/**
+ * Lo que Moni sabe de la persona. `undefined` = todavía no llegó o no se pudo leer;
+ * `null` / lista vacía = se leyó y no hay nada.
+ */
 export interface AsistenteCtx {
   nombre?: string
   saldoARS?: number
@@ -11,7 +42,14 @@ export interface AsistenteCtx {
   cbu?: string | null
   saldoReserva?: number | null
   tasaReserva?: number | null
+  interesDiarioReserva?: number | null
   gastosMes?: GastosDelMes | null
+  movimientos?: MovimientoCtx[]
+  prestamos?: PrestamoCtx[]
+  metas?: MetaCtx[] | null
+  dolarOficial?: { compra: number; venta: number } | null
+  tarjetaCongelada?: boolean
+  oferta?: { montoMax: number; cuotasMax: number; tna: number } | null
 }
 
 export interface AsistenteReply {
@@ -32,16 +70,6 @@ export interface Topic {
   answers: (ctx: AsistenteCtx, pregunta: string) => string[]
 }
 
-export const SUGERENCIAS = [
-  '¿Cómo transfiero?',
-  'Mi saldo',
-  'Préstamos',
-  'Pagar con QR',
-  'Dólares',
-  'Reservas',
-  'Metas comunes',
-  'Cashback',
-] as const
 
 function nom(ctx: AsistenteCtx) {
   return ctx.nombre ? `${ctx.nombre}` : ''

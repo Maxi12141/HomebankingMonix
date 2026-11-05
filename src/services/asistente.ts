@@ -1,12 +1,8 @@
-import {
-  SUGERENCIAS,
-  TOPICS,
-  type AsistenteCtx,
-  type AsistenteReply,
-  type Topic,
-} from './asistenteConocimiento'
+import { TOPICS, type AsistenteCtx, type AsistenteReply, type Topic } from './asistenteConocimiento'
+import { consultar, normalizar } from './asistenteConsultas'
+import { SUGERENCIAS, mensajeBienvenida } from './asistenteBienvenida'
 
-export { SUGERENCIAS }
+export { SUGERENCIAS, mensajeBienvenida }
 export type { AsistenteCtx, AsistenteReply }
 
 export interface AsistenteOpts {
@@ -22,20 +18,13 @@ const STOP = new Set([
   'esa', 'ese', 'eso', 'hay', 'tiene', 'tengo', 'vos', 'soy', 'ser', 'the', 'and', 'for', 'are',
 ])
 
+// Charla suelta: no tiene sentido "seguir" con ella.
+const SIN_CONTINUACION = new Set(['gracias', 'saludo', 'ayuda'])
+
 const SEGUIMIENTO =
   /^(y |ok |dale |entonces |bueno |claro |si |sip |bien )?(eso|eso como|como hago|como era|como es|y eso|mas info|mas detalles|explicame|contame|contame mas|y ahora|en serio|cuanto|cuanto es|cuanto sale|cuanto cuesta|es gratis|sirve|funciona|donde|en donde|y el|y la|y los|dale)$/
 
-function stripAccents(value: string) {
-  return value.normalize('NFD').replace(/\p{M}/gu, '')
-}
-
-function normalize(value: string) {
-  return stripAccents(value)
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
+const normalize = normalizar
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -55,7 +44,7 @@ function tokenize(q: string) {
 function similar(a: string, b: string) {
   if (a === b) return true
   if (a.length < 4 || b.length < 4) return false
-  if (a.includes(b) || b.includes(a)) return true
+  if (Math.min(a.length, b.length) >= 5 && (a.includes(b) || b.includes(a))) return true
   return a.slice(0, 5) === b.slice(0, 5) && Math.min(a.length, b.length) >= 5
 }
 
@@ -120,31 +109,160 @@ function replyFrom(topic: Topic, ctx: AsistenteCtx, seed: string, turn: number):
   }
 }
 
+// ── Cuando conviene frenar en vez de adivinar ──────────────────────────────
+
+const EJEMPLOS = '“¿cuánto tengo en Reservas?”, “mi último movimiento” o “¿cómo transfiero?”'
+
 const FALLBACKS_BANCO = [
-  'Puedo ayudarte con cualquier cosa de Monix: saldo, transferencias, QR, dólares, reservas, préstamos, débito, promos, cashback o mercadoMONIX. Preguntame más puntual.',
-  'No te seguí del todo. Probá con el producto: “préstamo”, “alias”, “congelar tarjeta”, “TNA de reservas”, “comprar dólares”…',
-  'Decime qué querés hacer en el banco (enviar dinero, pedir crédito, pagar con QR, hacer rendir el saldo) y te armo el paso a paso.',
+  `No te seguí del todo. Probá con algo más puntual, por ejemplo ${EJEMPLOS}.`,
+  `Prefiero no adivinar. Decime qué producto o qué dato querés (saldo, cuota, alias, TNA, tarjeta…) y te respondo.`,
+  `Eso no me quedó claro. Escribilo de otra forma: ${EJEMPLOS}.`,
 ]
 
 const FALLBACKS_AFUERA = [
   'Soy el asistente de Monix, así que voy mejor con lo del banco. Preguntame por tu cuenta, un producto o cómo hacer una operación.',
   'Eso queda afuera de Monix. Si es de tu caja, tarjetas, préstamos o pagos, tirame la consulta y te la resuelvo.',
-  'Me centro en el homebanking. ¿Hace falta transferir, ver un límite, un CBU, un préstamo o una promo?',
+  'Me centro en el homebanking. ¿Hace falta ver un saldo, una cuota, un límite o un alias?',
 ]
 
 const BANCO_HINT =
-  /saldo|plata|dinero|peso|dolar|cuenta|transfer|cbu|cvu|alias|tarjeta|qr|prestam|reserva|ahorro|depos|pago|pagar|promos|cashback|cuota|financi|mercado|meta|huella|clave|sesion|comision|horario|bono|cajero|debito|credito|monix|banco|cotiz|tna|interes/
+  /saldo|plata|dinero|peso|dolar|cuenta|transfer|cbu|cvu|alias|tarjeta|qr|prestam|reserva|ahorro|depos|pago|pagar|promos|cashback|cuota|financi|mercado|meta|huella|clave|sesion|comision|horario|bono|cajero|debito|credito|monix|banco|cotiz|tna|interes|movimiento/
+
+const NOMBRE_TEMA: Record<string, string> = {
+  saldo: 'tu saldo',
+  cbu_alias: 'tu alias o CBU',
+  transferir: 'transferencias',
+  depositar: 'depósitos',
+  gastos: 'tus gastos',
+  historial: 'tu historial',
+  pagar_qr: 'pagos con QR',
+  metas: 'metas comunes',
+  dolares: 'dólares',
+  reservas: 'Reservas',
+  tarjeta: 'tu tarjeta',
+  congelar: 'congelar la tarjeta',
+  limites: 'límites de la tarjeta',
+  contactos: 'contactos',
+  promos: 'promos',
+  cashback: 'cashback',
+  mercado: 'mercadoMONIX',
+  cuentas: 'tus cuentas',
+  cuenta_usd: 'la cuenta en dólares',
+  prestamos: 'préstamos',
+  sueldo: 'cobrar el sueldo en Monix',
+  perfil: 'tu perfil',
+  huella: 'la huella',
+  seguridad: 'seguridad',
+  costos: 'comisiones',
+  horarios: 'horarios',
+  bono: 'el bono de bienvenida',
+  cajero: 'sacar efectivo',
+  login: 'iniciar sesión',
+  'dos-pasos': 'verificación en dos pasos',
+  sesiones: 'sesiones abiertas',
+}
+
+const SIGLAS_SIN_VOCAL = new Set(['qr', 'cbu', 'cvu', 'tna', 'dni', 'pin', 'cvv', 'ars', 'atm', 'pdf', 'nfc', 'mp', 'ya', 'mps', 'ctm'])
+
+function pareceRuido(q: string) {
+  if (q.length < 2) return true
+  if (/(.)\1{3,}/.test(q)) return true
+  if (/[^aeiouy\s\d]{5,}/.test(q)) return true
+  const palabras = q.split(' ').filter(Boolean)
+  if (palabras.length === 0) return true
+  const sinVocal = palabras.filter((w) => w.length >= 3 && !/[aeiou]/.test(w) && !SIGLAS_SIN_VOCAL.has(w))
+  if (sinVocal.length > 0 && sinVocal.length >= palabras.length / 2) return true
+  return /^[\d\s]+$/.test(q)
+}
+
+const ACK = /^(?:ok|okey|okis|oka|listo|bueno|genial|perfecto|joya|barbaro|buenisimo|entendido|ya esta|todo bien|excelente)$/
+
+const PIDE_SECRETO =
+  /\b(?:dame|dime|decime|pasame|mostrame|mandame|cual es|ver|recordame)\b.*\b(?:clave|contrasena|password|cvv|pin|token|codigo de seguridad|codigos? de recuperacion)\b/
+
+const OTRA_PERSONA = /\bcuant[oa] (?:plata |dinero )?(?:tiene|tienen|gana|ganan)\b/
+
+const ACCION =
+  /^(?:(?:por favor|porfa|podes|podrias|puedes|quiero que|necesito que)\s+)*(transferi(?:me|le|les)?|mandale|mandame|manda|envia(?:le|me)?|enviale|pagale|pagame|paga|comprame|compra|vendeme|vende|depositame|deposita|saca(?:me)?|retira(?:me)?|congela(?:me|la)?|descongela(?:la)?|cambia(?:me)?|cambiame|borra(?:me)?|elimina(?:me)?|anula|cancela|pedime|activa(?:me|la)?|abri(?:me)?|aproba|vota)\b/
+
+function soloLectura(q: string): AsistenteReply | null {
+  const m = q.match(ACCION)
+  if (!m) return null
+  const verbo = m[1]
+  let href: string | undefined
+  let hrefLabel: string | undefined
+  let donde = ''
+  if (/^(?:transferi|manda|envia|pagale|pagame|paga)/.test(verbo)) {
+    href = '/transferir'; hrefLabel = 'Ir a Transferir'; donde = 'Transferir'
+  } else if (/dolar|usd|verdes/.test(q) && /^(?:compra|vende)/.test(verbo)) {
+    href = '/dolares'; hrefLabel = 'Ir a Dólares'; donde = 'Dólares'
+  } else if (/^deposit/.test(verbo)) {
+    href = '/depositar'; hrefLabel = 'Ir a Depositar'; donde = 'Depositar'
+  } else if (/congela/.test(verbo)) {
+    href = '/tarjeta'; hrefLabel = 'Ver tarjetas'; donde = 'Mis Tarjetas'
+  } else if (/^pedime/.test(verbo) || /prestamo/.test(q)) {
+    href = '/prestamos'; hrefLabel = 'Ir a Préstamos'; donde = 'Préstamos'
+  } else if (/reserva/.test(q)) {
+    href = '/reservas'; hrefLabel = 'Ir a Reservas'; donde = 'Reservas'
+  } else if (/alias|clave|contrasena|mail|email|foto|huella|biometria/.test(q)) {
+    href = '/perfil'; hrefLabel = 'Ir a Perfil'; donde = 'Perfil'
+  }
+  return {
+    text: `Yo solo consulto: no puedo mover plata ni cambiar nada por vos.${donde ? ` Lo hacés vos desde ${donde}; si querés, te explico el paso a paso.` : ' Si me decís qué querés lograr, te explico cómo hacerlo en la app.'}`,
+    href,
+    hrefLabel,
+    topicId: 'solo-lectura',
+  }
+}
+
+function aclarar(ranked: { topic: Topic; score: number }[], q: string, turn: number): AsistenteReply {
+  const cercanos = ranked.filter((r) => r.score > 0).slice(0, 2).map((r) => NOMBRE_TEMA[r.topic.id] ?? r.topic.hrefLabel ?? r.topic.id)
+  if (cercanos.length === 0) return { text: pick(FALLBACKS_BANCO, q, turn) }
+  const pregunta = cercanos.length === 2 ? `${cercanos[0]} o ${cercanos[1]}` : cercanos[0]
+  return {
+    text: `No estoy seguro de haberte entendido. ¿Es sobre ${pregunta}? Probá con otras palabras, por ejemplo ${EJEMPLOS}.`,
+  }
+}
 
 function vacia(): AsistenteReply {
-  return { text: pick(['Escribí tu consulta o tocá una sugerencia.', 'Tirame la duda, aunque sea en criollo.', '¿Saldo, transferir, préstamo, QR? Lo que necesites.'], 'vacia', Date.now() % 9) }
+  return { text: pick(['Escribí tu consulta o tocá una sugerencia.', 'Tirame la duda, aunque sea en criollo.', '¿Saldo, cuota, movimientos, QR? Lo que necesites.'], 'vacia', Date.now() % 9) }
 }
 
 export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: AsistenteOpts = {}): AsistenteReply {
   const q = normalize(pregunta)
   if (!q) return vacia()
 
-  const tokens = tokenize(q)
   const turn = opts.turn ?? 0
+
+  if (q.split(' ').length > 40) {
+    return { text: 'Es mucha información junta. Partila en una pregunta corta y te respondo preciso.' }
+  }
+  if (PIDE_SECRETO.test(q)) {
+    return {
+      text: 'Por seguridad yo no manejo claves, CVV ni códigos, y Monix nunca te los pide por chat. Los datos de tu tarjeta los ves vos en Mis Tarjetas.',
+      href: '/tarjeta',
+      hrefLabel: 'Ver tarjetas',
+      topicId: 'seguridad',
+    }
+  }
+  if (OTRA_PERSONA.test(q) && !/\bmonix\b/.test(q)) {
+    return { text: 'Solo puedo consultar tus propios datos. No tengo acceso a las cuentas de otras personas.' }
+  }
+  const accion = soloLectura(q)
+  if (accion) return accion
+  if (pareceRuido(q)) {
+    return { text: `No te entendí. Escribilo de otra forma, por ejemplo ${EJEMPLOS}.` }
+  }
+
+  if (ACK.test(q)) {
+    const gracias = TOPICS.find((t) => t.id === 'gracias')
+    if (gracias) return replyFrom(gracias, ctx, q, turn)
+  }
+
+  const datos = consultar(q, ctx, opts.lastTopicId)
+  if (datos) return datos
+
+  const tokens = tokenize(q)
   const ranked = TOPICS.map((topic, index) => ({
     topic,
     index,
@@ -153,13 +271,15 @@ export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: Asiste
 
   if (opts.lastTopicId && esSeguimiento(q)) {
     const prev = ranked.find((r) => r.topic.id === opts.lastTopicId)
-    if (prev) prev.score += 8
+    if (prev && !SIN_CONTINUACION.has(prev.topic.id)) prev.score += 8
   }
 
   ranked.sort((a, b) => b.score - a.score || a.index - b.index)
 
+  // "plata" suelta empuja al saldo solo si de verdad pregunta cuánto hay y no nombra otro producto.
   const preguntaPlata = /\b(saldo|plata|dinero|pesos|cuanto tengo|mi sueldo|el sueldo|decime cuanto|decime mi saldo)\b/.test(q)
-    && !/\b(cobro|acreditar|paquete|nomina|haberes)\b/.test(q)
+    && /\b(cuanto|cuanta|saldo|decime)\b/.test(q)
+    && !/\b(cobro|acreditar|paquete|nomina|haberes|reserva|reservas|dolar|dolares|usd|prestamo|meta|metas|rendir|rinde|invertir|ahorrar)\b/.test(q)
   if (preguntaPlata) {
     const saldo = ranked.find((r) => r.topic.id === 'saldo')
     if (saldo) saldo.score += 14
@@ -170,8 +290,9 @@ export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: Asiste
   const second = ranked[1]
   const compuesta = / y | o |ademas|tambien/.test(q)
 
-  if (best && best.score >= 4) {
+  if (best && best.score >= 3) {
     if (
+      best.score >= 4 &&
       compuesta &&
       second &&
       second.score >= 8 &&
@@ -188,32 +309,10 @@ export function responder(pregunta: string, ctx: AsistenteCtx = {}, opts: Asiste
     return replyFrom(best.topic, ctx, q, turn)
   }
 
-  if (best && best.score >= 2) {
-    return replyFrom(best.topic, ctx, q, turn)
-  }
-
-  if (BANCO_HINT.test(q) && best && best.score > 0) {
-    const near = ranked.filter((r) => r.score > 0).slice(0, 2)
-    const hint = near.map((r) => r.topic.hrefLabel ?? r.topic.id).join(' o ')
-    return {
-      ...replyFrom(best.topic, ctx, q, turn),
-      text: `${pick(best.topic.answers(ctx, q), q, turn)} Si no era eso, capaz buscabas ${hint}.`,
-    }
-  }
+  // Coincidencia débil: antes se contestaba igual con el tema más parecido; ahora se pregunta.
+  if (best && best.score > 0 && BANCO_HINT.test(q)) return aclarar(ranked, q, turn)
 
   return {
     text: pick(BANCO_HINT.test(q) ? FALLBACKS_BANCO : FALLBACKS_AFUERA, q, turn),
   }
-}
-
-export function mensajeBienvenida(ctx: AsistenteCtx): AsistenteReply {
-  const h = new Date().getHours()
-  const momento = h < 12 ? 'Buen día' : h < 19 ? 'Buenas tardes' : 'Buenas noches'
-  const nombre = ctx.nombre ? ` ${ctx.nombre}` : ''
-  const texts = [
-    `${momento}${nombre}, soy Moni. Preguntame lo que sea de tu cuenta Monix: te respondo al toque.`,
-    `Hola${nombre}. Soy Moni, el asistente del banco. Transferencias, préstamos, dólares, QR, lo que se te ocurra.`,
-    `${ctx.nombre ? `Hola ${ctx.nombre}` : 'Hola'}, soy Moni. No hace falta un menú: escribí la duda como la dirías a un amigo.`,
-  ]
-  return { text: pick(texts, `${momento}${nombre}`, h) }
 }
