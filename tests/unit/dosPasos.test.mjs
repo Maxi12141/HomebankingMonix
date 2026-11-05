@@ -1,7 +1,7 @@
 // npm run test:unit
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { nivelDeSesion, sesionPideCodigo } from '../../src/utils/dosPasos.ts'
+import { idDeSesion, nivelDeSesion, sesionPideCodigo } from '../../src/utils/dosPasos.ts'
 
 const token = (datos) => `cabecera.${Buffer.from(JSON.stringify(datos)).toString('base64url')}.firma`
 const verificado = [{ status: 'verified' }]
@@ -29,4 +29,18 @@ test('con 2FA activo pide código hasta que la sesión lo pasa', () => {
 
 test('si no puede leer el token, pide código', () => {
   assert.equal(sesionPideCodigo({ access_token: 'roto', user: { factors: verificado } }), true)
+})
+
+test('una sesión ya comprobada en un dispositivo recordado no pide código', () => {
+  const access_token = token({ aal: 'aal1', session_id: 'ses-1' })
+  const session = { access_token, user: { factors: verificado } }
+  assert.equal(idDeSesion(access_token), 'ses-1')
+  assert.equal(sesionPideCodigo(session), true)
+  assert.equal(sesionPideCodigo(session, 'ses-1'), false)
+  assert.equal(sesionPideCodigo(session, 'otra-sesion'), true, 'la marca de otra sesión no sirve')
+})
+
+test('sin identificador de sesión siempre pide código', () => {
+  const session = { access_token: token({ aal: 'aal1' }), user: { factors: verificado } }
+  assert.equal(sesionPideCodigo(session, 'ses-1'), true)
 })

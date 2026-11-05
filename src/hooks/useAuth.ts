@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
 import { registrarEmailUid } from '../lib/biometria'
-import { sesionPideCodigo } from '../utils/dosPasos'
+import { leerSesionConfiable, sesionPideCodigo } from '../utils/dosPasos'
+import { marcarActividad } from '../utils/sesiones'
 import { entrarModoPrueba, esModoPrueba, salirModoPrueba, soltarPruebaEnEntradaReal } from '../lib/modoPrueba'
 import type { Session } from '@supabase/supabase-js'
 import type { Persona } from '../types'
@@ -21,7 +22,7 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
 }
 
 export function useAuth() {
-  const { user, persona, loading, provisioning, pendienteCodigo, setUser, setPersona, setLoading, setPendienteCodigo, clear } = useAuthStore()
+  const { user, persona, loading, provisioning, pendienteCodigo, comprobandoDispositivo, setUser, setPersona, setLoading, setPendienteCodigo, setComprobandoDispositivo, clear } = useAuthStore()
   const { clear: clearCuenta } = useCuentaStore()
 
   useEffect(() => {
@@ -113,9 +114,22 @@ export function useAuth() {
   async function aplicarSesion(session: Session) {
     setUser(session.user)
     if (session.user.email) registrarEmailUid(session.user.email, session.user.id)
-    if (sesionPideCodigo(session)) {
+    if (sesionPideCodigo(session, leerSesionConfiable())) {
       setPersona(null)
       setPendienteCodigo(true)
+      // El link de recuperación de contraseña siempre pide el código.
+      if (window.location.pathname !== '/restablecer-contrasena') {
+        setComprobandoDispositivo(true)
+        const confiable = await import('../services/dispositivoConfianza')
+          .then((m) => m.entrarConDispositivo(session))
+          .catch(() => false)
+        setComprobandoDispositivo(false)
+        if (confiable) {
+          setPendienteCodigo(false)
+          await fetchPersona(session.user.id)
+          return
+        }
+      }
       setLoading(false)
       return
     }
@@ -146,6 +160,7 @@ export function useAuth() {
   }
 
   async function login(email: string, password: string) {
+    marcarActividad()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
     return data.user
@@ -159,5 +174,5 @@ export function useAuth() {
     await supabase.auth.signOut()
   }
 
-  return { user, persona, loading, provisioning, pendienteCodigo, login, logout }
+  return { user, persona, loading, provisioning, pendienteCodigo, comprobandoDispositivo, login, logout }
 }

@@ -30,6 +30,7 @@ import Stepper, { Step } from '../components/Stepper'
 import type { RegisterFormData } from '../types'
 import { mensajeError } from '../lib/errores'
 import { saveRememberedEmail } from '../utils/rememberMe'
+import { marcarActividad } from '../utils/sesiones'
 
 interface BioOfferInfo {
   userId: string
@@ -225,6 +226,7 @@ export function RegisterPage() {
       marcarIngresoConClave()
 
       saveRememberedEmail(form.email.trim())
+      marcarActividad()
 
       // Ofrecemos biometría acá, con la contraseña fresca en memoria, en vez de que el usuario la busque sola en Perfil.
       if (esCelular() && await soportaHuella()) {

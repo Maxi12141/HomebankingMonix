@@ -1,7 +1,7 @@
 // npm run test:unit
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { haceCuanto, nombreDispositivo } from '../../src/utils/sesiones.ts'
+import { haceCuanto, inactividadVencida, INACTIVIDAD_MAXIMA_MS, nombreDispositivo, tipoDispositivo } from '../../src/utils/sesiones.ts'
 
 test('reconoce navegador y sistema de los dispositivos comunes', () => {
   const casos = [
@@ -29,4 +29,23 @@ test('dice hace cuánto con singular y plural', () => {
   assert.equal(haceCuanto(antes(60), ahora), 'hace 1 hora')
   assert.equal(haceCuanto(antes(60 * 24), ahora), 'hace 1 día')
   assert.equal(haceCuanto(antes(60 * 24 * 3), ahora), 'hace 3 días')
+})
+
+test('reconoce el tipo de dispositivo', () => {
+  assert.equal(tipoDispositivo('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) Mobile/15E148 Safari/604.1'), 'Celular')
+  assert.equal(tipoDispositivo('Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/130.0 Mobile Safari/537.36'), 'Celular')
+  assert.equal(tipoDispositivo('Mozilla/5.0 (Linux; Android 14; SM-X710) Chrome/130.0 Safari/537.36'), 'Tablet')
+  assert.equal(tipoDispositivo('Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) Safari/604.1'), 'Tablet')
+  assert.equal(tipoDispositivo('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0 Safari/537.36'), 'Computadora')
+  assert.equal(tipoDispositivo('curl/8.0'), null)
+  assert.equal(tipoDispositivo(null), null)
+})
+
+test('a los 15 minutos sin uso vence, salvo con biometría', () => {
+  const ahora = 1_000_000_000
+  assert.equal(inactividadVencida(ahora - INACTIVIDAD_MAXIMA_MS + 1, ahora, false), false)
+  assert.equal(inactividadVencida(ahora - INACTIVIDAD_MAXIMA_MS, ahora, false), true)
+  assert.equal(inactividadVencida(ahora - INACTIVIDAD_MAXIMA_MS * 10, ahora, true), false)
+  assert.equal(inactividadVencida(null, ahora, false), false, 'sin marca no cierra')
+  assert.equal(INACTIVIDAD_MAXIMA_MS, 15 * 60_000)
 })

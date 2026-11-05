@@ -6,8 +6,8 @@ import { esModoPrueba, frenarSiEsPrueba } from '../lib/modoPrueba'
 import {
   confirmarActivacion,
   desactivar,
+  generarCodigosConCodigo,
   hayVerificacionActiva,
-  nuevosCodigos,
   prepararActivacion,
   type Activacion,
 } from '../services/dosPasos'
@@ -17,7 +17,7 @@ import { Input } from './ui/Input'
 
 const CODIGO_INCORRECTO = 'Ese código no es correcto o ya venció. Probá con el que muestra tu app ahora.'
 
-type Estado = 'cargando' | 'apagada' | 'activando' | 'activa' | 'desactivando' | 'error'
+type Estado = 'cargando' | 'apagada' | 'activando' | 'activa' | 'desactivando' | 'generando' | 'error'
 
 async function copiar(texto: string, aviso: string) {
   try {
@@ -38,7 +38,7 @@ function descargarCodigos(codigos: string[]) {
   URL.revokeObjectURL(url)
 }
 
-export function DosPasos({ onSesionesCerradas }: { onSesionesCerradas: () => void }) {
+export function DosPasos({ onSesionesCerradas, onCambioEstado }: { onSesionesCerradas: () => void; onCambioEstado: (activa: boolean) => void }) {
   const [estado, setEstado] = useState<Estado>('cargando')
   const [activacion, setActivacion] = useState<Activacion | null>(null)
   const [codigo, setCodigo] = useState('')
@@ -61,6 +61,9 @@ export function DosPasos({ onSesionesCerradas }: { onSesionesCerradas: () => voi
   }
 
   useEffect(() => { void cargar() }, [])
+
+  const activa = estado === 'activa' || estado === 'desactivando' || estado === 'generando'
+  useEffect(() => { onCambioEstado(activa) }, [activa, onCambioEstado])
 
   function cambiarCodigo(texto: string) {
     setCodigo(texto.replace(/\D/g, '').slice(0, 6))
@@ -124,13 +127,18 @@ export function DosPasos({ onSesionesCerradas }: { onSesionesCerradas: () => voi
     }
   }
 
-  async function generar() {
+  async function generar(e: React.FormEvent) {
+    e.preventDefault()
     setLoading(true)
+    setError('')
     try {
-      setCodigos(await nuevosCodigos())
+      setCodigos(await generarCodigosConCodigo(codigo))
+      setCodigo('')
+      setEstado('activa')
       toast.success('Listo. Los códigos anteriores ya no sirven.')
     } catch (err) {
-      toast.error(mensajeError(err, 'No pudimos generar los códigos. Probá de nuevo.'))
+      setError(mensajeError(err, CODIGO_INCORRECTO))
+      setCodigo('')
     } finally {
       setLoading(false)
     }
@@ -140,13 +148,13 @@ export function DosPasos({ onSesionesCerradas }: { onSesionesCerradas: () => voi
     setActivacion(null)
     setCodigo('')
     setError('')
-    setEstado(estado === 'desactivando' ? 'activa' : 'apagada')
+    setEstado(estado === 'activando' ? 'apagada' : 'activa')
   }
 
   return (
     <Desplegable
       titulo="Verificación en dos pasos"
-      resumen={estado === 'activa' || estado === 'desactivando' ? 'Activa' : estado === 'cargando' || estado === 'error' ? undefined : 'Apagada'}
+      resumen={activa ? 'Activa' : estado === 'cargando' || estado === 'error' ? undefined : 'Apagada'}
       icono={<ShieldCheck size={20} />}
     >
 
@@ -218,9 +226,9 @@ export function DosPasos({ onSesionesCerradas }: { onSesionesCerradas: () => voi
         </div>
       )}
 
-      {(estado === 'activa' || estado === 'desactivando') && (
+      {activa && (
         <p className="font-body text-sm text-slate-secondary mb-4">
-          Está activa. Te vamos a pedir el código cada vez que inicies sesión, también con biometría.
+          Está activa. Te pedimos el código en dispositivos nuevos, al cambiar la contraseña, tras varios intentos fallidos y si pasás 30 días sin usar este dispositivo.
         </p>
       )}
 
@@ -253,7 +261,11 @@ export function DosPasos({ onSesionesCerradas }: { onSesionesCerradas: () => voi
 
       {estado === 'activa' && !codigos && (
         <div className="flex flex-col gap-3">
-          <Button variant="secondary" onClick={() => { void generar() }} loading={loading} loadingLabel="Generando..." className="w-full">
+          <Button
+            variant="secondary"
+            onClick={() => { setError(''); setCodigo(''); setEstado('generando') }}
+            className="w-full"
+          >
             Generar códigos de recuperación nuevos
           </Button>
           <Button
@@ -264,6 +276,25 @@ export function DosPasos({ onSesionesCerradas }: { onSesionesCerradas: () => voi
             Desactivar
           </Button>
         </div>
+      )}
+
+      {estado === 'generando' && (
+        <form onSubmit={(e) => { void generar(e) }} className="flex flex-col gap-3">
+          <Input
+            label="Para generarlos, escribí el código de tu app"
+            aria-label="Código de 6 números"
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            placeholder="000000"
+            value={codigo}
+            onChange={(e) => cambiarCodigo(e.target.value)}
+            error={error}
+          />
+          <Button type="submit" loading={loading} loadingLabel="Generando..." disabled={codigo.length < 6} className="w-full">
+            Generar códigos
+          </Button>
+          <Button type="button" variant="ghost" onClick={cancelar} className="w-full min-h-11">Cancelar</Button>
+        </form>
       )}
 
       {estado === 'desactivando' && (

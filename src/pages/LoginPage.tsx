@@ -5,7 +5,8 @@ import { Fingerprint, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabaseClient'
-import { sesionPideCodigo } from '../utils/dosPasos'
+import { leerSesionConfiable, sesionPideCodigo } from '../utils/dosPasos'
+import { entrarConDispositivo, limpiarIngresosFallidos, registrarIngresoFallido } from '../services/dispositivoConfianza'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { usePwaInstall } from '../hooks/usePwaInstall'
@@ -109,6 +110,7 @@ export function LoginPage() {
       setProvisioning(false)
       throw err
     }
+    limpiarIngresosFallidos(emailFinal)
     descartarOnboarding()
     if (rememberMe) {
       saveRememberedEmail(emailFinal)
@@ -118,7 +120,7 @@ export function LoginPage() {
 
     // Falta el segundo paso: esa pantalla reemplaza a esta y, al pasarla, sigue al inicio.
     const { data: { session } } = await supabase.auth.getSession()
-    if (sesionPideCodigo(session)) {
+    if (session && sesionPideCodigo(session, leerSesionConfiable()) && !(await entrarConDispositivo(session))) {
       setProvisioning(false)
       return
     }
@@ -220,6 +222,7 @@ export function LoginPage() {
       setIntentosFallidos(0)
     } catch (err) {
       setError(mensajeError(err, 'Email o contraseña incorrectos.'))
+      registrarIngresoFallido(email, uidParaEmail(email.trim()))
       const nuevosIntentos = intentosFallidos + 1
       setIntentosFallidos(nuevosIntentos)
       if (nuevosIntentos >= UMBRAL_INTENTOS) {

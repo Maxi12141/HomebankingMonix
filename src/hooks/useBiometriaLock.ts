@@ -7,7 +7,7 @@ import {
 } from '../lib/biometria'
 import { esModoPrueba } from '../lib/modoPrueba'
 
-const GRACIA_MS = 30_000
+const GRACIA_MS = 60_000
 // localStorage: al salir, Android suele matar el WebView y sessionStorage no llega al regreso.
 const ACTIVO_KEY = 'monix_activo_en'
 

@@ -451,7 +451,7 @@ export const TOPICS: Topic[] = [
     keywords: ['huella', 'biometria', 'fingerprint', 'biometrica', 'face'],
     extra: ['lock', 'desbloqueo', 'dedo'],
     answers: () => [
-      'En Perfil activás el desbloqueo con la biometría del celular: huella, cara o PIN. Si volvés antes de 30 segundos no te la pide; pasado eso, validás de nuevo. Si falla, usás la contraseña.',
+      'En Perfil activás el desbloqueo con la biometría del celular: huella, cara o PIN. Si volvés antes de un minuto no te la pide; pasado eso, validás de nuevo. Si falla, usás la contraseña.',
       'La biometría te evita escribir la contraseña al entrar y protege la sesión abierta en este dispositivo. Se prende y se apaga desde Perfil.',
     ],
   },
@@ -548,7 +548,7 @@ export const TOPICS: Topic[] = [
     keywords: ['2fa', 'autenticador', 'authenticator', 'autenticadora'],
     extra: ['codigo', 'verificacion', 'seguridad'],
     answers: () => [
-      'La verificación en dos pasos se activa en Perfil con una app autenticadora, como Google Authenticator: aunque alguien tenga tu contraseña, sin el código de tu celular no entra. Si perdés el celular, entrás con uno de los códigos de recuperación que guardaste al activarla. Sin celular y sin esos códigos, vas a tener que pedirnos ayuda.',
+      'La verificación en dos pasos se activa en Perfil con una app autenticadora, como Google Authenticator: aunque alguien tenga tu contraseña, sin el código de tu celular no entra desde otro dispositivo. En los dispositivos que recordás no te lo pedimos para entrar: sí al cambiar la contraseña, tras varios intentos fallidos o si pasás 30 días sin usarlo. Si perdés el celular, entrás con uno de los códigos de recuperación que guardaste al activarla. Sin celular y sin esos códigos, vas a tener que pedirnos ayuda.',
     ],
   },
   {

@@ -83,8 +83,8 @@ async function mockear(page, { demoraCuentasMs = 0, rpcFalla = false, cuentasExt
       if (fn === 'cobrar_cuotas_prestamos') return r.fulfill({ json: cuenta.saldo })
       if (fn === 'mis_sesiones') {
         return r.fulfill({ json: [
-          { id: 's1', creada: ahora, ultimo_uso: ahora, user_agent: 'Mozilla/5.0 (Windows NT 10.0) Chrome/130.0 Safari/537.36', actual: true },
-          { id: 's2', creada: ahora, ultimo_uso: ahora, user_agent: 'Mozilla/5.0 (Linux; Android 14) Chrome/130.0 Mobile Safari/537.36', actual: false },
+          { id: 's1', creada: ahora, ultimo_uso: ahora, user_agent: 'Mozilla/5.0 (Windows NT 10.0) Chrome/130.0 Safari/537.36', actual: true, ip: '190.1.2.3', ciudad: 'Córdoba, AR', de_confianza: true },
+          { id: 's2', creada: ahora, ultimo_uso: ahora, user_agent: 'Mozilla/5.0 (Linux; Android 14) Chrome/130.0 Mobile Safari/537.36', actual: false, ip: '190.9.9.9', ciudad: null, de_confianza: false },
         ] })
       }
       if (fn === 'preparar_reserva') {
@@ -537,7 +537,7 @@ const BASE_TOQUES_CHICOS = 0
 const FACTOR = { id: 'f1', factor_type: 'totp', status: 'verified', friendly_name: 'Monix', created_at: ahora, updated_at: ahora }
 const sesionDe = (aal, factores) => ({
   ...session,
-  access_token: fakeJwt({ aal }),
+  access_token: fakeJwt({ aal, session_id: 'ses-1' }),
   user: factores ? { ...user, factors: [FACTOR] } : user,
 })
 // Como lo manda Auth: SVG crudo con su encabezado. El prefijo data: lo agrega supabase-js.
@@ -642,6 +642,8 @@ prueba('Dos pasos: se activa y se desactiva desde Perfil', async (b) => {
   const page = await nuevaPagina(b, { reducedMotion: 'reduce' })
   const estado = await mockearAuthDosPasos(page, false)
   await page.route(`${SUPABASE}/rest/v1/rpc/generar_codigos_recuperacion`, (r) => r.fulfill({ json: CODIGOS_DE_PRUEBA }))
+  const rpcs = []
+  page.on('request', (q) => { const m = q.url().match(/\/rpc\/(\w+)/); if (m) rpcs.push(m[1]) })
   await page.goto('/perfil')
   const titulo = page.getByRole('heading', { name: 'Verificación en dos pasos' })
   await titulo.waitFor({ timeout: 15000 })
@@ -670,7 +672,8 @@ prueba('Dos pasos: se activa y se desactiva desde Perfil', async (b) => {
   await tarjeta.getByLabel('Código de 6 números').fill('123456')
   await tarjeta.getByRole('button', { name: 'Confirmar' }).click()
   await tarjeta.getByText('AAAAA-11111').waitFor({ timeout: 5000 })
-  assert.equal(estado.cerroOtras, true, 'al activar cierra los demás dispositivos')
+  assert.ok(rpcs.includes('cerrar_otras_sesiones'), 'al activar cierra los demás dispositivos')
+  assert.ok(rpcs.includes('confiar_en_dispositivo'), 'al activar recuerda este dispositivo')
   await sinToquesChicos()
   assert.deepEqual(await violacionesAxe(page), [])
   await tarjeta.screenshot({ path: `${SCREENS}dos-pasos-codigos.png` })
@@ -682,6 +685,153 @@ prueba('Dos pasos: se activa y se desactiva desde Perfil', async (b) => {
   await tarjeta.getByRole('button', { name: 'Desactivar' }).click()
   await tarjeta.getByRole('button', { name: 'Activar' }).waitFor({ timeout: 5000 })
   assert.equal(estado.factor, false)
+  await page.context().close()
+})
+
+const TOKEN_DISPOSITIVO = 'token-de-este-dispositivo'
+const conDispositivo = (page) => page.addInitScript(([uid, token]) => {
+  localStorage.setItem(`monix_dispositivo_${uid}`, token)
+}, [UID, TOKEN_DISPOSITIVO])
+
+prueba('Dispositivo de confianza: entra sin pedir el código', async (b) => {
+  const page = await nuevaPagina(b, { sesion: sesionDe('aal1', true), reducedMotion: 'reduce' })
+  await mockearAuthDosPasos(page, true)
+  await conDispositivo(page)
+  const enviados = []
+  await page.route(`${SUPABASE}/rest/v1/rpc/entrar_con_dispositivo`, (r) => {
+    enviados.push(r.request().postDataJSON()?.p_token)
+    return r.fulfill({ json: true })
+  })
+  await page.goto('/dashboard')
+  await page.getByText('Hola, Sol').waitFor({ timeout: 15000 })
+  assert.equal(await page.getByRole('heading', { name: 'Ingresá tu código' }).count(), 0)
+  assert.ok(enviados.includes(TOKEN_DISPOSITIVO))
+  assert.equal(new Set(enviados).size, 1)
+  await page.context().close()
+})
+
+prueba('Dispositivo de confianza: si el servidor lo rechaza, pide código y lo olvida', async (b) => {
+  const page = await nuevaPagina(b, { sesion: sesionDe('aal1', true), reducedMotion: 'reduce' })
+  await mockearAuthDosPasos(page, true)
+  await conDispositivo(page)
+  const datos = []
+  page.on('request', (q) => { const u = q.url(); if (u.includes('/rest/v1/') && !u.includes('entrar_con_dispositivo')) datos.push(u) })
+  await page.route(`${SUPABASE}/rest/v1/rpc/entrar_con_dispositivo`, (r) => r.fulfill({ json: false }))
+  await page.goto('/dashboard')
+  await page.getByRole('heading', { name: 'Ingresá tu código' }).waitFor({ timeout: 15000 })
+  await page.waitForTimeout(800)
+  assert.deepEqual(datos, [], 'pidió datos sin verificar')
+  const guardado = await page.evaluate((k) => localStorage.getItem(k), `monix_dispositivo_${UID}`)
+  assert.equal(guardado, null)
+  await page.context().close()
+})
+
+prueba('Dispositivo de confianza: si la comprobación falla por red, pide código', async (b) => {
+  const page = await nuevaPagina(b, { sesion: sesionDe('aal1', true), reducedMotion: 'reduce' })
+  await mockearAuthDosPasos(page, true)
+  await conDispositivo(page)
+  await page.route(`${SUPABASE}/rest/v1/rpc/entrar_con_dispositivo`, (r) => r.fulfill({ status: 500, json: { message: 'caído' } }))
+  await page.goto('/dashboard')
+  await page.getByRole('heading', { name: 'Ingresá tu código' }).waitFor({ timeout: 15000 })
+  const guardado = await page.evaluate((k) => localStorage.getItem(k), `monix_dispositivo_${UID}`)
+  assert.equal(guardado, TOKEN_DISPOSITIVO, 'un corte no le saca la confianza')
+  await page.context().close()
+})
+
+prueba('Dispositivo de confianza: el link de recuperación pide código igual', async (b) => {
+  const page = await nuevaPagina(b, { sesion: sesionDe('aal1', true), reducedMotion: 'reduce' })
+  await mockearAuthDosPasos(page, true)
+  await conDispositivo(page)
+  let consultado = false
+  await page.route(`${SUPABASE}/rest/v1/rpc/entrar_con_dispositivo`, (r) => { consultado = true; return r.fulfill({ json: true }) })
+  await page.goto('/restablecer-contrasena')
+  await page.getByRole('heading', { name: 'Ingresá tu código' }).waitFor({ timeout: 15000 })
+  assert.equal(consultado, false)
+  await page.context().close()
+})
+
+prueba('Dispositivo de confianza: al pasar el código se recuerda solo si está marcado', async (b) => {
+  for (const [marcado, esperado] of [[true, 'guardado'], [false, null]]) {
+    const page = await nuevaPagina(b, { sesion: sesionDe('aal1', true), reducedMotion: 'reduce' })
+    await mockearAuthDosPasos(page, true)
+    await page.route(`${SUPABASE}/rest/v1/rpc/confiar_en_dispositivo`, (r) => r.fulfill({ json: 'guardado' }))
+    await page.goto('/dashboard')
+    await page.getByRole('heading', { name: 'Ingresá tu código' }).waitFor({ timeout: 15000 })
+    assert.equal(await page.getByLabel(/Recordar este dispositivo/).isChecked(), true, 'arranca marcado')
+    if (!marcado) await page.getByLabel(/Recordar este dispositivo/).uncheck()
+    await page.getByLabel('Código de 6 números').fill('123456')
+    await page.getByText('Hola, Sol').waitFor({ timeout: 15000 })
+    await page.waitForTimeout(500)
+    const guardado = await page.evaluate((k) => localStorage.getItem(k), `monix_dispositivo_${UID}`)
+    assert.equal(guardado, esperado)
+    await page.context().close()
+  }
+})
+
+prueba('Cambiar contraseña: con 2FA pide la actual y el código', async (b) => {
+  const page = await nuevaPagina(b, { sesion: sesionDe('aal2', true), reducedMotion: 'reduce' })
+  await mockearAuthDosPasos(page, true)
+  const pedidos = []
+  page.on('request', (q) => {
+    const u = q.url()
+    if (u.includes('/auth/v1/user') && q.method() === 'PUT') pedidos.push('cambio')
+    if (u.includes('/rpc/cerrar_otras_sesiones')) pedidos.push('cerro-otras')
+  })
+  await page.goto('/perfil')
+  const boton = page.getByRole('button', { name: /Cambiar contraseña/ })
+  await boton.waitFor({ timeout: 15000 })
+  await boton.click()
+  const codigo = page.getByLabel('Código de tu app autenticadora')
+  await codigo.waitFor({ timeout: 5000 })
+  await page.getByLabel('Contraseña actual').fill('la-actual')
+  await page.getByLabel('Nueva contraseña').fill('la-nueva-1234')
+  await codigo.fill('000000')
+  await page.getByRole('button', { name: 'Actualizar contraseña' }).click()
+  await page.getByText('Ese código no es correcto o ya venció').waitFor({ timeout: 5000 })
+  assert.deepEqual(pedidos, [], 'con el código malo no cambia nada')
+  await codigo.fill('123456')
+  await page.getByRole('button', { name: 'Actualizar contraseña' }).click()
+  await page.getByText(/Contraseña actualizada/).waitFor({ timeout: 5000 })
+  assert.deepEqual(pedidos, ['cambio', 'cerro-otras'])
+  await page.context().close()
+})
+
+prueba('Inactividad: a los 15 minutos sin uso cierra la sesión', async (b) => {
+  const page = await nuevaPagina(b, { reducedMotion: 'reduce' })
+  await page.addInitScript((viejo) => {
+    if (!sessionStorage.getItem('marcado')) {
+      sessionStorage.setItem('marcado', '1')
+      localStorage.setItem('monix_ultima_actividad', String(viejo))
+    }
+  }, Date.now() - 16 * 60_000)
+  await page.goto('/dashboard')
+  await page.waitForURL((u) => u.pathname === '/', { timeout: 20000 })
+  await page.context().close()
+})
+
+prueba('Inactividad: con uso reciente la sesión sigue', async (b) => {
+  const page = await nuevaPagina(b, { reducedMotion: 'reduce' })
+  await page.addInitScript((reciente) => {
+    localStorage.setItem('monix_ultima_actividad', String(reciente))
+  }, Date.now() - 14 * 60_000)
+  await page.goto('/dashboard')
+  await page.getByText('Hola, Sol').waitFor({ timeout: 15000 })
+  await page.waitForTimeout(2000)
+  assert.equal(new URL(page.url()).pathname, '/dashboard')
+  await page.context().close()
+})
+
+prueba('Sesiones: muestra dispositivo, fecha, IP, ciudad y confianza', async (b) => {
+  const page = await nuevaPagina(b, { reducedMotion: 'reduce' })
+  await page.goto('/perfil')
+  const boton = page.getByRole('button', { name: /Dónde está abierta/ })
+  await boton.waitFor({ timeout: 15000 })
+  await boton.click()
+  await page.getByText('Este dispositivo').waitFor({ timeout: 5000 })
+  const texto = await page.locator('body').innerText()
+  for (const dato of ['Computadora', 'Celular', 'De confianza', 'Cerca de Córdoba, AR', 'IP 190.1.2.3', 'Inició']) {
+    assert.ok(texto.includes(dato), `falta ${dato}`)
+  }
   await page.context().close()
 })
 

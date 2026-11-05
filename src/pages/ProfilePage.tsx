@@ -17,6 +17,7 @@ import { SesionesActivas } from '../components/SesionesActivas'
 import { DosPasos } from '../components/DosPasos'
 import {
   activarBiometria,
+  verificarHuella,
   borrarCredencialBio,
   borrarNombreBio,
   desactivarBiometria,
@@ -30,6 +31,7 @@ import { pedirTodosLosPermisos } from '../lib/permisos'
 import { parseMonto } from '../utils/monto'
 import { mensajeError } from '../lib/errores'
 import { frenarSiEsPrueba } from '../lib/modoPrueba'
+import { verificarCodigo } from '../services/dosPasos'
 
 export function ProfilePage() {
   const { persona, user, setPersona } = useAuthStore()
@@ -57,6 +59,8 @@ export function ProfilePage() {
   }
 
   const [versionSesiones, setVersionSesiones] = useState(0)
+  const [dosPasosActiva, setDosPasosActiva] = useState(false)
+  const [codigoPass, setCodigoPass] = useState('')
   const [editMode, setEditMode] = useState(false)
   const [email, setEmail] = useState(persona?.email ?? '')
   const [telefono, setTelefono] = useState(persona?.telefono ?? '')
@@ -181,6 +185,28 @@ export function ProfilePage() {
     setSavingCredito(false)
   }
 
+  // Lo que pide además de la contraseña actual: el código si hay 2FA, si no la biometría de este celular.
+  async function segundoPasoParaContrasena(): Promise<string | null> {
+    if (dosPasosActiva) {
+      if (codigoPass.length !== 6) return 'Escribí el código de 6 números de tu app.'
+      try {
+        await verificarCodigo(codigoPass)
+        return null
+      } catch {
+        setCodigoPass('')
+        return 'Ese código no es correcto o ya venció. Probá con el que muestra tu app ahora.'
+      }
+    }
+    if (bioActiva && user) {
+      try {
+        await verificarHuella(user.id)
+      } catch {
+        return 'Necesitamos confirmar con tu biometría para cambiar la contraseña.'
+      }
+    }
+    return null
+  }
+
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault()
     if (frenarSiEsPrueba()) return
@@ -200,16 +226,24 @@ export function ProfilePage() {
       return
     }
 
+    const faltaPaso = await segundoPasoParaContrasena()
+    if (faltaPaso) {
+      setPassError(faltaPaso)
+      setSavingPass(false)
+      return
+    }
+
     const { error } = await supabase.auth.updateUser({ password: newPass })
     if (!error) {
       // La huella usa esta misma contraseña para el login rápido (ver credencialBioParaEmail).
       if (bioActiva) guardarCredencialBio(user?.email ?? persona!.email, newPass)
-      // Si alguien más la tenía, deja de entrar con ella.
-      await supabase.auth.signOut({ scope: 'others' })
+      // También les saca la confianza: vuelven a pedir contraseña y código.
+      await supabase.rpc('cerrar_otras_sesiones')
       setVersionSesiones((v) => v + 1)
       toast.success('Contraseña actualizada. Cerramos tu cuenta en los demás dispositivos.')
       setCurrentPass('')
       setNewPass('')
+      setCodigoPass('')
     } else {
       setPassError('No pudimos actualizar la contraseña')
     }
@@ -518,7 +552,7 @@ export function ProfilePage() {
 
         <SesionesActivas key={versionSesiones} />
 
-        <DosPasos onSesionesCerradas={() => setVersionSesiones((v) => v + 1)} />
+        <DosPasos onSesionesCerradas={() => setVersionSesiones((v) => v + 1)} onCambioEstado={setDosPasosActiva} />
 
         {/* Cambiar contraseña */}
         <Desplegable titulo="Cambiar contraseña" icono={<Lock size={20} />}>
@@ -542,6 +576,20 @@ export function ProfilePage() {
               required
               minLength={6}
             />
+            {dosPasosActiva && (
+              <Input
+                label="Código de tu app autenticadora"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                placeholder="000000"
+                value={codigoPass}
+                onChange={(e) => setCodigoPass(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                required
+              />
+            )}
+            {!dosPasosActiva && bioActiva && (
+              <p className="font-body text-sm text-slate-secondary">Al actualizar te vamos a pedir tu biometría.</p>
+            )}
             {passError && <p className="text-sm text-red-500 dark:text-red-400 font-body">{passError}</p>}
             <Button type="submit" loading={savingPass} className="w-full">
               Actualizar contraseña

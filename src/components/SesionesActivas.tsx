@@ -3,7 +3,7 @@ import { MonitorSmartphone } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { mensajeError } from '../lib/errores'
-import { haceCuanto, nombreDispositivo } from '../utils/sesiones'
+import { fechaYHora, haceCuanto, nombreDispositivo, tipoDispositivo } from '../utils/sesiones'
 import { Desplegable } from './ui/Desplegable'
 import { Button } from './ui/Button'
 
@@ -13,6 +13,22 @@ interface Sesion {
   ultimo_uso: string
   user_agent: string | null
   actual: boolean
+  ip: string | null
+  ciudad: string | null
+  de_confianza: boolean
+}
+
+function DetalleSesion({ sesion }: { sesion: Sesion }) {
+  const tipo = tipoDispositivo(sesion.user_agent)
+  const lugar = [sesion.ciudad ? `Cerca de ${sesion.ciudad}` : null, sesion.ip ? `IP ${sesion.ip}` : null].filter(Boolean).join(' · ')
+  return (
+    <span className="block font-body text-xs text-slate-secondary mt-0.5">
+      <span className="block">{[tipo, sesion.de_confianza ? 'De confianza' : null].filter(Boolean).join(' · ')}</span>
+      <span className="block">Inició {fechaYHora(sesion.creada)}</span>
+      {!sesion.actual && <span className="block">Último uso {haceCuanto(sesion.ultimo_uso)}</span>}
+      {lugar && <span className="block break-words">{lugar}</span>}
+    </span>
+  )
 }
 
 const OTRAS_VISIBLES = 4
@@ -46,7 +62,7 @@ export function SesionesActivas() {
 
   async function cerrarOtras() {
     setCerrando('otras')
-    const { error } = await supabase.auth.signOut({ scope: 'others' })
+    const { error } = await supabase.rpc('cerrar_otras_sesiones')
     if (error) toast.error(mensajeError(error, 'No pudimos cerrar las demás sesiones. Probá de nuevo.'))
     else toast.success('Cerraste las demás sesiones')
     await cargar()
@@ -80,7 +96,8 @@ export function SesionesActivas() {
             {actual && (
               <li className="py-3 border-t border-slate-200 dark:border-white/10">
                 <p className="font-body text-sm font-medium text-navy dark:text-white">{nombreDispositivo(actual.user_agent)}</p>
-                <p className="font-body text-xs text-slate-secondary">Este dispositivo</p>
+                <p className="font-body text-xs font-medium text-navy dark:text-white">Este dispositivo</p>
+                <DetalleSesion sesion={actual} />
               </li>
             )}
             {visibles.map((s) => {
@@ -89,7 +106,7 @@ export function SesionesActivas() {
                 <li key={s.id} className="flex items-center justify-between gap-3 py-3 border-t border-slate-200 dark:border-white/10">
                   <span className="min-w-0">
                     <span className="block font-body text-sm font-medium text-navy dark:text-white truncate">{nombre}</span>
-                    <span className="block font-body text-xs text-slate-secondary">Último uso {haceCuanto(s.ultimo_uso)}</span>
+                    <DetalleSesion sesion={s} />
                   </span>
                   <Button
                     variant="secondary"

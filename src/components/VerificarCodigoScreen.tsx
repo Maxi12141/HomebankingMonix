@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { mensajeError } from '../lib/errores'
 import { usarCodigoRecuperacion, verificarCodigo } from '../services/dosPasos'
+import { recordarEsteDispositivo } from '../services/dispositivoConfianza'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import monixLogo from '../assets/logos/logo-blanco.svg'
@@ -15,6 +16,7 @@ export function VerificarCodigoScreen() {
   const [modo, setModo] = useState<'codigo' | 'recuperacion'>('codigo')
   const [codigo, setCodigo] = useState('')
   const [recuperacion, setRecuperacion] = useState('')
+  const [recordar, setRecordar] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -25,6 +27,7 @@ export function VerificarCodigoScreen() {
     try {
       // Al verificar, useAuth recibe la sesión nueva y esta pantalla se va sola.
       await verificarCodigo(valor)
+      if (recordar) await recordarEsteDispositivo()
     } catch (err) {
       setError(mensajeError(err, CODIGO_INCORRECTO))
       setCodigo('')
@@ -94,6 +97,15 @@ export function VerificarCodigoScreen() {
             <Button type="submit" loading={loading} loadingLabel="Verificando..." disabled={codigo.length < 6} className="w-full">
               Verificar
             </Button>
+            <label className="min-h-11 flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={recordar}
+                onChange={(e) => setRecordar(e.target.checked)}
+                className="h-5 w-5 accent-mint shrink-0"
+              />
+              <span className="font-body text-sm text-white/70">Recordar este dispositivo. No lo marques en una compu ajena.</span>
+            </label>
           </form>
         </>
       ) : (

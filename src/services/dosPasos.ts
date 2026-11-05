@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { olvidarEsteDispositivo, recordarEsteDispositivo } from './dispositivoConfianza'
 
 async function factorActivo(): Promise<string | null> {
   const { data, error } = await supabase.auth.mfa.listFactors()
@@ -41,6 +42,12 @@ export async function prepararActivacion(): Promise<Activacion> {
   return { factorId: data.id, qr: data.totp.qr_code, clave: data.totp.secret, uri: data.totp.uri }
 }
 
+/** Pide el código antes: en un dispositivo de confianza la sesión todavía no lo pasó. */
+export async function generarCodigosConCodigo(code: string): Promise<string[]> {
+  await verificarCodigo(code)
+  return nuevosCodigos()
+}
+
 export async function nuevosCodigos(): Promise<string[]> {
   const { data, error } = await supabase.rpc('generar_codigos_recuperacion')
   if (error) throw error
@@ -51,8 +58,9 @@ export async function nuevosCodigos(): Promise<string[]> {
 export async function confirmarActivacion(factorId: string, code: string): Promise<string[] | null> {
   await comprobarCodigo(factorId, code)
 
-  const { error } = await supabase.auth.signOut({ scope: 'others' })
+  const { error } = await supabase.rpc('cerrar_otras_sesiones')
   if (error) console.error('No se pudieron cerrar las demás sesiones:', error.message)
+  await recordarEsteDispositivo()
 
   try {
     return await nuevosCodigos()
@@ -66,8 +74,12 @@ export async function desactivar(code: string) {
   const factorId = await factorActivo()
   if (!factorId) return
   await comprobarCodigo(factorId, code)
+  const { error: errorDispositivos } = await supabase.rpc('olvidar_dispositivos')
+  if (errorDispositivos) throw errorDispositivos
   const { error } = await supabase.auth.mfa.unenroll({ factorId })
   if (error) throw error
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) olvidarEsteDispositivo(user.id)
   const { error: errorSesion } = await supabase.auth.refreshSession()
   if (errorSesion) throw errorSesion
 }
