@@ -95,8 +95,9 @@ function AppRoutes() {
   if (!loading && user && pendienteCodigo && !enPrueba && location.pathname !== '/pitch') {
     return <Suspense fallback={null}><VerificarCodigoScreen /></Suspense>
   }
-  // El link de recuperación no debería toparse con el bloqueo por huella.
-  if (!loading && user && locked && !enPrueba && location.pathname !== '/restablecer-contrasena') {
+  // El link de recuperación no debería toparse con el bloqueo por huella, y la pauta de
+  // /pitch no muestra datos de nadie: corre en la TV aunque la sesión quede bloqueada.
+  if (!loading && user && locked && !enPrueba && location.pathname !== '/restablecer-contrasena' && location.pathname !== '/pitch') {
     return <Suspense fallback={null}><HuellaLockScreen onUnlock={unlock} /></Suspense>
   }
 

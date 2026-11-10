@@ -1,96 +1,146 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ComponentType } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { Maximize } from 'lucide-react'
 import { MonixLogoNavbar } from '../components/MonixLogoNavbar'
+import { ArcosTarjeta } from '../components/TarjetaPiezas'
+import {
+  EscenaMarca, EscenaProbalo, EscenaRinde, EscenaSeguridad, EscenaTarjetas, EscenaTelefono,
+} from '../components/pitch/EscenasPitch'
+import './pitch.css'
 
-// Segunda pantalla del pitch: una TV de fondo mientras se presenta. Se lee de lejos
-// y no compite con los oradores: frases cortas, movimiento lento y nada que dependa
-// de datos en vivo. Medidas en vmin para que sirva en horizontal y en vertical.
-const TarjetaHero = lazy(() => import('../components/TarjetaHero').then((m) => ({ default: m.TarjetaHero })))
+// Segunda pantalla de la presentación: una pauta de marca que corre de fondo en una TV
+// de 32" mientras se expone. Poco texto, movimiento lento y nada que dependa de datos en
+// vivo. El escenario mide 1920×1080 y se escala con zoom para que el texto quede nítido.
+// Teclas: ← → cambian de escena, espacio pausa, F pone pantalla completa (Esc o F11 salen).
 
-const ESCENAS = [
-  { imagen: '/pitch/inicio.jpg', antes: 'Tu dinero rinde', dato: '32% anual', alt: 'Inicio de Monix con el saldo y lo que rinde por día' },
-  { imagen: '/pitch/dolares.jpg', antes: 'Dólares al', dato: 'precio real', alt: 'Compra de dólares al precio oficial del momento' },
-  { imagen: '/pitch/gastos.jpg', antes: 'Mirá en qué', dato: 'gastás', alt: 'Mis gastos: total del mes y barras por concepto' },
-  { imagen: '/pitch/moni.jpg', antes: 'Moni te responde', dato: 'al toque', alt: 'Moni responde en qué se gastó más este mes' },
-  { imagen: '/pitch/tarjeta.jpg', antes: 'Tu débito devuelve', dato: 'hasta 8%', alt: 'Tarjeta de débito Monix' },
+const ESCENAS: { Escena: ComponentType; segundos: number; centro?: boolean; gap?: number }[] = [
+  { Escena: EscenaMarca, segundos: 8, centro: true },
+  { Escena: EscenaTelefono, segundos: 9 },
+  { Escena: EscenaTarjetas, segundos: 10, centro: true },
+  { Escena: EscenaRinde, segundos: 9, gap: 110 },
+  { Escena: EscenaSeguridad, segundos: 9, centro: true },
+  { Escena: EscenaProbalo, segundos: 9, gap: 140 },
 ]
-const SEGUNDOS_POR_ESCENA = 7
+
+const ANCHO = 1920
+const ALTO = 1080
+
+function enPantallaCompleta() {
+  return !!document.fullscreenElement
+}
 
 export function PitchPage() {
   const reducir = useReducedMotion()
+  const raiz = useRef<HTMLDivElement>(null)
+  const [escala, setEscala] = useState(1)
   const [indice, setIndice] = useState(0)
-  const escena = ESCENAS[indice]
+  const [pausado, setPausado] = useState(false)
+  const [quieto, setQuieto] = useState(false)
+  const [completa, setCompleta] = useState(false)
+  const [aviso, setAviso] = useState('')
 
+  // Escala el escenario a la ventana (vertical u horizontal) sin deformarlo.
   useEffect(() => {
-    // Se bajan todas de entrada: el service worker las guarda por si se corta internet en el aula.
-    ESCENAS.forEach((e) => { new Image().src = e.imagen })
-    const id = window.setInterval(() => setIndice((i) => (i + 1) % ESCENAS.length), SEGUNDOS_POR_ESCENA * 1000)
-    return () => window.clearInterval(id)
+    const el = raiz.current
+    if (!el) return
+    const ajustar = () => setEscala(Math.min(el.clientWidth / ANCHO, el.clientHeight / ALTO))
+    ajustar()
+    const ro = new ResizeObserver(ajustar)
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
 
-  const fundido = { duration: reducir ? 0 : 1 }
+  // Avance automático. Cambiar de escena a mano reinicia el tiempo de la nueva.
+  useEffect(() => {
+    if (pausado) return
+    const id = window.setTimeout(() => setIndice((i) => (i + 1) % ESCENAS.length), ESCENAS[indice].segundos * 1000)
+    return () => window.clearTimeout(id)
+  }, [indice, pausado])
+
+  // El QR se baja de entrada: el service worker lo guarda por si se corta internet.
+  useEffect(() => { new Image().src = '/pitch/qr-prueba.png' }, [])
+
+  const pedirPantallaCompleta = useCallback(() => {
+    const el = raiz.current
+    if (!el || enPantallaCompleta()) return
+    el.requestFullscreen().catch(() => {
+      setAviso('Este navegador no deja usar pantalla completa. Probá con F11.')
+      window.setTimeout(() => setAviso(''), 6000)
+    })
+  }, [])
+
+  useEffect(() => {
+    const cambio = () => setCompleta(enPantallaCompleta())
+    document.addEventListener('fullscreenchange', cambio)
+    return () => document.removeEventListener('fullscreenchange', cambio)
+  }, [])
+
+  // El botón y el cursor se esconden solos para que no se vean en la TV.
+  useEffect(() => {
+    let id = 0
+    const despertar = () => {
+      setQuieto(false)
+      window.clearTimeout(id)
+      id = window.setTimeout(() => setQuieto(true), 2500)
+    }
+    despertar()
+    window.addEventListener('pointermove', despertar)
+    window.addEventListener('keydown', despertar)
+    return () => {
+      window.clearTimeout(id)
+      window.removeEventListener('pointermove', despertar)
+      window.removeEventListener('keydown', despertar)
+    }
+  }, [])
+
+  useEffect(() => {
+    const teclas = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') setIndice((i) => (i + 1) % ESCENAS.length)
+      else if (e.key === 'ArrowLeft') setIndice((i) => (i - 1 + ESCENAS.length) % ESCENAS.length)
+      else if (e.key === ' ') { e.preventDefault(); setPausado((p) => !p) }
+      else if (e.key === 'f' || e.key === 'F') pedirPantallaCompleta()
+    }
+    window.addEventListener('keydown', teclas)
+    return () => window.removeEventListener('keydown', teclas)
+  }, [pedirPantallaCompleta])
+
+  const { Escena, centro, gap } = ESCENAS[indice]
 
   return (
-    <main
-      className="dark h-screen w-screen overflow-hidden text-white grid grid-rows-[auto_auto_1fr] landscape:grid-rows-1 landscape:grid-cols-[1.15fr_auto_0.85fr] items-center gap-[4vmin] p-[5vmin]"
-      style={{ background: 'radial-gradient(ellipse at 50% 40%, #0D2B52 0%, #001A3D 55%, #00112A 100%)' }}
-    >
-      <section className="flex flex-col gap-[4vmin] min-w-0">
-        <MonixLogoNavbar variant="white" className="w-[38vmin] h-auto" />
-        <h1 className="sr-only">Monix: banca de verdad, desde tu celular</h1>
-        <div className="min-h-[24vmin]" aria-live="off">
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={escena.dato}
-              initial={{ opacity: 0, y: reducir ? 0 : 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: reducir ? 0 : 0.6 }}
-              className="font-display font-extrabold leading-[1.05] tracking-tight text-[9vmin]"
-            >
-              {escena.antes}
-              <span className="block text-mint text-[13vmin]">{escena.dato}</span>
-            </motion.p>
-          </AnimatePresence>
-        </div>
-      </section>
+    <div ref={raiz} className={`pitch${quieto ? ' quieto' : ''}${completa ? ' completa' : ''}`}>
+      <main className="p-stage" style={{ zoom: escala }} aria-label="Pauta de Monix" data-escena={indice}>
+        <h1 className="sr-only">Monix: tu banco, en tu celular</h1>
+        <div className="p-aurora a" aria-hidden="true" />
+        <div className="p-aurora b" aria-hidden="true" />
+        <div className="p-arcos-fondo" aria-hidden="true"><ArcosTarjeta color="#C7D4E3" /></div>
 
-      <motion.div
-        className="relative justify-self-center h-[46vh] landscape:h-[88vh] aspect-[390/844] rounded-[5vmin] border-[1vmin] border-[#0A1F3D] bg-navy overflow-hidden shadow-2xl"
-        animate={reducir ? undefined : { y: [0, -10, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-      >
         <AnimatePresence initial={false}>
-          <motion.img
-            key={escena.imagen}
-            src={escena.imagen}
-            alt={escena.alt}
+          <motion.section
+            key={indice}
+            className={`p-scene${centro ? ' centro' : ''}`}
+            style={gap ? { gap } : undefined}
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={fundido}
-            className="absolute inset-0 w-full h-full object-cover object-top"
-          />
+            animate={{ opacity: 1, transition: { duration: reducir ? 0 : 1, delay: reducir ? 0 : 0.25 } }}
+            exit={{ opacity: 0, transition: { duration: reducir ? 0 : 0.7 } }}
+          >
+            <Escena />
+          </motion.section>
         </AnimatePresence>
-      </motion.div>
 
-      <section className="flex landscape:flex-col items-center justify-center gap-[4vmin] min-w-0 min-h-0">
-        <div className="hidden landscape:block w-full max-w-[60vmin]" aria-hidden="true">
-          <Suspense fallback={null}>
-            <TarjetaHero />
-          </Suspense>
-        </div>
-        <div className="flex landscape:flex-col items-center gap-[3vmin] text-center">
-          <img
-            src="/pitch/qr-prueba.png"
-            alt="Código QR para probar Monix sin registrarse"
-            className="w-[24vmin] h-[24vmin] rounded-[2vmin] bg-white"
-          />
-          <p className="font-display font-bold text-[4vmin] leading-tight max-w-[40vmin]">
-            Escaneá y <span className="text-mint">probalo</span>
-          </p>
-        </div>
-      </section>
-    </main>
+        <motion.div
+          className="p-esquina"
+          aria-hidden="true"
+          animate={{ opacity: indice === 0 ? 0 : 0.9 }}
+          transition={{ duration: 0.6 }}
+        >
+          <MonixLogoNavbar variant="white" className="w-full h-auto" />
+        </motion.div>
+      </main>
+
+      <button type="button" className="p-fs" onClick={pedirPantallaCompleta}>
+        <Maximize aria-hidden="true" />Pantalla completa
+      </button>
+      {aviso && <p className="p-aviso" role="status">{aviso}</p>}
+    </div>
   )
 }

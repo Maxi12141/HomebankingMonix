@@ -10,8 +10,8 @@ export const FONDO_FRENTE: Record<VarianteTarjeta, string> = {
   credito: 'radial-gradient(120% 90% at 10% 0%, rgba(214,186,128,0.2) 0%, transparent 45%), linear-gradient(145deg, #1C2230 0%, #0B0F18 55%, #05070C 100%)',
 }
 
-const METAL: Record<VarianteTarjeta, 'oro' | 'plata'> = { ars: 'oro', usd: 'plata', credito: 'oro' }
-const COLOR_ARCOS: Record<VarianteTarjeta, string> = { ars: '#C7D4E3', usd: '#C7D4E3', credito: '#D6BA80' }
+export const METAL: Record<VarianteTarjeta, 'oro' | 'plata'> = { ars: 'oro', usd: 'plata', credito: 'oro' }
+export const COLOR_ARCOS: Record<VarianteTarjeta, string> = { ars: '#C7D4E3', usd: '#C7D4E3', credito: '#D6BA80' }
 
 // La curva del isologo repetida 19 veces (Repetidor de AE: +26, +10 por copia).
 const ARCO = 'M300 600 C340 340 570 100 900 70'
