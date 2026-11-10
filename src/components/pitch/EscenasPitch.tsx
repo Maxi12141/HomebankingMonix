@@ -29,14 +29,6 @@ function useContador(fin: number, duracion = 2.4, desde = 0, demora = 0) {
   return valor
 }
 
-function Ripple({ tamaños, top = '50%', left = '50%' }: { tamaños: number[]; top?: string; left?: string }) {
-  return (
-    <div className="p-ripple" aria-hidden="true" style={{ top, left }}>
-      {tamaños.map((t, i) => <i key={t} style={{ width: t, height: t, animationDelay: `${i * 0.7}s` }} />)}
-    </div>
-  )
-}
-
 // ---------------------------------------------------------------- 1. Marca
 
 const ORBITA = [
@@ -53,7 +45,6 @@ export function EscenaMarca() {
   return (
     <>
       <div className="p-orbita" aria-hidden="true">
-        <Ripple tamaños={[560, 760, 960]} />
         <div className="p-anillo">
           {ORBITA.map(({ nombre, Icono }, i) => {
             const a = (i / ORBITA.length) * Math.PI * 2 - Math.PI / 2
@@ -211,7 +202,6 @@ export function EscenaTarjetas() {
 
   return (
     <>
-      <Ripple tamaños={[900, 1200]} top="46%" />
       <div className="p-tj-escena">
         <motion.div
           className="p-tj-w"
@@ -334,7 +324,6 @@ const SEGURIDAD = [
 export function EscenaSeguridad() {
   return (
     <>
-      <Ripple tamaños={[700, 1000, 1300]} top="44%" />
       <motion.p
         className="p-slogan"
         initial={{ opacity: 0, y: 30 }}
@@ -365,7 +354,6 @@ export function EscenaSeguridad() {
 export function EscenaProbalo() {
   return (
     <>
-      <Ripple tamaños={[800, 1100]} left="70%" />
       <motion.p
         className="p-cta"
         initial={{ opacity: 0, x: -40 }}

@@ -35,9 +35,6 @@
 .pitch .p-scene { position: absolute; inset: 0; display: flex; padding: 40px 120px 60px; align-items: center; justify-content: center; gap: 80px; }
 .pitch .p-scene.centro { flex-direction: column; text-align: center; gap: 40px; }
 
-.pitch .p-ripple { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
-.pitch .p-ripple i { position: absolute; border-radius: 50%; border: 2px solid rgba(38, 255, 193, 0.32); background: rgba(38, 255, 193, 0.035); transform: translate(-50%, -50%) scale(0.6); animation: p-onda 7s ease-in-out infinite; }
-@keyframes p-onda { 0%, 100% { transform: translate(-50%, -50%) scale(0.6); } 50% { transform: translate(-50%, -50%) scale(1); } }
 
 /* 1. Marca */
 .pitch .p-orbita { position: absolute; left: 50%; top: 50%; width: 900px; height: 900px; margin: -450px 0 0 -450px; transform: scale(1.32); display: grid; place-items: center; }
