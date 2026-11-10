@@ -4,9 +4,6 @@ import { motion } from 'framer-motion'
 import { Fingerprint, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../lib/supabaseClient'
-import { leerSesionConfiable, sesionPideCodigo } from '../utils/dosPasos'
-import { entrarConDispositivo, limpiarIngresosFallidos, registrarIngresoFallido } from '../services/dispositivoConfianza'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { usePwaInstall } from '../hooks/usePwaInstall'
@@ -110,19 +107,11 @@ export function LoginPage() {
       setProvisioning(false)
       throw err
     }
-    limpiarIngresosFallidos(emailFinal)
     descartarOnboarding()
     if (rememberMe) {
       saveRememberedEmail(emailFinal)
     } else {
       clearRememberedEmail()
-    }
-
-    // Falta el segundo paso: esa pantalla reemplaza a esta y, al pasarla, sigue al inicio.
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session && sesionPideCodigo(session, leerSesionConfiable()) && !(await entrarConDispositivo(session))) {
-      setProvisioning(false)
-      return
     }
 
     // Ofrecemos biometría acá, recién autenticado, en vez de que el usuario la busque sola en Perfil.
@@ -222,7 +211,6 @@ export function LoginPage() {
       setIntentosFallidos(0)
     } catch (err) {
       setError(mensajeError(err, 'Email o contraseña incorrectos.'))
-      registrarIngresoFallido(email, uidParaEmail(email.trim()))
       const nuevosIntentos = intentosFallidos + 1
       setIntentosFallidos(nuevosIntentos)
       if (nuevosIntentos >= UMBRAL_INTENTOS) {

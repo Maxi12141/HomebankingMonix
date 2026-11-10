@@ -47,7 +47,10 @@ export function ResetPasswordPage() {
     try {
       const { error: err } = await supabase.auth.updateUser({ password })
       if (err) throw err
-      toast.success('Contraseña actualizada')
+      // Si alguien más tenía la contraseña, también queda afuera de los demás dispositivos.
+      const { error: errorCierre } = await supabase.rpc('cerrar_otras_sesiones')
+      if (errorCierre) console.error('No se pudieron cerrar las demás sesiones:', errorCierre.message)
+      toast.success('Contraseña actualizada. Cerramos tu cuenta en los demás dispositivos.')
       navigate('/dashboard')
     } catch (err) {
       setError(mensajeError(err, 'No pudimos actualizar la contraseña. Pedí un link nuevo y probá de nuevo.'))

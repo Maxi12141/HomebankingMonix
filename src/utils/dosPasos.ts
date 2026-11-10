@@ -23,28 +23,9 @@ export function idDeSesion(token: string): string | null {
   return typeof id === 'string' ? id : null
 }
 
-// Solo decide qué pantalla mostrar: quien exige de verdad es el servidor (exigir_2fa).
-const SESION_CONFIABLE_KEY = 'monix_sesion_confiable'
-
-export function leerSesionConfiable(): string | null {
-  try {
-    return localStorage.getItem(SESION_CONFIABLE_KEY)
-  } catch {
-    return null
-  }
-}
-
-export function guardarSesionConfiable(id: string) {
-  try {
-    localStorage.setItem(SESION_CONFIABLE_KEY, id)
-  } catch {
-    /* modo privado: se volverá a comprobar el dispositivo */
-  }
-}
-
 /**
- * La cuenta tiene la verificación en dos pasos activa y esta sesión todavía no pasó el código
- * ni se comprobó en un dispositivo recordado.
+ * La cuenta tiene la verificación en dos pasos activa y esta sesión todavía no pasó el código.
+ * La app lo usa solo con el link de recuperación de contraseña.
  * No llama a Auth: se usa dentro de onAuthStateChange, donde otra llamada a Auth se queda colgada.
  */
 export function sesionPideCodigo(session: SesionMinima | null | undefined, sesionConfiable: string | null = null): boolean {

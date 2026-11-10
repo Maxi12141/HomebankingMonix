@@ -548,7 +548,7 @@ export const TOPICS: Topic[] = [
     keywords: ['2fa', 'autenticador', 'authenticator', 'autenticadora'],
     extra: ['codigo', 'verificacion', 'seguridad'],
     answers: () => [
-      'La verificación en dos pasos se activa en Perfil con una app autenticadora, como Google Authenticator: aunque alguien tenga tu contraseña, sin el código de tu celular no entra desde otro dispositivo. En los dispositivos que recordás no te lo pedimos para entrar: sí al cambiar la contraseña, tras varios intentos fallidos o si pasás 30 días sin usarlo. Si perdés el celular, entrás con uno de los códigos de recuperación que guardaste al activarla. Sin celular y sin esos códigos, vas a tener que pedirnos ayuda.',
+      'La verificación en dos pasos es opcional y se activa en Perfil con una app autenticadora, como Google Authenticator. Para entrar alcanza con tu contraseña o tu biometría: el código te lo pedimos para cambiar o recuperar la contraseña y para desactivarla. Si perdés el celular, al recuperar la contraseña usás uno de los códigos de recuperación que guardaste al activarla. Sin celular y sin esos códigos, vas a tener que pedirnos ayuda.',
     ],
   },
   {

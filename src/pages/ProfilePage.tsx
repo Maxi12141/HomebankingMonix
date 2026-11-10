@@ -64,6 +64,7 @@ export function ProfilePage() {
   const [editMode, setEditMode] = useState(false)
   const [email, setEmail] = useState(persona?.email ?? '')
   const [telefono, setTelefono] = useState(persona?.telefono ?? '')
+  const [codigoEmail, setCodigoEmail] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
 
   const [aliasInput, setAliasInput] = useState(cuenta?.alias ?? '')
@@ -105,6 +106,22 @@ export function ProfilePage() {
 
     const emailCambio = email !== persona.email
     if (emailCambio) {
+      // Con 2FA, Supabase no deja cambiar el mail sin el código (aal2).
+      if (dosPasosActiva) {
+        if (codigoEmail.length !== 6) {
+          toast.error('Escribí el código de 6 números de tu app.')
+          setSavingProfile(false)
+          return
+        }
+        try {
+          await verificarCodigo(codigoEmail)
+        } catch {
+          setCodigoEmail('')
+          toast.error('Ese código no es correcto o ya venció. Probá con el que muestra tu app ahora.')
+          setSavingProfile(false)
+          return
+        }
+      }
       const { error: authError } = await supabase.auth.updateUser({ email })
       if (authError) {
         toast.error('No pudimos actualizar tu email. Probá de nuevo.')
@@ -125,6 +142,7 @@ export function ProfilePage() {
         : 'Datos actualizados correctamente'
       )
       setEditMode(false)
+      setCodigoEmail('')
     } else {
       toast.error('No pudimos guardar tus datos. Probá de nuevo.')
     }
@@ -457,6 +475,17 @@ export function ProfilePage() {
             <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
               <Input label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               <Input label="Teléfono" type="tel" autoComplete="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+              {dosPasosActiva && email !== persona.email && (
+                <Input
+                  label="Código de tu app autenticadora"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  placeholder="000000"
+                  value={codigoEmail}
+                  onChange={(e) => setCodigoEmail(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                />
+              )}
               <div className="flex gap-3">
                 <Button variant="secondary" className="flex-1" type="button" onClick={() => setEditMode(false)} disabled={savingProfile}>
                   Cancelar

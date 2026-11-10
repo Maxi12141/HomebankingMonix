@@ -85,14 +85,14 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, loading, pendienteCodigo, comprobandoDispositivo } = useAuth()
+  const { user, loading, pendienteCodigo } = useAuth()
   const { locked, unlock } = useBiometriaLock(loading ? null : user)
   const location = useLocation()
 
   // La prueba no pide huella: entra directo, aunque este celular tenga otra cuenta.
   const enPrueba = esModoPrueba() || location.pathname === '/prueba'
   // Va antes de cualquier ruta: también el link de recuperación de contraseña pasa por acá.
-  if (!loading && user && pendienteCodigo && !comprobandoDispositivo && !enPrueba && location.pathname !== '/pitch') {
+  if (!loading && user && pendienteCodigo && !enPrueba && location.pathname !== '/pitch') {
     return <Suspense fallback={null}><VerificarCodigoScreen /></Suspense>
   }
   // El link de recuperación no debería toparse con el bloqueo por huella.

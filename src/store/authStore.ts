@@ -19,8 +19,6 @@ interface AuthState {
   setLoading: (loading: boolean) => void
   setProvisioning: (provisioning: boolean) => void
   // La sesión pide código, pero todavía se está comprobando si el dispositivo es de confianza.
-  comprobandoDispositivo: boolean
-  setComprobandoDispositivo: (comprobandoDispositivo: boolean) => void
   clear: () => void
 }
 
@@ -33,8 +31,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   persona: null,
   loading: true,
   provisioning: false,
-  comprobandoDispositivo: false,
-  setComprobandoDispositivo: (comprobandoDispositivo) => set({ comprobandoDispositivo }),
   pendienteCodigo: false,
   setPendienteCodigo: (pendienteCodigo) => set({ pendienteCodigo }),
   setUser: (user) => set({ user }),
@@ -43,6 +39,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   setProvisioning: (provisioning) => set({ provisioning }),
   clear: () => {
     sessionStorage.removeItem(SALDO_ANIMADO_KEY)
-    set({ user: null, persona: null, loading: false, provisioning: false, comprobandoDispositivo: false, pendienteCodigo: false })
+    set({ user: null, persona: null, loading: false, provisioning: false, pendienteCodigo: false })
   },
 }))

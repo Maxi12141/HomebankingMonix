@@ -15,7 +15,6 @@ interface Sesion {
   actual: boolean
   ip: string | null
   ciudad: string | null
-  de_confianza: boolean
 }
 
 function DetalleSesion({ sesion }: { sesion: Sesion }) {
@@ -23,7 +22,7 @@ function DetalleSesion({ sesion }: { sesion: Sesion }) {
   const lugar = [sesion.ciudad ? `Cerca de ${sesion.ciudad}` : null, sesion.ip ? `IP ${sesion.ip}` : null].filter(Boolean).join(' · ')
   return (
     <span className="block font-body text-xs text-slate-secondary mt-0.5">
-      <span className="block">{[tipo, sesion.de_confianza ? 'De confianza' : null].filter(Boolean).join(' · ')}</span>
+      {tipo && <span className="block">{tipo}</span>}
       <span className="block">Inició {fechaYHora(sesion.creada)}</span>
       {!sesion.actual && <span className="block">Último uso {haceCuanto(sesion.ultimo_uso)}</span>}
       {lugar && <span className="block break-words">{lugar}</span>}

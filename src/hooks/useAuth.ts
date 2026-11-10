@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/authStore'
 import { useCuentaStore } from '../store/cuentaStore'
 import { registrarEmailUid } from '../lib/biometria'
-import { leerSesionConfiable, sesionPideCodigo } from '../utils/dosPasos'
+import { sesionPideCodigo } from '../utils/dosPasos'
 import { marcarActividad } from '../utils/sesiones'
 import { entrarModoPrueba, esModoPrueba, salirModoPrueba, soltarPruebaEnEntradaReal } from '../lib/modoPrueba'
 import type { Session } from '@supabase/supabase-js'
@@ -22,7 +22,7 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
 }
 
 export function useAuth() {
-  const { user, persona, loading, provisioning, pendienteCodigo, comprobandoDispositivo, setUser, setPersona, setLoading, setPendienteCodigo, setComprobandoDispositivo, clear } = useAuthStore()
+  const { user, persona, loading, provisioning, pendienteCodigo, setUser, setPersona, setLoading, setPendienteCodigo, clear } = useAuthStore()
   const { clear: clearCuenta } = useCuentaStore()
 
   useEffect(() => {
@@ -114,22 +114,10 @@ export function useAuth() {
   async function aplicarSesion(session: Session) {
     setUser(session.user)
     if (session.user.email) registrarEmailUid(session.user.email, session.user.id)
-    if (sesionPideCodigo(session, leerSesionConfiable())) {
+    // Entrar con contraseña o biometría no pide el código: solo el link de recuperación.
+    if (window.location.pathname === '/restablecer-contrasena' && sesionPideCodigo(session)) {
       setPersona(null)
       setPendienteCodigo(true)
-      // El link de recuperación de contraseña siempre pide el código.
-      if (window.location.pathname !== '/restablecer-contrasena') {
-        setComprobandoDispositivo(true)
-        const confiable = await import('../services/dispositivoConfianza')
-          .then((m) => m.entrarConDispositivo(session))
-          .catch(() => false)
-        setComprobandoDispositivo(false)
-        if (confiable) {
-          setPendienteCodigo(false)
-          await fetchPersona(session.user.id)
-          return
-        }
-      }
       setLoading(false)
       return
     }
@@ -175,5 +163,5 @@ export function useAuth() {
     await supabase.auth.signOut({ scope: 'local' })
   }
 
-  return { user, persona, loading, provisioning, pendienteCodigo, comprobandoDispositivo, login, logout }
+  return { user, persona, loading, provisioning, pendienteCodigo, login, logout }
 }

@@ -228,7 +228,7 @@ export function DosPasos({ onSesionesCerradas, onCambioEstado }: { onSesionesCer
 
       {activa && (
         <p className="font-body text-sm text-slate-secondary mb-4">
-          Está activa. Te pedimos el código en dispositivos nuevos, al cambiar la contraseña, tras varios intentos fallidos y si pasás 30 días sin usar este dispositivo.
+          Está activa. Te pedimos el código para cambiar o recuperar tu contraseña y para desactivarla. Para entrar alcanza con tu contraseña o tu biometría.
         </p>
       )}
 

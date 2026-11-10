@@ -1,0 +1,64 @@
+<!--
+  Plantilla "Verification method removed" de Supabase Auth, con la identidad de Monix.
+
+  CÓMO APLICARLA (solo desde el Dashboard de Supabase):
+  1. Authentication → Email Templates → Verification method removed.
+  2. Asunto: Desactivaste la verificación en dos pasos en Monix
+  3. Activá el aviso ("Verification method removed") en esa misma pantalla.
+  4. Pegá todo lo que está debajo de este comentario y guardá.
+
+  El logo es public/email/logo-monix.png, ya publicado: si se borra o se mueve, el mail lo pierde.
+-->
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>Desactivaste la verificación en dos pasos</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#F0F2F5; font-family:Arial, Helvetica, sans-serif;">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#F0F2F5;">
+      Tu cuenta de Monix ya no tiene verificación en dos pasos.
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#F0F2F5" style="background-color:#F0F2F5; padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" bgcolor="#FFFFFF" style="max-width:480px; width:100%; background-color:#FFFFFF; border-radius:16px; overflow:hidden;">
+            <tr>
+              <td align="center" bgcolor="#0D2B52" style="background-color:#0D2B52; padding:28px 32px; border-bottom:4px solid #26FFC1;">
+                <img src="https://monix-homebanking.vercel.app/email/logo-monix.png" width="160" height="40" alt="Monix" style="display:block; width:160px; height:40px; border:0; color:#FFFFFF; font-size:22px; font-weight:bold;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:36px 32px 32px;">
+                <h1 style="margin:0 0 12px; font-size:24px; line-height:1.25; font-weight:bold; color:#0D2B52;">Desactivaste la verificación en dos pasos</h1>
+                <p style="margin:0 0 20px; font-size:16px; line-height:1.6; color:#3F5370;">
+                  Tu cuenta de Monix ya no pide el código de tu app autenticadora. Si querés, la volvés a activar desde Perfil.
+                </p>
+                <p style="margin:0 0 28px; font-size:14px; line-height:1.6; color:#3F5370;">
+                  Si no fuiste vos, restablecé tu contraseña ahora: así cerramos tu cuenta en los demás dispositivos.
+                </p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+                  <tr>
+                    <td align="center" bgcolor="#0D2B52" style="background-color:#0D2B52; border-radius:12px;">
+                      <a href="{{ .SiteURL }}/recuperar-contrasena" style="display:block; padding:16px 24px; font-size:16px; font-weight:bold; line-height:1.25; color:#FFFFFF; text-decoration:none; border-radius:12px;"><span style="color:#FFFFFF;">Restablecer mi contraseña</span></a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" bgcolor="#F7F8FA" style="background-color:#F7F8FA; padding:18px 32px;">
+                <p style="margin:0; font-size:12px; line-height:1.5; color:#5B6B82;">
+                  Mail automático de Monix. No respondas a esta dirección.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

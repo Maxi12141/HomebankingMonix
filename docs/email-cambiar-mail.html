@@ -1,0 +1,63 @@
+<!--
+  Plantilla "Change email address" de Supabase Auth, con la identidad de Monix.
+
+  CÓMO APLICARLA (solo desde el Dashboard de Supabase):
+  1. Authentication → Email Templates → Change email address.
+  2. Asunto: Confirmá tu mail nuevo en Monix
+  3. Pegá todo lo que está debajo de este comentario y guardá.
+
+  El logo es public/email/logo-monix.png, ya publicado: si se borra o se mueve, el mail lo pierde.
+-->
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>Confirmá tu mail nuevo</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#F0F2F5; font-family:Arial, Helvetica, sans-serif;">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#F0F2F5;">
+      Confirmá el cambio de mail de tu cuenta de Monix.
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#F0F2F5" style="background-color:#F0F2F5; padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" bgcolor="#FFFFFF" style="max-width:480px; width:100%; background-color:#FFFFFF; border-radius:16px; overflow:hidden;">
+            <tr>
+              <td align="center" bgcolor="#0D2B52" style="background-color:#0D2B52; padding:28px 32px; border-bottom:4px solid #26FFC1;">
+                <img src="https://monix-homebanking.vercel.app/email/logo-monix.png" width="160" height="40" alt="Monix" style="display:block; width:160px; height:40px; border:0; color:#FFFFFF; font-size:22px; font-weight:bold;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:36px 32px 32px;">
+                <h1 style="margin:0 0 12px; font-size:24px; line-height:1.25; font-weight:bold; color:#0D2B52;">Confirmá tu mail nuevo</h1>
+                <p style="margin:0 0 28px; font-size:16px; line-height:1.6; color:#3F5370;">
+                  Pediste cambiar el mail de tu cuenta de Monix a <strong style="color:#0D2B52;">{{ .NewEmail }}</strong>. Tocá el botón para confirmarlo.
+                </p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+                  <tr>
+                    <td align="center" bgcolor="#0D2B52" style="background-color:#0D2B52; border-radius:12px;">
+                      <a href="{{ .ConfirmationURL }}" style="display:block; padding:16px 24px; font-size:16px; font-weight:bold; line-height:1.25; color:#FFFFFF; text-decoration:none; border-radius:12px;"><span style="color:#FFFFFF;">Confirmar el cambio</span></a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0; padding-top:20px; border-top:1px solid #E3E7ED; font-size:12px; line-height:1.6; color:#5B6B82; word-break:break-all;">
+                  Si no pediste este cambio, ignorá este mail: tu cuenta sigue con el mail de siempre.<br><br>¿No funciona el botón? Copiá este link en tu navegador:<br>{{ .ConfirmationURL }}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" bgcolor="#F7F8FA" style="background-color:#F7F8FA; padding:18px 32px;">
+                <p style="margin:0; font-size:12px; line-height:1.5; color:#5B6B82;">
+                  Mail automático de Monix. No respondas a esta dirección.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
