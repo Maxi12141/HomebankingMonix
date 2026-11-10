@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentType } from 're
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Maximize } from 'lucide-react'
 import { MonixLogoNavbar } from '../components/MonixLogoNavbar'
+import { ArcosTarjeta } from '../components/TarjetaPiezas'
 import {
   EscenaMarca, EscenaProbalo, EscenaRinde, EscenaSeguridad, EscenaTarjetas, EscenaTelefono,
 } from '../components/pitch/EscenasPitch'
@@ -109,8 +110,7 @@ export function PitchPage() {
     <div ref={raiz} className={`pitch${quieto ? ' quieto' : ''}${completa ? ' completa' : ''}`}>
       <main className="p-stage" style={{ zoom: escala }} aria-label="Pauta de Monix" data-escena={indice}>
         <h1 className="sr-only">Monix: tu banco, en tu celular</h1>
-        <div className="p-aurora a" aria-hidden="true" />
-        <div className="p-aurora b" aria-hidden="true" />
+        <div className="p-arcos-fondo" aria-hidden="true"><ArcosTarjeta color="#C7D4E3" /></div>
 
         <AnimatePresence initial={false}>
           <motion.section
