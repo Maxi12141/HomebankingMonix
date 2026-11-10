@@ -31,6 +31,7 @@ const VerificarCodigoScreen = lazy(() => import('./components/VerificarCodigoScr
 const CuentasGlobales = lazy(() => import('./components/CuentasGlobales').then((m) => ({ default: m.CuentasGlobales })))
 const LoginPage = pagina(() => import('./pages/LoginPage'), 'LoginPage')
 const PitchPage = pagina(() => import('./pages/PitchPage'), 'PitchPage')
+const PresentacionPage = pagina(() => import('./pages/PresentacionPage'), 'PresentacionPage')
 const PruebaEntrada = pagina(() => import('./pages/PruebaEntrada'), 'PruebaEntrada')
 const RegisterPage = pagina(() => import('./pages/RegisterPage'), 'RegisterPage')
 const TransferPage = pagina(() => import('./pages/TransferPage'), 'TransferPage')
@@ -91,13 +92,14 @@ function AppRoutes() {
 
   // La prueba no pide huella: entra directo, aunque este celular tenga otra cuenta.
   const enPrueba = esModoPrueba() || location.pathname === '/prueba'
+  // La pauta y la presentación no muestran datos de nadie: corren aunque la sesión quede bloqueada.
+  const esPantallaDeClase = location.pathname === '/pitch' || location.pathname === '/presentacion'
   // Va antes de cualquier ruta: también el link de recuperación de contraseña pasa por acá.
-  if (!loading && user && pendienteCodigo && !enPrueba && location.pathname !== '/pitch') {
+  if (!loading && user && pendienteCodigo && !enPrueba && !esPantallaDeClase) {
     return <Suspense fallback={null}><VerificarCodigoScreen /></Suspense>
   }
-  // El link de recuperación no debería toparse con el bloqueo por huella, y la pauta de
-  // /pitch no muestra datos de nadie: corre en la TV aunque la sesión quede bloqueada.
-  if (!loading && user && locked && !enPrueba && location.pathname !== '/restablecer-contrasena' && location.pathname !== '/pitch') {
+  // El link de recuperación no debería toparse con el bloqueo por huella.
+  if (!loading && user && locked && !enPrueba && location.pathname !== '/restablecer-contrasena' && !esPantallaDeClase) {
     return <Suspense fallback={null}><HuellaLockScreen onUnlock={unlock} /></Suspense>
   }
 
@@ -111,6 +113,7 @@ function AppRoutes() {
       <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
       <Route path="/prueba" element={<PruebaEntrada />} />
       <Route path="/pitch" element={<PitchPage />} />
+      <Route path="/presentacion" element={<PresentacionPage />} />
       <Route path="/recuperar-contrasena" element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
       <Route path="/restablecer-contrasena" element={<ResetPasswordPage />} />
       <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />

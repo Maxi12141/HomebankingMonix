@@ -11,14 +11,14 @@ import { ArcosTarjeta, ChipTarjeta, COLOR_ARCOS, FONDO_FRENTE, IsologoTarjeta, M
 // Escenas de la pauta de /pitch. Cada una se monta al entrar, así sus animaciones
 // arrancan de cero; el orden y la duración los maneja PitchPage.
 
-const SUAVE: [number, number, number, number] = [0.2, 0.7, 0.2, 1]
+export const SUAVE: [number, number, number, number] = [0.2, 0.7, 0.2, 1]
 
-function formato(n: number, dec = 0) {
+export function formato(n: number, dec = 0) {
   return n.toLocaleString('es-AR', { minimumFractionDigits: dec, maximumFractionDigits: dec })
 }
 
 /** Número que sube desde `desde` hasta `fin` al montarse. */
-function useContador(fin: number, duracion = 2.4, desde = 0, demora = 0) {
+export function useContador(fin: number, duracion = 2.4, desde = 0, demora = 0) {
   const reducir = useReducedMotion()
   const [valor, setValor] = useState(reducir ? fin : desde)
   useEffect(() => {
@@ -80,7 +80,7 @@ export function EscenaMarca() {
 // ---------------------------------------------------------------- 2. Teléfono
 
 function AppInicio() {
-  const saldo = useContador(162300, 2.6, 0, 0.6)
+  const saldo = useContador(162300, 1.3, 0, 0.5)
   return (
     <div className="p-app">
       <div className="p-head">
@@ -177,7 +177,7 @@ export function EscenaTelefono() {
       </Flotante>
       <Flotante estilo={{ right: 130, top: 760 }} demora={2.1} desfase={-5}>
         <TarjetaChica />
-        <div><small>Débito Monix</small><b>•••• 2481</b></div>
+        <div><small>Débito Monix</small><b>•••• 2201</b></div>
       </Flotante>
     </>
   )
@@ -185,9 +185,9 @@ export function EscenaTelefono() {
 
 // ---------------------------------------------------------------- 3. Tarjetas
 
-// Mismos números y etiquetas que las tarjetas de la Landing.
+// Las de la Landing, con el titular y el número de débito de la cuenta de prueba (Alex).
 const TARJETAS: { variante: VarianteTarjeta; pan: string; etiqueta: string; pestaña: string }[] = [
-  { variante: 'ars', pan: '4532  8814  6201  2481', etiqueta: 'DÉBITO', pestaña: 'Pesos' },
+  { variante: 'ars', pan: '4532  ••••  ••••  2201', etiqueta: 'DÉBITO', pestaña: 'Pesos' },
   { variante: 'usd', pan: '5591  ••••  ••••  7730', etiqueta: 'DÉBITO USD', pestaña: 'Dólares' },
   { variante: 'credito', pan: '4970  ••••  ••••  1408', etiqueta: 'CRÉDITO', pestaña: 'Crédito' },
 ]
@@ -226,7 +226,7 @@ export function EscenaTarjetas() {
                 <ChipTarjeta metal={METAL[t.variante]} className="absolute right-[6.5%] top-[11%] w-[11.2%]" />
                 <div className="p-tj-pie">
                   <p className="p-tj-num">{t.pan}</p>
-                  <div className="p-tj-fila"><span>MARTINA GÓMEZ</span><span>{t.etiqueta}</span></div>
+                  <div className="p-tj-fila"><span>ALEX ROMERO</span><span>{t.etiqueta}</span></div>
                 </div>
               </motion.div>
             ))}
@@ -257,7 +257,7 @@ const LUGARES = [[600, 90], [-70, 110], [640, 480], [300, -70], [-90, 600]]
 export function EscenaRinde() {
   const reducir = useReducedMotion()
   const tasa = useContador(32, 1.8)
-  const reserva = useContador(RESERVA, 3.2, 0, 0.4)
+  const reserva = useContador(RESERVA, 1.8, 0, 0.4)
   const [burbujas, setBurbujas] = useState<number[]>([])
 
   useEffect(() => {
@@ -287,7 +287,7 @@ export function EscenaRinde() {
             transform="rotate(-90 350 350)" strokeDasharray={CIRCUNFERENCIA}
             initial={{ strokeDashoffset: reducir ? CIRCUNFERENCIA * (1 - RESERVA / META) : CIRCUNFERENCIA }}
             animate={{ strokeDashoffset: CIRCUNFERENCIA * (1 - RESERVA / META) }}
-            transition={{ duration: 3.2, delay: 0.4, ease: SUAVE }}
+            transition={{ duration: 1.8, delay: 0.4, ease: SUAVE }}
           />
         </svg>
         <div className="p-r-centro">
