@@ -27,14 +27,12 @@
 
 .pitch .p-stage { width: 1920px; height: 1080px; position: relative; flex: none; overflow: hidden; }
 
-/* ---------- Fondo: aurora + arcos de la marca ---------- */
+/* ---------- Fondo: aurora ---------- */
 .pitch .p-aurora { position: absolute; border-radius: 50%; pointer-events: none; }
 .pitch .p-aurora.a { width: 1300px; height: 1300px; left: -300px; top: -400px; background: radial-gradient(circle, rgba(38, 255, 193, 0.15) 0%, transparent 62%); animation: p-deriva1 28s ease-in-out infinite alternate; }
 .pitch .p-aurora.b { width: 1400px; height: 1400px; right: -400px; bottom: -600px; background: radial-gradient(circle, rgba(79, 163, 255, 0.17) 0%, transparent 62%); animation: p-deriva2 34s ease-in-out infinite alternate; }
-.pitch .p-arcos-fondo { position: absolute; left: 50%; top: 50%; width: 2600px; height: 1640px; margin: -820px 0 0 -1300px; opacity: 0.3; pointer-events: none; animation: p-respira 40s ease-in-out infinite alternate; }
 @keyframes p-deriva1 { to { transform: translate(420px, 260px); } }
 @keyframes p-deriva2 { to { transform: translate(-380px, -240px); } }
-@keyframes p-respira { from { transform: translate(-60px, 30px) rotate(-3deg); } to { transform: translate(60px, -30px) rotate(3deg); } }
 
 /* ---------- Escenas ---------- */
 .pitch .p-scene { position: absolute; inset: 0; display: flex; padding: 40px 120px 60px; align-items: center; justify-content: center; gap: 80px; }
