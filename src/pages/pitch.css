@@ -36,18 +36,17 @@
 .pitch .p-scene.centro { flex-direction: column; text-align: center; gap: 40px; }
 
 
-/* 1. Marca */
-.pitch .p-orbita { position: absolute; left: 50%; top: 50%; width: 900px; height: 900px; margin: -450px 0 0 -450px; transform: scale(1.32); display: grid; place-items: center; }
-.pitch .p-anillo { position: absolute; width: 920px; height: 920px; border-radius: 50%; border: 2px dashed var(--p-line); animation: p-gira 90s linear infinite; }
-.pitch .p-it { position: absolute; left: 50%; top: 50%; width: 180px; margin: -90px; text-align: center; opacity: 0.55; }
-.pitch .p-it > div { animation: p-contra 90s linear infinite; }
+/* 1. Marca: órbita ovalada (la posición de cada ícono la calcula EscenaMarca) */
+.pitch .p-orbita { position: absolute; inset: 0; }
+.pitch .p-anillo { position: absolute; left: 50%; top: 50%; width: 1664px; height: 804px; margin: -428px 0 0 -832px; overflow: visible; }
+.pitch .p-anillo ellipse { fill: none; stroke: var(--p-line); stroke-width: 2; stroke-dasharray: 10 12; animation: p-hormiga 30s linear infinite; }
+@keyframes p-hormiga { to { stroke-dashoffset: -440; } }
+.pitch .p-it { position: absolute; left: 50%; top: 50%; width: 180px; margin: -96px 0 0 -90px; text-align: center; opacity: 0.55; will-change: transform; }
 .pitch .p-chip-orbita { width: 140px; height: 140px; margin: 0 auto; border-radius: 50%; background: var(--p-card); border: 2px solid var(--p-line); display: grid; place-items: center; }
 .pitch .p-chip-orbita svg { width: 64px; height: 64px; color: var(--p-mint); }
 .pitch .p-it span { display: block; font: 700 32px var(--p-body); margin-top: 12px; }
-@keyframes p-gira { to { transform: rotate(360deg); } }
-@keyframes p-contra { to { transform: rotate(-360deg); } }
-.pitch .p-marca { position: absolute; left: 50%; top: 50%; width: 900px; transform: translate(-50%, -78%); }
-.pitch .p-lema { position: absolute; left: 0; right: 0; top: 50%; margin-top: 110px; text-align: center; font: 700 58px var(--p-body); }
+.pitch .p-marca { position: absolute; left: 50%; top: 50%; width: 1000px; transform: translate(-50%, -72%); }
+.pitch .p-lema { position: absolute; left: 0; right: 0; top: 50%; margin-top: 120px; text-align: center; font: 700 62px var(--p-body); }
 
 /* 2. Teléfono con la app */
 .pitch .p-flota { animation: p-flota 8s ease-in-out infinite 2.4s; }

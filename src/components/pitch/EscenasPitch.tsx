@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { animate, motion, useReducedMotion } from 'framer-motion'
 import {
   ArrowRight, ArrowRightLeft, Bell, Bot, Check, ChartPie, CreditCard, DollarSign, Fingerprint,
@@ -41,20 +41,44 @@ const ORBITA = [
   { nombre: 'Seguridad', Icono: Shield },
 ]
 
+// Órbita ovalada: la pantalla es mucho más ancha que alta, así los íconos usan el ancho
+// y no se salen arriba ni abajo, y el logo del centro puede ser grande. Radios en px del
+// escenario de 1920×1080 (cada ícono mide unos 180×192).
+const ORBITA_RX = 830
+const ORBITA_RY = 400
+const VUELTA_S = 90
+
 export function EscenaMarca() {
+  const reducir = useReducedMotion()
+  const items = useRef<(HTMLDivElement | null)[]>([])
+
+  useEffect(() => {
+    let id = 0
+    const inicio = performance.now()
+    const ubicar = (ahora: number) => {
+      const giro = reducir ? 0 : ((ahora - inicio) / 1000 / VUELTA_S) * Math.PI * 2
+      items.current.forEach((el, i) => {
+        if (!el) return
+        const a = (i / ORBITA.length) * Math.PI * 2 - Math.PI / 2 + giro
+        el.style.transform = `translate(${Math.cos(a) * ORBITA_RX}px, ${Math.sin(a) * ORBITA_RY}px)`
+      })
+      if (!reducir) id = requestAnimationFrame(ubicar)
+    }
+    ubicar(inicio)
+    return () => cancelAnimationFrame(id)
+  }, [reducir])
+
   return (
     <>
       <div className="p-orbita" aria-hidden="true">
-        <div className="p-anillo">
-          {ORBITA.map(({ nombre, Icono }, i) => {
-            const a = (i / ORBITA.length) * Math.PI * 2 - Math.PI / 2
-            return (
-              <div key={nombre} className="p-it" style={{ transform: `translate(${Math.cos(a) * 460}px, ${Math.sin(a) * 460}px)` }}>
-                <div><div className="p-chip-orbita"><Icono strokeWidth={1.8} /></div><span>{nombre}</span></div>
-              </div>
-            )
-          })}
-        </div>
+        <svg className="p-anillo" viewBox={`0 0 ${ORBITA_RX * 2 + 4} ${ORBITA_RY * 2 + 4}`}>
+          <ellipse cx={ORBITA_RX + 2} cy={ORBITA_RY + 2} rx={ORBITA_RX} ry={ORBITA_RY} />
+        </svg>
+        {ORBITA.map(({ nombre, Icono }, i) => (
+          <div key={nombre} ref={(el) => { items.current[i] = el }} className="p-it">
+            <div className="p-chip-orbita"><Icono strokeWidth={1.8} /></div><span>{nombre}</span>
+          </div>
+        ))}
       </div>
       <div className="p-marca">
         <motion.div

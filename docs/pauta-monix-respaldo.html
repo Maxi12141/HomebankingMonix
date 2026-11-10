@@ -52,17 +52,17 @@ body { background: var(--navy-deep); color: var(--ink); font-family: var(--body)
 @keyframes ond { 0%,100% { transform: translate(-50%,-50%) scale(.6) } 50% { transform: translate(-50%,-50%) scale(1) } }
 
 /* 1. Órbita */
-.orbita { position: relative; width: 900px; height: 900px; display: grid; place-items: center; }
-.anillo { position: absolute; border-radius: 50%; border: 2px dashed var(--line); animation: gira linear infinite; }
-.orbita .it { opacity: .55; }
-.anillo .it { position: absolute; left: 50%; top: 50%; width: 180px; margin: -90px; text-align: center; }
+/* Órbita ovalada, igual que /pitch: la posición de cada ícono la calcula el script */
+.orbita { position: absolute; inset: 0; }
+.anillo { position: absolute; left: 50%; top: 50%; width: 1664px; height: 804px; margin: -428px 0 0 -832px; overflow: visible; }
+.anillo ellipse { fill: none; stroke: var(--line); stroke-width: 2; stroke-dasharray: 10 12; animation: hormiga 30s linear infinite; }
+@keyframes hormiga { to { stroke-dashoffset: -440 } }
+.orbita .it { position: absolute; left: 50%; top: 50%; width: 180px; margin: -96px 0 0 -90px; text-align: center; opacity: .55; will-change: transform; }
 .chip-orbita { width: 140px; height: 140px; margin: 0 auto; border-radius: 50%; background: var(--card); border: 2px solid var(--line); display: grid; place-items: center; }
 .chip-orbita svg { width: 64px; height: 64px; stroke: var(--mint); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .it span { display: block; font: 700 32px var(--body); margin-top: 12px; }
-@keyframes gira { to { transform: rotate(360deg) } }
-@keyframes contra { to { transform: rotate(-360deg) } }
-.marca { position: absolute; left: 50%; top: 50%; width: 900px; height: auto; overflow: visible; transform: translate(-50%,-78%); }
-.lema { position: absolute; left: 0; right: 0; top: 50%; margin-top: 110px; text-align: center; font: 700 58px var(--body); }
+.marca { position: absolute; left: 50%; top: 50%; width: 1000px; height: auto; overflow: visible; transform: translate(-50%,-72%); }
+.lema { position: absolute; left: 0; right: 0; top: 50%; margin-top: 120px; text-align: center; font: 700 62px var(--body); }
 
 /* Teléfono */
 .scroll3d { perspective: 1800px; }
@@ -234,8 +234,8 @@ body.completa #fs { display: none; }
 
   <!-- 1. Marca -->
   <section class="scene centro" data-seg="8">
-    <div class="orbita" aria-hidden="true" style="position:absolute;left:50%;top:50%;margin:-450px 0 0 -450px;transform:scale(1.32)">
-      <div class="anillo" id="o1" style="width:920px;height:920px;animation-duration:90s"></div>
+    <div class="orbita" id="o1" aria-hidden="true">
+      <svg class="anillo" viewBox="0 0 1664 804"><ellipse cx="832" cy="402" rx="830" ry="400"/></svg>
     </div>
     <svg class="marca" viewBox="0 0 285.14707 71.320542" role="img" aria-label="Monix"><use href="#logo"/></svg>
     <p class="lema">Tu banco, en tu celular.</p>
@@ -332,13 +332,21 @@ body.completa #fs { display: none; }
 
   var items = [['Transferir', 'M4 12h14M13 6l6 6-6 6'], ['Tarjeta', 'M3 7h18v10H3zM3 11h18'], ['Dólares', 'M12 4v16M16 8c0-1.5-1.8-2.5-4-2.5S8 6.5 8 8s1.8 2 4 2.5 4 1 4 2.5-1.8 2.5-4 2.5-4-1-4-2.5'], ['Préstamos', 'M4 20V10M10 20V4M16 20v-7M22 20H2'], ['Gastos', 'M12 3v9h9A9 9 0 1 1 12 3z'], ['Moni', 'M5 6h14v9H10l-4 4v-4H5z'], ['Seguridad', 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z']];
   (function () {
-    var el = document.getElementById('o1');
-    items.forEach(function (it, i) {
-      var a = (i / items.length) * Math.PI * 2 - Math.PI / 2, x = Math.cos(a) * 460, y = Math.sin(a) * 460;
-      var w = document.createElement('div'); w.className = 'it'; w.style.transform = 'translate(' + x + 'px,' + y + 'px)';
-      w.innerHTML = '<div style="animation:contra 90s linear infinite"><div class="chip-orbita"><svg viewBox="0 0 24 24"><path d="' + it[1] + '"/></svg></div><span>' + it[0] + '</span></div>';
-      el.appendChild(w);
+    var el = document.getElementById('o1'), nodos = [], quieto = matchMedia('(prefers-reduced-motion: reduce)').matches, t0 = performance.now();
+    items.forEach(function (it) {
+      var w = document.createElement('div'); w.className = 'it';
+      w.innerHTML = '<div class="chip-orbita"><svg viewBox="0 0 24 24"><path d="' + it[1] + '"/></svg></div><span>' + it[0] + '</span>';
+      el.appendChild(w); nodos.push(w);
     });
+    function ubicar(ahora) {
+      var giro = quieto ? 0 : (ahora - t0) / 90000 * Math.PI * 2;
+      nodos.forEach(function (w, i) {
+        var a = (i / nodos.length) * Math.PI * 2 - Math.PI / 2 + giro;
+        w.style.transform = 'translate(' + Math.cos(a) * 830 + 'px,' + Math.sin(a) * 400 + 'px)';
+      });
+      if (!quieto) requestAnimationFrame(ubicar);
+    }
+    ubicar(t0);
   })();
 
   escenas.forEach(function () { var i = document.createElement('i'); i.appendChild(document.createElement('b')); prog.appendChild(i); });
