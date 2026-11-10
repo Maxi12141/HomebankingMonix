@@ -881,6 +881,41 @@ prueba('Cambiar contraseña: con 2FA pide la actual y el código', async (b) => 
   await page.context().close()
 })
 
+prueba('Perfil: el mail nuevo recién se guarda al confirmarlo', async (b) => {
+  const page = await nuevaPagina(b, { reducedMotion: 'reduce' })
+  const pedidos = []
+  page.on('request', (q) => {
+    const u = q.url()
+    if (u.includes('/rest/v1/personas') && q.method() === 'PATCH') pedidos.push(['ficha', q.postData() ?? ''])
+    if (u.includes('/auth/v1/user') && q.method() === 'PUT') pedidos.push(['auth', q.postData() ?? ''])
+  })
+  await page.goto('/perfil')
+  const datos = page.getByRole('button', { name: /Datos personales/ })
+  await datos.waitFor({ timeout: 15000 })
+  await datos.click()
+  await page.getByRole('button', { name: 'Editar', exact: true }).click()
+  const formulario = page.locator('form').filter({ has: page.getByLabel('Email', { exact: true }) })
+  await formulario.getByLabel('Email', { exact: true }).fill('sol.nueva@monix.test')
+  await formulario.getByRole('button', { name: 'Guardar', exact: true }).click()
+  await page.getByText(/Te mandamos un link a sol\.nueva@monix\.test/).waitFor({ timeout: 10000 })
+  assert.ok(pedidos.some(([d, cuerpo]) => d === 'auth' && cuerpo.includes('sol.nueva@monix.test')), 'pide el cambio a Auth')
+  assert.ok(!pedidos.some(([d, cuerpo]) => d === 'ficha' && cuerpo.includes('sol.nueva')), 'la ficha no cambia antes de confirmar')
+  await page.context().close()
+})
+
+prueba('Perfil: al confirmar el mail nuevo, la ficha lo copia', async (b) => {
+  const confirmado = { ...user, email: 'sol.nueva@monix.test' }
+  const page = await nuevaPagina(b, { sesion: { ...session, user: confirmado }, reducedMotion: 'reduce' })
+  await page.route(`${SUPABASE}/auth/v1/**`, (r) => r.fulfill({ json: r.request().url().includes('/user') ? confirmado : { ...session, user: confirmado } }))
+  const cambios = []
+  page.on('request', (q) => { if (q.url().includes('/rest/v1/personas') && q.method() === 'PATCH') cambios.push(q.postData() ?? '') })
+  await page.goto('/dashboard')
+  await page.getByText('Hola, Sol').waitFor({ timeout: 15000 })
+  await page.waitForTimeout(500)
+  assert.ok(cambios.some((c) => c.includes('sol.nueva@monix.test')), 'no copió el mail confirmado')
+  await page.context().close()
+})
+
 prueba('Recuperar contraseña: al elegir la nueva cierra los demás dispositivos', async (b) => {
   const page = await nuevaPagina(b, { reducedMotion: 'reduce' })
   const pedidos = []

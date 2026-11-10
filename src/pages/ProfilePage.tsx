@@ -130,17 +130,20 @@ export function ProfilePage() {
       }
     }
 
+    // El mail no se toca acá: recién cambia cuando lo confirmás desde el link (lo copia useAuth).
     const { error } = await supabase
       .from('personas')
-      .update({ email, telefono: telefono || null })
+      .update({ telefono: telefono || null })
       .eq('id', persona.id)
 
     if (!error) {
-      setPersona({ ...persona, email, telefono: telefono || null })
+      setPersona({ ...persona, telefono: telefono || null })
       toast.success(emailCambio
-        ? 'Datos actualizados. Revisá tu email para confirmar el cambio.'
-        : 'Datos actualizados correctamente'
+        ? `Te mandamos un link a ${email} para confirmarlo. Hasta entonces seguís entrando con ${persona.email}.`
+        : 'Datos actualizados correctamente',
+        { duration: emailCambio ? 7000 : 4000 },
       )
+      setEmail(persona.email)
       setEditMode(false)
       setCodigoEmail('')
     } else {
@@ -509,6 +512,11 @@ export function ProfilePage() {
                   <span className="font-body text-sm text-navy dark:text-white text-right min-w-0 break-words">{value}</span>
                 </div>
               ))}
+              {user?.new_email && user.new_email.toLowerCase() !== persona.email.toLowerCase() && (
+                <p className="font-body text-sm text-slate-secondary break-words">
+                  Falta confirmar tu mail nuevo, {user.new_email}. Tocá el link que te mandamos ahí.
+                </p>
+              )}
             </div>
           )}
         </Desplegable>

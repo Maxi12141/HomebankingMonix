@@ -122,10 +122,10 @@ export function useAuth() {
       return
     }
     setPendienteCodigo(false)
-    await fetchPersona(session.user.id)
+    await fetchPersona(session.user.id, session.user.email)
   }
 
-  async function fetchPersona(userId: string) {
+  async function fetchPersona(userId: string, emailDeAuth?: string) {
     try {
       const query = supabase
         .from('personas')
@@ -138,7 +138,14 @@ export function useAuth() {
         'Tiempo agotado al cargar el perfil',
       )
       if (error) console.error('Error al cargar el perfil:', error.message)
-      setPersona(data as Persona | null)
+      let ficha = data as Persona | null
+      // El mail nuevo vale recién cuando se confirma desde el link: ahí Auth lo cambia y la ficha lo copia.
+      if (ficha && emailDeAuth && ficha.email.toLowerCase() !== emailDeAuth.toLowerCase()) {
+        const { error: errorMail } = await supabase.from('personas').update({ email: emailDeAuth }).eq('id', userId)
+        if (errorMail) console.error('No se pudo copiar el mail confirmado:', errorMail.message)
+        else ficha = { ...ficha, email: emailDeAuth }
+      }
+      setPersona(ficha)
     } catch (err) {
       console.error('Error al cargar el perfil:', err)
       setPersona(null)
